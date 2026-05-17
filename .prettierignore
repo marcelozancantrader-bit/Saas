@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+build
+package-lock.json
+*.lock
+.vercel
+public
+supabase/.temp
+db/migrations
