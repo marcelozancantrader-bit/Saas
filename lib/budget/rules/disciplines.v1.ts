@@ -176,7 +176,7 @@ export function rulesHydraulicSinapi(d: HydraulicData): RuleItem[] {
     d.tubulacao_estimada?.pvc_25mm_metros ?? (d.total_pontos_agua_fria ?? 0) * M_POR_PONTO_AF;
   if (pvc25 > 0) {
     items.push({
-      codigo_sinapi: "89711",
+      codigo_sinapi: "89446",
       descricao_local: "Tubo PVC soldável 25mm (água fria ramais)",
       unidade: "m",
       quantidade: big(pvc25),
@@ -250,7 +250,9 @@ export function rulesHydraulicSinapi(d: HydraulicData): RuleItem[] {
 }
 
 // =============================================================================
-// ESTRUTURAL — SINAPI 92478 (concreto 25 MPa) / 92797 (aço CA-50)
+// ESTRUTURAL — reusa SINAPI 92873 (concreto 25 MPa) + 92775 (aço CA-50)
+// que já estão no seed curado do Sprint 4. Para fck >= 30, usa a composição
+// 92479 (será seedada à parte).
 // =============================================================================
 
 export type StructuralData = {
@@ -266,7 +268,7 @@ export function rulesStructuralSinapi(d: StructuralData): RuleItem[] {
   if (d.volume_concreto_m3 && d.volume_concreto_m3 > 0) {
     const fck = d.fck_mpa ?? 25;
     items.push({
-      codigo_sinapi: fck >= 30 ? "92479" : "92478",
+      codigo_sinapi: fck >= 30 ? "92479" : "92873",
       descricao_local: `Concreto estrutural fck=${fck} MPa`,
       unidade: "m³",
       quantidade: big(d.volume_concreto_m3),
@@ -276,7 +278,7 @@ export function rulesStructuralSinapi(d: StructuralData): RuleItem[] {
 
   if (d.aco_kg_total && d.aco_kg_total > 0) {
     items.push({
-      codigo_sinapi: "92797",
+      codigo_sinapi: "92775",
       descricao_local: "Aço CA-50 (corte, dobra e armação)",
       unidade: "kg",
       quantidade: big(d.aco_kg_total),

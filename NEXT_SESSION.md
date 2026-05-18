@@ -10,7 +10,7 @@
 
 ## ✅ Sprint 9 + 10 — Multi-disciplina (entregue)
 
-**Status:** código entregue, typecheck/lint/build limpos. **Falta:** aplicar migration `20260718000001_project_files_disciplina.sql` no Supabase Dashboard antes que o feature funcione em prod.
+**Status:** código entregue, typecheck/lint/build limpos. Migration `20260718000001_project_files_disciplina.sql` aplicada no Supabase em 2026-05-18 (commit local `9605619` — push manual ainda pendente).
 
 **Entregas:**
 
