@@ -112,7 +112,7 @@ npx tsx scripts/sprint1-dod-test.ts   # RLS clients
 npx tsx scripts/sprint2-dod-test.ts   # RLS projects/files/Storage
 npx tsx scripts/sprint3-dod-test.ts   # AI extraction (gasta ~$0.02)
 npx tsx scripts/sprint4-dod-test.ts   # SINAPI orçamento
-npx tsx scripts/sprint5-dod-test.ts   # AI docs (gasta ~$0.10) — AINDA NÃO RODADO
+npx tsx scripts/sprint5-dod-test.ts   # AI docs (gasta ~$0.55, ~9min — 4 chamadas Claude)
 
 # Deploy
 vercel deploy --prod --token "$VERCEL_TOKEN" --yes
