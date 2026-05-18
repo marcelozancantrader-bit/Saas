@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateOrganizationAction } from "@/server/actions/organizations/update.action";
+import {
+  uploadLogoAction,
+  removeLogoAction,
+} from "@/server/actions/organizations/upload-logo.action";
 
 export type WorkspaceInitial = {
   name: string;
@@ -41,11 +46,49 @@ const PIX_LABEL: Record<WorkspaceInitial["pix_tipo"], string> = {
 };
 
 export function WorkspaceForm({ initial, canEdit }: Props) {
+  const router = useRouter();
   const [form, setForm] = useState<WorkspaceInitial>(initial);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   function field<K extends keyof WorkspaceInitial>(key: K, value: WorkspaceInitial[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function onLogoFile(file: File) {
+    setUploadingLogo(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = await uploadLogoAction(fd);
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      field("logo_url", r.logo_url);
+      toast.success("Logo atualizado.");
+      router.refresh();
+    } finally {
+      setUploadingLogo(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function clearLogo() {
+    setUploadingLogo(true);
+    try {
+      const r = await removeLogoAction();
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      field("logo_url", "");
+      toast.success("Logo removido.");
+      router.refresh();
+    } finally {
+      setUploadingLogo(false);
+    }
   }
 
   async function submit() {
@@ -132,19 +175,54 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
         </div>
 
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="logo">URL do logo</Label>
-          <Input
-            id="logo"
-            value={form.logo_url}
-            onChange={(e) => field("logo_url", e.target.value)}
-            placeholder="https://…/logo.png"
-            type="url"
-            maxLength={500}
-          />
-          <p className="text-xs text-zinc-500">
-            Cole a URL pública do seu logo (hospede no Drive público, Cloudinary, etc). Upload
-            integrado vem depois.
-          </p>
+          <Label>Logo do escritório</Label>
+          <div className="flex items-start gap-3">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+              {form.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={form.logo_url} alt="Logo" className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-[10px] text-zinc-400">sem logo</span>
+              )}
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={uploadingLogo}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploadingLogo ? "Enviando…" : form.logo_url ? "Trocar imagem" : "Enviar imagem"}
+                </Button>
+                {form.logo_url ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={uploadingLogo}
+                    onClick={clearLogo}
+                  >
+                    Remover
+                  </Button>
+                ) : null}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void onLogoFile(f);
+                }}
+              />
+              <p className="text-xs text-zinc-500">
+                PNG, JPG, WebP ou SVG. Máx 2 MB. Aparece no portal do cliente e no rodapé dos PDFs.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-1.5">
