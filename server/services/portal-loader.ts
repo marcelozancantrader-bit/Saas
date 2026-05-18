@@ -99,7 +99,7 @@ export async function loadPortalByToken(token: string): Promise<PortalLoadResult
 
   const { data: org, error: orgErr } = await admin
     .from("organizations")
-    .select("nome")
+    .select("name")
     .eq("id", client.org_id)
     .maybeSingle();
 
@@ -143,7 +143,7 @@ export async function loadPortalByToken(token: string): Promise<PortalLoadResult
     data: {
       client: { nome: client.nome, email: client.email },
       project,
-      organization: { nome: org.nome },
+      organization: { nome: org.name as string },
       documents: (documents ?? []) as PortalDocument[],
       scope_changes: (scopeChanges ?? []) as PortalScopeChange[],
     },

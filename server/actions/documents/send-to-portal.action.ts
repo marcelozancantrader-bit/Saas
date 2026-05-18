@@ -38,7 +38,7 @@ export async function sendDocumentToPortalAction(
        projects!inner(
          nome, client_id, org_id,
          clients!inner(portal_token, email, nome),
-         organizations!inner(nome)
+         organizations!inner(name)
        )`,
     )
     .eq("id", parsed.data.document_id)
@@ -50,7 +50,7 @@ export async function sendDocumentToPortalAction(
     client_id: string | null;
     org_id: string;
     clients: { portal_token: string; email: string | null; nome: string } | null;
-    organizations: { nome: string } | null;
+    organizations: { name: string } | null;
   };
   if (!project.client_id || !project.clients)
     return {
@@ -92,7 +92,7 @@ export async function sendDocumentToPortalAction(
   let emailSent = false;
   if (project.clients.email) {
     const portalUrl = `${env.NEXT_PUBLIC_APP_URL}/portal/${project.clients.portal_token}`;
-    const orgName = project.organizations?.nome ?? "Memorial.ai";
+    const orgName = project.organizations?.name ?? "Memorial.ai";
     const r = await sendEmail({
       to: project.clients.email,
       subject: `${orgName}: novo documento para sua aprovação — ${doc.titulo}`,
