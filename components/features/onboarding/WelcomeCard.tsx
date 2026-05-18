@@ -1,12 +1,12 @@
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+"use client";
 
-/**
- * Card de boas-vindas mostrado quando o escritório ainda não tem projeto.
- * Lista o fluxo end-to-end em 4 passos para o usuário entender o produto
- * em 30s.
- */
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { buttonVariants, Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { createDemoProjectAction } from "@/server/actions/demo/create-demo-project.action";
 
 const STEPS = [
   {
@@ -33,46 +33,82 @@ const STEPS = [
 ];
 
 export function WelcomeCard() {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [creating, setCreating] = useState(false);
+
+  function explorar() {
+    setCreating(true);
+    startTransition(async () => {
+      const r = await createDemoProjectAction();
+      if (!r.ok) {
+        toast.error(r.error);
+        setCreating(false);
+        return;
+      }
+      toast.success("Projeto exemplo pronto! Explore tudo à vontade.");
+      router.push(`/projetos/${r.project_id}?demo=1`);
+    });
+  }
+
   return (
-    <Card>
+    <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white dark:border-emerald-900 dark:from-emerald-950 dark:to-zinc-900">
       <CardContent className="space-y-6 p-6">
         <div>
-          <p className="text-xs font-medium tracking-wider text-emerald-600 uppercase">
+          <p className="text-xs font-medium tracking-wider text-emerald-600 uppercase dark:text-emerald-400">
             Bem-vindo ao Memorial.ai
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight">
             Da planta ao contrato em horas, não semanas.
           </h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Em 4 passos você cobre todo o ciclo do projeto técnico:
+            Você pode explorar um projeto exemplo agora (1 clique, 2 segundos) ou criar o primeiro
+            projeto real do seu escritório.
           </p>
         </div>
 
-        <ol className="space-y-3">
-          {STEPS.map((step) => (
-            <li key={step.n} className="flex gap-3">
-              <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
-                {step.n}
-              </span>
-              <div>
-                <p className="text-sm font-medium">{step.titulo}</p>
-                <p className="text-xs text-zinc-600 dark:text-zinc-400">{step.detalhe}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-
-        <div className="flex flex-wrap gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <Link href="/clientes/novo" className={buttonVariants({ size: "sm" })}>
-            Criar primeiro cliente
-          </Link>
-          <Link
-            href="/projetos/novo"
-            className={buttonVariants({ size: "sm", variant: "outline" })}
-          >
-            Criar projeto direto
-          </Link>
+        <div className="flex flex-col gap-3 rounded-lg border border-emerald-300 bg-white p-4 sm:flex-row sm:items-center sm:justify-between dark:border-emerald-800 dark:bg-zinc-900">
+          <div className="min-w-0">
+            <p className="font-medium">🚀 Quero ver o produto funcionando agora</p>
+            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+              Cria automaticamente um projeto Casa 120m² com planta extraída, 4 documentos prontos e
+              briefing preenchido. Você navega tudo em 30 segundos.
+            </p>
+          </div>
+          <Button onClick={explorar} disabled={pending || creating} className="shrink-0">
+            {creating ? "Criando…" : "Explorar exemplo →"}
+          </Button>
         </div>
+
+        <details className="rounded-lg border border-zinc-200 dark:border-zinc-800">
+          <summary className="cursor-pointer p-4 text-sm font-medium">
+            Ou veja como funciona em 4 passos
+          </summary>
+          <div className="space-y-3 px-4 pb-4">
+            {STEPS.map((step) => (
+              <div key={step.n} className="flex gap-3">
+                <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
+                  {step.n}
+                </span>
+                <div>
+                  <p className="text-sm font-medium">{step.titulo}</p>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400">{step.detalhe}</p>
+                </div>
+              </div>
+            ))}
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Link href="/clientes/novo" className={buttonVariants({ size: "sm" })}>
+                Começar do zero (criar cliente)
+              </Link>
+              <Link
+                href="/projetos/novo"
+                className={buttonVariants({ size: "sm", variant: "outline" })}
+              >
+                Criar projeto direto
+              </Link>
+            </div>
+          </div>
+        </details>
       </CardContent>
     </Card>
   );
