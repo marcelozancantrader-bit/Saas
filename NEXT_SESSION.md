@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-18 — **Sprint 9+10 entregues: multi-disciplina (upload+extração+orçamento). Próximo: Sprint 11 (análise cruzada IA) é opcional, ou aplicar migration e validar live.**
+**Última pausa:** 2026-05-18 — **Sprint 9+10+10.1 fechados em prod: multi-disciplina (upload+extração+orçamento+breakdown por disciplina). Próximo: Sprint 11 (análise cruzada IA) opcional, ou polish (multi-upload, edição manual da extração das disciplinas).**
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
 **App live:** https://memorial-ai-mu.vercel.app
@@ -8,9 +8,9 @@
 
 ---
 
-## ✅ Sprint 9 + 10 — Multi-disciplina (entregue)
+## ✅ Sprint 9 + 10 + 10.1 — Multi-disciplina (em prod)
 
-**Status:** código entregue, typecheck/lint/build limpos. Migration `20260718000001_project_files_disciplina.sql` aplicada no Supabase em 2026-05-18 (commit local `9605619` — push manual ainda pendente).
+**Status:** tudo em prod. Commits `9605619` (Sprint 9+10) + `12d8a5a` (seed SINAPI das disciplinas) + `72ad331` (fix: observacoes max 2000 chars) + `a8c358f` (Sprint 10.1: breakdown por disciplina). 3 migrations aplicadas no Supabase: `project_files.disciplina`, seed das 16 composições SINAPI das disciplinas e `budget_items.disciplina`.
 
 **Entregas:**
 
