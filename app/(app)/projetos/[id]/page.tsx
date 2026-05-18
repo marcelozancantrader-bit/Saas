@@ -213,7 +213,16 @@ export default async function ProjetoDetailPage({ params }: Props) {
             </Link>{" "}
             — gere a partir da extração acima (Sprint 4 ✅)
           </p>
-          <p>📄 Documentos por IA (memorial, caderno, proposta, contrato) — Sprint 5</p>
+          <p>
+            📄{" "}
+            <Link
+              href={`/projetos/${project.id}/documentos`}
+              className="font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-50"
+            >
+              Documentos por IA
+            </Link>{" "}
+            — memorial, caderno, proposta, contrato (Sprint 5 ✅)
+          </p>
           <p>👤 Portal do cliente com aprovação digital — Sprint 6</p>
         </CardContent>
       </Card>
