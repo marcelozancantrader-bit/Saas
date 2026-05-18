@@ -17,17 +17,30 @@ import { toast } from "sonner";
 
 type Props = { projectId: string; hasConfirmedExtraction: boolean };
 
-const TIPOS: DocumentTipo[] = [
-  "memorial",
-  "caderno",
-  "proposta",
-  "contrato",
-  "memorial_estrutural",
-  "memorial_hidrossanitario",
-  "memorial_eletrico",
-  "ppci",
-  "impermeabilizacao",
-  "cronograma",
+type DocGroup = {
+  label: string;
+  tipos: DocumentTipo[];
+};
+
+const GROUPS: DocGroup[] = [
+  {
+    label: "Memoriais gerais",
+    tipos: ["memorial", "caderno"],
+  },
+  {
+    label: "Comercial",
+    tipos: ["proposta", "contrato", "cronograma"],
+  },
+  {
+    label: "Memoriais técnicos",
+    tipos: [
+      "memorial_estrutural",
+      "memorial_hidrossanitario",
+      "memorial_eletrico",
+      "ppci",
+      "impermeabilizacao",
+    ],
+  },
 ];
 
 const REQUIRES_EXTRACTION: Record<DocumentTipo, boolean> = {
@@ -46,14 +59,14 @@ const REQUIRES_EXTRACTION: Record<DocumentTipo, boolean> = {
 const HINTS: Record<DocumentTipo, string> = {
   memorial: "Memorial geral (NBR 12.722)",
   caderno: "Caderno técnico por sistema",
-  proposta: "Proposta comercial pro cliente",
-  contrato: "Contrato com cláusulas de aditivo",
-  memorial_estrutural: "Estrutural (NBR 6118, 6122)",
+  proposta: "Para o cliente — visual + comercial",
+  contrato: "Com cláusulas de aditivo e revisão",
+  memorial_estrutural: "Fundação, vigas, pilares, lajes (NBR 6118)",
   memorial_hidrossanitario: "Água, esgoto, pluviais (NBR 5626, 8160)",
-  memorial_eletrico: "Instalações elétricas (NBR 5410)",
-  ppci: "Combate a incêndio (NBRs + IT do CB)",
-  impermeabilizacao: "Impermeabilização (NBR 9575, 9574)",
-  cronograma: "Cronograma físico-financeiro por etapas",
+  memorial_eletrico: "Quadro, circuitos, pontos (NBR 5410)",
+  ppci: "Extintores, saídas, sinalização",
+  impermeabilizacao: "Banheiros, lajes, sacadas (NBR 9575)",
+  cronograma: "Etapas de obra + % desembolso",
 };
 
 export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction }: Props) {
@@ -83,26 +96,30 @@ export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction }: Prop
       >
         {generating ? `Gerando ${DOCUMENT_LABELS[generating]}…` : "Gerar documento por IA"}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="max-h-[60vh] w-80 overflow-y-auto">
-        <DropdownMenuLabel>Escolha o tipo</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {TIPOS.map((tipo) => {
-          const needsExtraction = REQUIRES_EXTRACTION[tipo] && !hasConfirmedExtraction;
-          return (
-            <DropdownMenuItem
-              key={tipo}
-              disabled={needsExtraction || generating !== null}
-              onClick={() => onGenerate(tipo)}
-            >
-              <div className="flex flex-col">
-                <span className="font-medium">{DOCUMENT_LABELS[tipo]}</span>
-                <span className="text-xs text-zinc-500">
-                  {needsExtraction ? "Confirme a extração da planta primeiro" : HINTS[tipo]}
-                </span>
-              </div>
-            </DropdownMenuItem>
-          );
-        })}
+      <DropdownMenuContent align="end" className="max-h-[70vh] w-80 overflow-y-auto">
+        {GROUPS.map((group, gi) => (
+          <div key={group.label}>
+            {gi > 0 ? <DropdownMenuSeparator /> : null}
+            <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+            {group.tipos.map((tipo) => {
+              const needsExtraction = REQUIRES_EXTRACTION[tipo] && !hasConfirmedExtraction;
+              return (
+                <DropdownMenuItem
+                  key={tipo}
+                  disabled={needsExtraction || generating !== null}
+                  onClick={() => onGenerate(tipo)}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">{DOCUMENT_LABELS[tipo]}</span>
+                    <span className="text-xs text-zinc-500">
+                      {needsExtraction ? "Confirme a extração da planta primeiro" : HINTS[tipo]}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              );
+            })}
+          </div>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

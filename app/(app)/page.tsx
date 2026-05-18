@@ -6,6 +6,7 @@ import { getCurrentOrg } from "@/server/services/current-org";
 import { getDashboardMetrics } from "@/server/services/dashboard-metrics";
 import { getPlanUsage } from "@/server/services/plan-usage";
 import { getPlanInfo, type PlanId } from "@/lib/plans/limits";
+import { WelcomeCard } from "@/components/features/onboarding/WelcomeCard";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +97,8 @@ export default async function DashboardPage() {
           Gerenciar plano →
         </Link>
       </div>
+
+      {metrics.activeProjects === 0 ? <WelcomeCard /> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {KPI.map((kpi) => (

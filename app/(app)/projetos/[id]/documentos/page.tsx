@@ -112,8 +112,22 @@ export default async function DocumentosPage({ params }: Props) {
 
       {!documents || documents.length === 0 ? (
         <Card>
-          <CardContent className="p-8 text-center text-sm text-zinc-500">
-            Nenhum documento gerado ainda.
+          <CardContent className="space-y-2 p-8 text-center">
+            <p className="text-base font-medium">Nenhum documento gerado ainda</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Use o botão{" "}
+              <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs dark:bg-zinc-800">
+                Gerar documento por IA
+              </span>{" "}
+              acima. Os tipos estão agrupados em <strong>Memoriais gerais</strong>,{" "}
+              <strong>Comercial</strong> e <strong>Memoriais técnicos</strong>.
+            </p>
+            {!hasConfirmedExtraction ? (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Para tipos técnicos (memorial, caderno, estrutural, etc.) é preciso confirmar a
+                extração da planta primeiro. Proposta, contrato e cronograma podem ser gerados sem.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       ) : (

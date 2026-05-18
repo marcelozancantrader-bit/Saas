@@ -24,10 +24,14 @@ type Props = { rows: ClientRow[] };
 export function ClientsTable({ rows }: Props) {
   if (rows.length === 0) {
     return (
-      <div className="rounded-md border border-dashed p-8 text-center text-sm text-zinc-500">
-        Nenhum cliente cadastrado ainda.
-        <div className="mt-3">
-          <Button render={<Link href="/clientes/novo">Criar primeiro cliente</Link>} />
+      <div className="rounded-md border border-dashed p-8 text-center">
+        <p className="text-base font-medium">Nenhum cliente ainda</p>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          Cadastre o contratante (pessoa física ou jurídica) — vira base para projetos, ART/RRT,
+          contrato e portal do cliente.
+        </p>
+        <div className="mt-4">
+          <Button render={<Link href="/clientes/novo">+ Criar primeiro cliente</Link>} />
         </div>
       </div>
     );

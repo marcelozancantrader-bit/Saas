@@ -36,11 +36,22 @@ type Props = { rows: ProjectRow[] };
 export function ProjectsTable({ rows }: Props) {
   if (rows.length === 0) {
     return (
-      <div className="rounded-md border border-dashed p-8 text-center text-sm text-zinc-500">
-        Nenhum projeto cadastrado ainda.
-        <div className="mt-3">
-          <Button render={<Link href="/projetos/novo">Criar primeiro projeto</Link>} />
+      <div className="rounded-md border border-dashed p-8 text-center">
+        <p className="text-base font-medium">Nenhum projeto ainda</p>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          Crie o primeiro projeto. Cada projeto pode ter planta, documentos por IA, portal do
+          cliente e orçamento.
+        </p>
+        <div className="mt-4">
+          <Button render={<Link href="/projetos/novo">+ Criar primeiro projeto</Link>} />
         </div>
+        <p className="mt-4 text-xs text-zinc-500">
+          Dica: cadastre o cliente em{" "}
+          <Link href="/clientes/novo" className="underline">
+            /clientes
+          </Link>{" "}
+          antes — fica disponível pra associar ao projeto.
+        </p>
       </div>
     );
   }
