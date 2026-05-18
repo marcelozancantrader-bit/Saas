@@ -57,11 +57,15 @@ function DropdownMenuLabel({
   className,
   inset,
   ...props
-}: MenuPrimitive.GroupLabel.Props & {
+}: React.ComponentProps<"div"> & {
   inset?: boolean;
 }) {
+  // Plain <div> instead of Menu.GroupLabel: GroupLabel requires being inside
+  // Menu.Group (Base UI throws "MenuGroupRootContext is missing" #31). For a
+  // simple section title in a flat menu, a styled div is enough and works
+  // regardless of structure.
   return (
-    <MenuPrimitive.GroupLabel
+    <div
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(
