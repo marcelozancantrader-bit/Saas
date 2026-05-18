@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { clientSchema } from "@/lib/validators/clients.schema";
@@ -48,5 +47,5 @@ export async function createClientAction(formData: FormData): Promise<CreateClie
   }
 
   revalidatePath("/clientes");
-  redirect(`/clientes/${data.id}`);
+  return { ok: true, id: data.id };
 }

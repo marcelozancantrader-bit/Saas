@@ -63,6 +63,8 @@ function DeleteClientControl({ id }: { id: string }) {
       confirmTitle="Excluir cliente?"
       confirmDescription="Os projetos vinculados manterão o histórico, mas o cliente será removido permanentemente."
       onConfirm={handle}
+      redirectAfterSuccess="/clientes"
+      successMessage="Cliente excluído"
       variant="outline"
       size="sm"
     />

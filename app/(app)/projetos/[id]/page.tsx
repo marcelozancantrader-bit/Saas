@@ -223,6 +223,8 @@ function DeleteProjectControl({ id }: { id: string }) {
       confirmTitle="Excluir projeto?"
       confirmDescription="Arquivos no Storage também serão removidos. Esta ação não pode ser desfeita."
       onConfirm={handle}
+      redirectAfterSuccess="/projetos"
+      successMessage="Projeto excluído"
       variant="outline"
       size="sm"
     />

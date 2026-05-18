@@ -20,11 +20,12 @@ function loadEnv() {
 }
 loadEnv();
 
-const email = process.argv[2];
-if (!email) {
+const emailArg = process.argv[2];
+if (!emailArg) {
   console.error("Usage: npx tsx scripts/confirm-user-email.ts <email>");
   process.exit(1);
 }
+const email: string = emailArg;
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -73,7 +74,13 @@ async function main() {
   console.log("\n✅ Email confirmed.");
   console.log(`Memberships (${memberships?.length ?? 0}):`);
   for (const m of memberships ?? []) {
-    const orgName = (m.organizations as { name: string } | null)?.name ?? "?";
+    const orgs = m.organizations as unknown;
+    let orgName = "?";
+    if (Array.isArray(orgs)) {
+      orgName = (orgs[0] as { name?: string } | undefined)?.name ?? "?";
+    } else if (orgs && typeof orgs === "object") {
+      orgName = (orgs as { name?: string }).name ?? "?";
+    }
     console.log(`  - ${m.role} of "${orgName}"`);
   }
   if (!memberships || memberships.length === 0) {

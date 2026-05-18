@@ -61,13 +61,19 @@ export function ProjectForm({ initial, clients }: Props) {
     setFieldErrors({});
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
-      const result = initial?.id
-        ? await updateProjectAction(initial.id, formData)
+      const isUpdate = !!initial?.id;
+      const result = isUpdate
+        ? await updateProjectAction(initial!.id!, formData)
         : await createProjectAction(formData);
       if (!result) return;
       if ("ok" in result && result.ok) {
-        toast.success("Projeto atualizado");
-        router.refresh();
+        if (!isUpdate && "id" in result) {
+          toast.success("Projeto criado");
+          router.push(`/projetos/${result.id}`);
+        } else {
+          toast.success("Projeto atualizado");
+          router.refresh();
+        }
         return;
       }
       if ("fieldErrors" in result) {

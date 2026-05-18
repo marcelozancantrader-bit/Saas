@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +19,8 @@ type Props = {
   confirmTitle: string;
   confirmDescription: string;
   onConfirm: () => Promise<{ ok: true } | { ok: false; error: string } | void>;
+  redirectAfterSuccess?: string;
+  successMessage?: string;
   variant?: "destructive" | "outline";
   size?: "sm" | "default";
 };
@@ -27,9 +30,12 @@ export function DeleteButton({
   confirmTitle,
   confirmDescription,
   onConfirm,
+  redirectAfterSuccess,
+  successMessage,
   variant = "destructive",
   size = "default",
 }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -38,9 +44,12 @@ export function DeleteButton({
       const result = await onConfirm();
       if (result && "ok" in result && !result.ok) {
         toast.error(result.error);
-      } else {
-        setOpen(false);
+        return;
       }
+      if (successMessage) toast.success(successMessage);
+      setOpen(false);
+      if (redirectAfterSuccess) router.push(redirectAfterSuccess);
+      else router.refresh();
     });
   }
 

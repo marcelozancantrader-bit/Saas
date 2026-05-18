@@ -59,14 +59,19 @@ export function ClientForm({ initial }: Props) {
     setFieldErrors({});
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
-      const action = initial?.id
-        ? () => updateClientAction(initial.id!, formData)
-        : () => createClientAction(formData);
-      const result = await action();
-      if (!result) return; // redirect happened
+      const isUpdate = !!initial?.id;
+      const result = isUpdate
+        ? await updateClientAction(initial!.id!, formData)
+        : await createClientAction(formData);
+      if (!result) return;
       if ("ok" in result && result.ok) {
-        toast.success("Cliente atualizado");
-        router.refresh();
+        if (!isUpdate && "id" in result) {
+          toast.success("Cliente criado");
+          router.push(`/clientes/${result.id}`);
+        } else {
+          toast.success("Cliente atualizado");
+          router.refresh();
+        }
         return;
       }
       if ("fieldErrors" in result) {
