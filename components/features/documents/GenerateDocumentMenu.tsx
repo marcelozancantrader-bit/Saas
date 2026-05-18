@@ -17,13 +17,43 @@ import { toast } from "sonner";
 
 type Props = { projectId: string; hasConfirmedExtraction: boolean };
 
-const TIPOS: DocumentTipo[] = ["memorial", "caderno", "proposta", "contrato"];
+const TIPOS: DocumentTipo[] = [
+  "memorial",
+  "caderno",
+  "proposta",
+  "contrato",
+  "memorial_estrutural",
+  "memorial_hidrossanitario",
+  "memorial_eletrico",
+  "ppci",
+  "impermeabilizacao",
+  "cronograma",
+];
 
 const REQUIRES_EXTRACTION: Record<DocumentTipo, boolean> = {
   memorial: true,
   caderno: true,
   proposta: false,
   contrato: false,
+  memorial_estrutural: true,
+  memorial_hidrossanitario: true,
+  memorial_eletrico: true,
+  ppci: true,
+  impermeabilizacao: true,
+  cronograma: false,
+};
+
+const HINTS: Record<DocumentTipo, string> = {
+  memorial: "Memorial geral (NBR 12.722)",
+  caderno: "Caderno técnico por sistema",
+  proposta: "Proposta comercial pro cliente",
+  contrato: "Contrato com cláusulas de aditivo",
+  memorial_estrutural: "Estrutural (NBR 6118, 6122)",
+  memorial_hidrossanitario: "Água, esgoto, pluviais (NBR 5626, 8160)",
+  memorial_eletrico: "Instalações elétricas (NBR 5410)",
+  ppci: "Combate a incêndio (NBRs + IT do CB)",
+  impermeabilizacao: "Impermeabilização (NBR 9575, 9574)",
+  cronograma: "Cronograma físico-financeiro por etapas",
 };
 
 export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction }: Props) {
@@ -53,7 +83,7 @@ export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction }: Prop
       >
         {generating ? `Gerando ${DOCUMENT_LABELS[generating]}…` : "Gerar documento por IA"}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
+      <DropdownMenuContent align="end" className="max-h-[60vh] w-80 overflow-y-auto">
         <DropdownMenuLabel>Escolha o tipo</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {TIPOS.map((tipo) => {
@@ -66,17 +96,9 @@ export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction }: Prop
             >
               <div className="flex flex-col">
                 <span className="font-medium">{DOCUMENT_LABELS[tipo]}</span>
-                {needsExtraction ? (
-                  <span className="text-xs text-zinc-500">
-                    Confirme a extração da planta primeiro
-                  </span>
-                ) : (
-                  <span className="text-xs text-zinc-500">
-                    {tipo === "memorial" || tipo === "caderno"
-                      ? "Usa dados da extração"
-                      : "Não depende da planta"}
-                  </span>
-                )}
+                <span className="text-xs text-zinc-500">
+                  {needsExtraction ? "Confirme a extração da planta primeiro" : HINTS[tipo]}
+                </span>
               </div>
             </DropdownMenuItem>
           );

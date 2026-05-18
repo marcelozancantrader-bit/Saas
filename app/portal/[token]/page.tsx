@@ -7,6 +7,7 @@ import { DOCUMENT_LABELS, type DocumentTipo } from "@/lib/ai/generate-document";
 import { ApprovalCard } from "@/components/features/portal/ApprovalCard";
 import { ScopeChangeSection } from "@/components/features/portal/ScopeChangeSection";
 import { BriefingForm } from "@/components/features/portal/BriefingForm";
+import { ChatDaPlanta } from "@/components/features/portal/ChatDaPlanta";
 
 export const dynamic = "force-dynamic";
 
@@ -170,6 +171,12 @@ export default async function PortalPage({ params }: Props) {
           })}
         </section>
       ) : null}
+
+      <Separator className="my-10" />
+
+      <section className="space-y-3">
+        <ChatDaPlanta portalToken={token} projectId={project.id} />
+      </section>
 
       <Separator className="my-10" />
 

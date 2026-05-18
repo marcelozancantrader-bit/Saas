@@ -11,7 +11,18 @@ import type { PlanId } from "@/lib/plans/limits";
 
 const inputSchema = z.object({
   project_id: z.string().uuid(),
-  tipo: z.enum(["memorial", "caderno", "proposta", "contrato"]),
+  tipo: z.enum([
+    "memorial",
+    "caderno",
+    "proposta",
+    "contrato",
+    "memorial_estrutural",
+    "memorial_hidrossanitario",
+    "memorial_eletrico",
+    "ppci",
+    "impermeabilizacao",
+    "cronograma",
+  ]),
 });
 
 export type GenerateDocumentActionInput = z.infer<typeof inputSchema>;
@@ -85,8 +96,17 @@ export async function generateDocumentAction(
         }
       | undefined) ?? null;
 
-  // Memorial e caderno se beneficiam muito da extração; proposta e contrato funcionam sem.
-  if ((tipo === "memorial" || tipo === "caderno") && !extracao?.confirmed_by_user) {
+  // Docs técnicos que precisam da extração confirmada da planta:
+  const REQUIRES_EXTRACTION: ReadonlySet<string> = new Set([
+    "memorial",
+    "caderno",
+    "memorial_estrutural",
+    "memorial_hidrossanitario",
+    "memorial_eletrico",
+    "ppci",
+    "impermeabilizacao",
+  ]);
+  if (REQUIRES_EXTRACTION.has(tipo) && !extracao?.confirmed_by_user) {
     return {
       ok: false,
       error: `Para gerar ${DOCUMENT_LABELS[tipo]}, confirme primeiro a extração da planta na aba do projeto.`,

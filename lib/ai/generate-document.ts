@@ -24,7 +24,17 @@ import {
   type GeneratedDocument,
 } from "@/lib/ai/prompts/_shared-document-schema";
 
-export type DocumentTipo = "memorial" | "caderno" | "proposta" | "contrato";
+export type DocumentTipo =
+  | "memorial"
+  | "caderno"
+  | "proposta"
+  | "contrato"
+  | "memorial_estrutural"
+  | "memorial_hidrossanitario"
+  | "memorial_eletrico"
+  | "ppci"
+  | "impermeabilizacao"
+  | "cronograma";
 
 export type GenerateDocumentInput = {
   tipo: DocumentTipo;
@@ -94,6 +104,18 @@ async function loadPromptForTipo(tipo: DocumentTipo): Promise<{
       return await import("@/lib/ai/prompts/proposta.v1");
     case "contrato":
       return await import("@/lib/ai/prompts/contrato.v1");
+    case "memorial_estrutural":
+      return await import("@/lib/ai/prompts/memorial-estrutural.v1");
+    case "memorial_hidrossanitario":
+      return await import("@/lib/ai/prompts/memorial-hidrossanitario.v1");
+    case "memorial_eletrico":
+      return await import("@/lib/ai/prompts/memorial-eletrico.v1");
+    case "ppci":
+      return await import("@/lib/ai/prompts/ppci.v1");
+    case "impermeabilizacao":
+      return await import("@/lib/ai/prompts/impermeabilizacao.v1");
+    case "cronograma":
+      return await import("@/lib/ai/prompts/cronograma.v1");
   }
 }
 
@@ -264,4 +286,10 @@ export const DOCUMENT_LABELS: Record<DocumentTipo, string> = {
   caderno: "Caderno de especificações",
   proposta: "Proposta comercial",
   contrato: "Contrato de prestação de serviços",
+  memorial_estrutural: "Memorial estrutural",
+  memorial_hidrossanitario: "Memorial hidrossanitário",
+  memorial_eletrico: "Memorial elétrico",
+  ppci: "PPCI — Prevenção e combate a incêndio",
+  impermeabilizacao: "Memorial de impermeabilização",
+  cronograma: "Cronograma físico-financeiro",
 };

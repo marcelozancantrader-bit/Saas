@@ -26,6 +26,9 @@ import {
 } from "@/components/features/scope-changes/ScopeChangesCard";
 import { BriefingCard } from "@/components/features/briefings/BriefingCard";
 import type { BriefingRespostas } from "@/lib/validators/briefing.schema";
+import { ArtRrtCard } from "@/components/features/art-rrt/ArtRrtCard";
+import type { ArtRrtData } from "@/lib/art-rrt/fields";
+import { NbrChecksCard } from "@/components/features/nbr-checks/NbrChecksCard";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +112,38 @@ export default async function ProjetoDetailPage({ params }: Props) {
     .eq("project_id", id)
     .maybeSingle<BriefingRow>();
 
+  // ART/RRT pre-fill: precisa de dados completos do cliente + org.
+  const [{ data: orgFull }, { data: clientFull }] = await Promise.all([
+    supabase
+      .from("organizations")
+      .select("name, cnpj, registro_cau, registro_crea")
+      .eq("id", org.orgId)
+      .single<{
+        name: string;
+        cnpj: string | null;
+        registro_cau: string | null;
+        registro_crea: string | null;
+      }>(),
+    project?.client_id
+      ? supabase
+          .from("clients")
+          .select(
+            "nome, cpf_cnpj, endereco_logradouro, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade, endereco_uf",
+          )
+          .eq("id", project.client_id)
+          .maybeSingle<{
+            nome: string | null;
+            cpf_cnpj: string | null;
+            endereco_logradouro: string | null;
+            endereco_numero: string | null;
+            endereco_complemento: string | null;
+            endereco_bairro: string | null;
+            endereco_cidade: string | null;
+            endereco_uf: string | null;
+          }>()
+      : Promise.resolve({ data: null }),
+  ]);
+
   if (error || !project) {
     notFound();
   }
@@ -153,21 +188,38 @@ export default async function ProjetoDetailPage({ params }: Props) {
       </div>
 
       {completedExtraction?.extracao_resultado ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Extração da planta (IA)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ExtractionReview
-              projectId={project.id}
-              sourceFileId={completedExtraction.id}
-              extraction={completedExtraction.extracao_resultado}
-              confirmedByUser={confirmedByUser}
-              promptVersion={completedExtraction.extracao_resultado._meta?.prompt_version}
-              usdCost={completedExtraction.extracao_resultado._meta?.usage?.usd_cost}
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Extração da planta (IA)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ExtractionReview
+                projectId={project.id}
+                sourceFileId={completedExtraction.id}
+                extraction={completedExtraction.extracao_resultado}
+                confirmedByUser={confirmedByUser}
+                promptVersion={completedExtraction.extracao_resultado._meta?.prompt_version}
+                usdCost={completedExtraction.extracao_resultado._meta?.usage?.usd_cost}
+              />
+            </CardContent>
+          </Card>
+
+          {confirmedByUser ? (
+            <NbrChecksCard
+              extracao={{
+                area_total_m2: completedExtraction.extracao_resultado.area_total_m2 ?? null,
+                numero_pavimentos: completedExtraction.extracao_resultado.numero_pavimentos ?? null,
+                ambientes:
+                  completedExtraction.extracao_resultado.ambientes?.map((a) => ({
+                    nome: a.nome,
+                    area_m2: a.area_m2 ?? null,
+                    tipo: a.tipo,
+                  })) ?? [],
+              }}
             />
-          </CardContent>
-        </Card>
+          ) : null}
+        </>
       ) : null}
 
       {errorExtraction && !completedExtraction ? (
@@ -238,6 +290,45 @@ export default async function ProjetoDetailPage({ params }: Props) {
         projectId={project.id}
         briefing={briefingRow ?? null}
         portalUrl={project.clients?.portal_token ? `/portal/${project.clients.portal_token}` : null}
+      />
+
+      <ArtRrtCard
+        filename={`art-rrt-${project.nome.replace(/\s+/g, "-")}`}
+        initial={
+          {
+            tipo: orgFull?.registro_cau && !orgFull?.registro_crea ? "rrt" : "art",
+            profissional_nome: "",
+            profissional_registro: orgFull?.registro_cau ?? orgFull?.registro_crea ?? "",
+            profissional_cpf: "",
+            profissional_email: org.email,
+            profissional_endereco: "",
+            org_nome: orgFull?.name ?? org.orgName,
+            org_cnpj: orgFull?.cnpj ?? "",
+            contratante_nome: clientFull?.nome ?? project.clients?.nome ?? "",
+            contratante_cpf_cnpj: clientFull?.cpf_cnpj ?? "",
+            contratante_endereco: [
+              clientFull?.endereco_logradouro,
+              clientFull?.endereco_numero,
+              clientFull?.endereco_complemento,
+              clientFull?.endereco_bairro,
+              clientFull?.endereco_cidade,
+              clientFull?.endereco_uf,
+            ]
+              .filter(Boolean)
+              .join(", "),
+            obra_endereco_completo: project.endereco_completo ?? "",
+            obra_cidade_uf: "",
+            obra_tipologia: TIPOLOGIA_LABEL[project.tipologia],
+            obra_area_m2: project.area_prevista_m2 ?? null,
+            obra_pavimentos: null,
+            obra_padrao: project.padrao_construtivo ?? "",
+            atividade_descricao: `${TIPOLOGIA_LABEL[project.tipologia]} — ${project.nome}`,
+            atividade_tipo: "projeto",
+            data_inicio: new Date().toISOString().slice(0, 10),
+            data_previsao_termino: null,
+            valor_contrato_brl: null,
+          } satisfies ArtRrtData
+        }
       />
 
       <ScopeChangesCard scopeChanges={scopeChanges ?? []} />
