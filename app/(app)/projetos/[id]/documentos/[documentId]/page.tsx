@@ -7,6 +7,7 @@ import { getCurrentOrg } from "@/server/services/current-org";
 import { TiptapEditor } from "@/components/features/documents/TiptapEditor";
 import { DocumentPdfExport } from "@/components/features/documents/DocumentPdfExport";
 import { DocumentStatusToggle } from "@/components/features/documents/DocumentStatusToggle";
+import { SendToPortalButton } from "@/components/features/documents/SendToPortalButton";
 import { DeleteButton } from "@/components/features/shell/DeleteButton";
 import { deleteDocumentAction } from "@/server/actions/documents/delete.action";
 import { DOCUMENT_LABELS, type DocumentTipo } from "@/lib/ai/generate-document";
@@ -26,6 +27,8 @@ type DocumentDetail = {
   status: "rascunho" | "aguardando_aprovacao" | "aprovado" | "recusado" | "arquivado";
   prompt_versao: string | null;
   custo_tokens: { usd_cost?: number } | null;
+  envio_meta: { enviado_em: string } | null;
+  aprovacao_meta: { decisao: "aprovado" | "recusado"; timestamp: string } | null;
 };
 
 function tipoLabel(tipo: DocumentDetail["tipo"]): string {
@@ -43,7 +46,7 @@ export default async function DocumentEditorPage({ params }: Props) {
     supabase
       .from("documents")
       .select(
-        "id, project_id, tipo, versao, titulo, conteudo_tiptap, status, prompt_versao, custo_tokens",
+        "id, project_id, tipo, versao, titulo, conteudo_tiptap, status, prompt_versao, custo_tokens, envio_meta, aprovacao_meta",
       )
       .eq("id", documentId)
       .single<DocumentDetail>(),
@@ -95,6 +98,7 @@ export default async function DocumentEditorPage({ params }: Props) {
 
           <div className="flex flex-wrap items-end gap-2">
             <DocumentStatusToggle documentId={doc.id} status={doc.status} />
+            <SendToPortalButton documentId={doc.id} envioMeta={doc.envio_meta} />
             <DocumentPdfExport
               filename={filenameBase}
               titulo={doc.titulo}

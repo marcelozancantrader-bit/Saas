@@ -20,6 +20,10 @@ import {
   type ExtractionData,
 } from "@/components/features/extraction/ExtractionReview";
 import { ExtractionPoller } from "@/components/features/extraction/ExtractionPoller";
+import {
+  ScopeChangesCard,
+  type ScopeChangeForProf,
+} from "@/components/features/scope-changes/ScopeChangesCard";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +55,13 @@ export default async function ProjetoDetailPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: project, error }, { data: clients }, { data: files }, org] = await Promise.all([
+  const [
+    { data: project, error },
+    { data: clients },
+    { data: files },
+    { data: scopeChanges },
+    org,
+  ] = await Promise.all([
     supabase
       .from("projects")
       .select(
@@ -72,6 +82,14 @@ export default async function ProjetoDetailPage({ params }: Props) {
       .eq("project_id", id)
       .order("created_at", { ascending: false })
       .returns<ExtractionFileRow[]>(),
+    supabase
+      .from("scope_changes")
+      .select(
+        "id, descricao, urgencia, solicitado_por, status, valor_aditivo, prazo_adicional_dias, created_at, resolvido_em",
+      )
+      .eq("project_id", id)
+      .order("created_at", { ascending: false })
+      .returns<ScopeChangeForProf[]>(),
     getCurrentOrg(),
   ]);
 
@@ -198,6 +216,8 @@ export default async function ProjetoDetailPage({ params }: Props) {
         </CardContent>
       </Card>
 
+      <ScopeChangesCard scopeChanges={scopeChanges ?? []} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Próximas seções</CardTitle>
@@ -223,7 +243,10 @@ export default async function ProjetoDetailPage({ params }: Props) {
             </Link>{" "}
             — memorial, caderno, proposta, contrato (Sprint 5 ✅)
           </p>
-          <p>👤 Portal do cliente com aprovação digital — Sprint 6</p>
+          <p>
+            👤 Portal do cliente com aprovação digital (Sprint 6 ✅) — Envie um documento ao cliente
+            pelo editor e ele aparece em <code>/portal/&lt;token&gt;</code>.
+          </p>
         </CardContent>
       </Card>
     </div>

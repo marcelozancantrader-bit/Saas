@@ -17,6 +17,11 @@ const envSchema = z.object({
   // Inngest — optional in dev (uses local dev server at :8288)
   INNGEST_EVENT_KEY: z.string().optional(),
   INNGEST_SIGNING_KEY: z.string().optional(),
+
+  // Resend (transactional email) — Sprint 6 portal notifications. Optional:
+  // when not set, emails são silenciosamente puladas (warn no servidor).
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().email().optional(),
 });
 
 type Env = z.infer<typeof envSchema>;
@@ -43,6 +48,8 @@ function parseEnv(): Env {
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
     INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
     INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
   });
   if (!parsed.success) {
     const issues = parsed.error.issues
