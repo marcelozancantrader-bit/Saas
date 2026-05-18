@@ -49,6 +49,14 @@ export type PortalScopeChange = {
   aprovacao_meta: PortalApprovalMeta | null;
 };
 
+export type PortalBriefing = {
+  id: string;
+  status: "aguardando_cliente" | "preenchido" | "arquivado";
+  enviado_em: string | null;
+  preenchido_em: string | null;
+  respostas: Record<string, unknown> | null;
+};
+
 export type PortalProject = {
   client: {
     nome: string;
@@ -65,9 +73,12 @@ export type PortalProject = {
   };
   organization: {
     nome: string;
+    logo_url: string | null;
+    cor_primaria: string | null;
   };
   documents: PortalDocument[];
   scope_changes: PortalScopeChange[];
+  briefing: PortalBriefing | null;
 };
 
 export type PortalLoadResult =
@@ -99,7 +110,7 @@ export async function loadPortalByToken(token: string): Promise<PortalLoadResult
 
   const { data: org, error: orgErr } = await admin
     .from("organizations")
-    .select("name")
+    .select("name, logo_url, cor_primaria")
     .eq("id", client.org_id)
     .maybeSingle();
 
@@ -138,14 +149,25 @@ export async function loadPortalByToken(token: string): Promise<PortalLoadResult
 
   if (scErr) return { ok: false, reason: "db_error", detail: scErr.message };
 
+  const { data: briefingRow } = await admin
+    .from("briefings")
+    .select("id, status, enviado_em, preenchido_em, respostas")
+    .eq("project_id", project.id)
+    .maybeSingle();
+
   return {
     ok: true,
     data: {
       client: { nome: client.nome, email: client.email },
       project,
-      organization: { nome: org.name as string },
+      organization: {
+        nome: org.name as string,
+        logo_url: (org.logo_url ?? null) as string | null,
+        cor_primaria: (org.cor_primaria ?? null) as string | null,
+      },
       documents: (documents ?? []) as PortalDocument[],
       scope_changes: (scopeChanges ?? []) as PortalScopeChange[],
+      briefing: briefingRow as PortalBriefing | null,
     },
   };
 }

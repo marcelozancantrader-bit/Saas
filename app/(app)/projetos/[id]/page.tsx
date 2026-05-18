@@ -24,6 +24,8 @@ import {
   ScopeChangesCard,
   type ScopeChangeForProf,
 } from "@/components/features/scope-changes/ScopeChangesCard";
+import { BriefingCard } from "@/components/features/briefings/BriefingCard";
+import type { BriefingRespostas } from "@/lib/validators/briefing.schema";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +41,16 @@ type ProjectDetail = {
   endereco_cep: string | null;
   endereco_completo: string | null;
   status: (typeof STATUS_VALUES)[number];
-  clients: { id: string; nome: string } | null;
+  clients: { id: string; nome: string; portal_token: string } | null;
   meta: Record<string, unknown> | null;
+};
+
+type BriefingRow = {
+  id: string;
+  status: "aguardando_cliente" | "preenchido" | "arquivado";
+  enviado_em: string | null;
+  preenchido_em: string | null;
+  respostas: BriefingRespostas | null;
 };
 
 type ExtractionFileRow = ProjectFileRow & {
@@ -65,7 +75,7 @@ export default async function ProjetoDetailPage({ params }: Props) {
     supabase
       .from("projects")
       .select(
-        "id, nome, client_id, tipologia, area_prevista_m2, padrao_construtivo, endereco_cep, endereco_completo, status, meta, clients ( id, nome )",
+        "id, nome, client_id, tipologia, area_prevista_m2, padrao_construtivo, endereco_cep, endereco_completo, status, meta, clients ( id, nome, portal_token )",
       )
       .eq("id", id)
       .single<ProjectDetail>(),
@@ -92,6 +102,12 @@ export default async function ProjetoDetailPage({ params }: Props) {
       .returns<ScopeChangeForProf[]>(),
     getCurrentOrg(),
   ]);
+
+  const { data: briefingRow } = await supabase
+    .from("briefings")
+    .select("id, status, enviado_em, preenchido_em, respostas")
+    .eq("project_id", id)
+    .maybeSingle<BriefingRow>();
 
   if (error || !project) {
     notFound();
@@ -217,6 +233,12 @@ export default async function ProjetoDetailPage({ params }: Props) {
           />
         </CardContent>
       </Card>
+
+      <BriefingCard
+        projectId={project.id}
+        briefing={briefingRow ?? null}
+        portalUrl={project.clients?.portal_token ? `/portal/${project.clients.portal_token}` : null}
+      />
 
       <ScopeChangesCard scopeChanges={scopeChanges ?? []} />
 

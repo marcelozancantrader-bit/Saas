@@ -60,6 +60,13 @@ export default async function DocumentEditorPage({ params }: Props) {
   const projectName = project?.nome ?? "Projeto";
   const filenameBase = `${doc.tipo}-${projectName.replace(/\s+/g, "-")}-v${doc.versao}`;
 
+  // D4 branding: fetch logo + cor primaria pra ir no PDF
+  const { data: brand } = await supabase
+    .from("organizations")
+    .select("logo_url, cor_primaria")
+    .eq("id", org.orgId)
+    .single<{ logo_url: string | null; cor_primaria: string | null }>();
+
   return (
     <div className="space-y-6">
       <div>
@@ -108,6 +115,8 @@ export default async function DocumentEditorPage({ params }: Props) {
               status={doc.status}
               orgName={org.orgName}
               projectName={projectName}
+              logoUrl={brand?.logo_url ?? null}
+              corPrimaria={brand?.cor_primaria ?? null}
             />
             <DeleteDocControl id={doc.id} projectId={projectId} />
           </div>

@@ -6,6 +6,7 @@ import { loadPortalByToken, type PortalDocument } from "@/server/services/portal
 import { DOCUMENT_LABELS, type DocumentTipo } from "@/lib/ai/generate-document";
 import { ApprovalCard } from "@/components/features/portal/ApprovalCard";
 import { ScopeChangeSection } from "@/components/features/portal/ScopeChangeSection";
+import { BriefingForm } from "@/components/features/portal/BriefingForm";
 
 export const dynamic = "force-dynamic";
 
@@ -38,21 +39,33 @@ export default async function PortalPage({ params }: Props) {
     if (result.reason === "invalid_token" || result.reason === "no_project") notFound();
     throw new Error(`Portal load failed: ${result.reason}`);
   }
-  const { client, project, organization, documents, scope_changes } = result.data;
+  const { client, project, organization, documents, scope_changes, briefing } = result.data;
 
   const pending = documents.filter((d) => !d.aprovacao_meta);
   const decided = documents.filter((d) => d.aprovacao_meta);
   const contratoValor = formatBrl(project.valor_contrato);
+  const showBriefingForm = briefing?.status === "aguardando_cliente";
+  const hasLogo = !!organization.logo_url;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:py-14">
-      <header className="mb-8 space-y-2">
-        <p className="text-xs tracking-wider text-zinc-500 uppercase">{organization.nome}</p>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{project.nome}</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Olá, <strong>{client.nome}</strong>. Este é o portal do seu projeto. Aqui você acompanha o
-          andamento, aprova documentos e solicita ajustes de escopo.
-        </p>
+      <header className="mb-8 flex items-start gap-4">
+        {hasLogo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={organization.logo_url!}
+            alt={organization.nome}
+            className="h-14 w-14 shrink-0 rounded-md border border-zinc-200 bg-white object-contain p-1 dark:border-zinc-700"
+          />
+        ) : null}
+        <div className="min-w-0 space-y-1">
+          <p className="text-xs tracking-wider text-zinc-500 uppercase">{organization.nome}</p>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{project.nome}</h1>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Olá, <strong>{client.nome}</strong>. Este é o portal do seu projeto. Aqui você acompanha
+            o andamento, aprova documentos e solicita ajustes de escopo.
+          </p>
+        </div>
       </header>
 
       <Card>
@@ -84,6 +97,22 @@ export default async function PortalPage({ params }: Props) {
           ) : null}
         </CardContent>
       </Card>
+
+      {showBriefingForm ? (
+        <section className="mt-8">
+          <BriefingForm portalToken={token} projectId={project.id} />
+        </section>
+      ) : briefing?.status === "preenchido" ? (
+        <Card className="mt-8">
+          <CardContent className="p-4 text-sm text-zinc-600 dark:text-zinc-400">
+            ✅ Briefing enviado em{" "}
+            {briefing.preenchido_em
+              ? new Date(briefing.preenchido_em).toLocaleString("pt-BR")
+              : "data desconhecida"}
+            . O profissional já tem suas respostas.
+          </CardContent>
+        </Card>
+      ) : null}
 
       <section className="mt-8 space-y-4">
         <div>
