@@ -2,14 +2,52 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { PlaceholderCard } from "@/components/features/shell/PlaceholderCard";
 import { DeleteAccountDialog } from "@/components/features/configuracoes/DeleteAccountDialog";
+import {
+  WorkspaceForm,
+  type WorkspaceInitial,
+} from "@/components/features/configuracoes/WorkspaceForm";
 import { getCurrentOrg } from "@/server/services/current-org";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+type OrgRow = {
+  name: string;
+  cnpj: string | null;
+  registro_cau: string | null;
+  registro_crea: string | null;
+  logo_url: string | null;
+  cor_primaria: string | null;
+  bdi_padrao: number | null;
+  dados_pix: { tipo?: string; chave?: string } | null;
+};
+
 export default async function ConfiguracoesPage() {
   const me = await getCurrentOrg();
+  const supabase = await createClient();
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select(
+      "name, cnpj, registro_cau, registro_crea, logo_url, cor_primaria, bdi_padrao, dados_pix",
+    )
+    .eq("id", me.orgId)
+    .single<OrgRow>();
+
+  const initial: WorkspaceInitial = {
+    name: org?.name ?? "",
+    cnpj: org?.cnpj ?? "",
+    registro_cau: org?.registro_cau ?? "",
+    registro_crea: org?.registro_crea ?? "",
+    logo_url: org?.logo_url ?? "",
+    cor_primaria: org?.cor_primaria ?? "",
+    bdi_padrao: org?.bdi_padrao ?? null,
+    pix_tipo: (org?.dados_pix?.tipo as WorkspaceInitial["pix_tipo"]) ?? "",
+    pix_chave: org?.dados_pix?.chave ?? "",
+  };
+
+  const canEdit = me.role === "owner" || me.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -20,11 +58,14 @@ export default async function ConfiguracoesPage() {
         </p>
       </div>
 
-      <PlaceholderCard
-        title="Workspace"
-        description="Nome do escritório, CNPJ, registro CAU/CREA, logo, cor primária, BDI padrão, dados PIX. Convite de membros (limites por plano)."
-        sprint="Sprint 1 (placeholder) → expandido em sprint dedicado de polish"
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Workspace</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <WorkspaceForm initial={initial} canEdit={canEdit} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
