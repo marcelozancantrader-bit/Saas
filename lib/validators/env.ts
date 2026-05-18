@@ -22,6 +22,11 @@ const envSchema = z.object({
   // when not set, emails são silenciosamente puladas (warn no servidor).
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().email().optional(),
+
+  // Asaas (cobrança PIX/boleto/cartão) — Sprint 7 billing. Optional: quando
+  // não configurado, upgrade vira "manual" (atualiza plano direto sem cobrança).
+  ASAAS_API_KEY: z.string().optional(),
+  ASAAS_WEBHOOK_TOKEN: z.string().optional(),
 });
 
 type Env = z.infer<typeof envSchema>;
@@ -50,6 +55,8 @@ function parseEnv(): Env {
     INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+    ASAAS_API_KEY: process.env.ASAAS_API_KEY,
+    ASAAS_WEBHOOK_TOKEN: process.env.ASAAS_WEBHOOK_TOKEN,
   });
   if (!parsed.success) {
     const issues = parsed.error.issues

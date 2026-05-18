@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertPortalAccess } from "@/server/services/portal-loader";
+import { notify } from "@/server/services/notifications";
 
 const schema = z.object({
   token: z.string().uuid(),
@@ -56,6 +57,18 @@ export async function requestScopeChangeAction(
     payload: { descricao: parsed.data.descricao, urgencia: parsed.data.urgencia },
     ip: ipFromHeaders(h),
     user_agent: h.get("user-agent"),
+  });
+
+  await notify({
+    org_id: access.orgId,
+    type: "scope_change.requested",
+    title: "Cliente solicitou alteração de escopo",
+    body:
+      parsed.data.descricao.length > 140
+        ? parsed.data.descricao.slice(0, 137) + "…"
+        : parsed.data.descricao,
+    link_url: `/projetos/${parsed.data.project_id}`,
+    meta: { scope_change_id: data.id, urgencia: parsed.data.urgencia },
   });
 
   revalidatePath(`/portal/${parsed.data.token}`);

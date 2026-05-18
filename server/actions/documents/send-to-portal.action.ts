@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/resend";
 import { env } from "@/lib/validators/env";
+import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 
 const schema = z.object({
   document_id: z.string().uuid(),
@@ -56,6 +57,20 @@ export async function sendDocumentToPortalAction(
       ok: false,
       error: "Projeto não tem cliente associado — vincule um cliente antes de enviar ao portal.",
     };
+
+  // Plan gating: Free não tem portal.
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("plano")
+    .eq("id", project.org_id)
+    .single<{ plano: PlanId }>();
+  if (!getPlanLimits(orgRow?.plano ?? "free").portalClienteEnabled) {
+    return {
+      ok: false,
+      error:
+        "Portal do cliente está disponível a partir do plano Pro. Faça upgrade em /billing para liberar.",
+    };
+  }
 
   const hash = createHash("sha256").update(JSON.stringify(doc.conteudo_tiptap)).digest("hex");
   const envio_meta = {

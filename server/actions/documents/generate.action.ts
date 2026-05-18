@@ -5,6 +5,9 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateDocument, DOCUMENT_LABELS } from "@/lib/ai/generate-document";
 import { documentToTiptap } from "@/lib/tiptap/from-sections";
+import { getCurrentOrg } from "@/server/services/current-org";
+import { canGenerateAiDoc, getPlanUsage } from "@/server/services/plan-usage";
+import type { PlanId } from "@/lib/plans/limits";
 
 const inputSchema = z.object({
   project_id: z.string().uuid(),
@@ -46,6 +49,22 @@ export async function generateDocumentAction(
 
   if (projErr || !project) {
     return { ok: false, error: "Projeto não encontrado ou sem permissão." };
+  }
+
+  // Plan limit: monthly AI docs.
+  const me = await getCurrentOrg();
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("plano")
+    .eq("id", me.orgId)
+    .single<{ plano: PlanId }>();
+  const usage = await getPlanUsage(me.orgId, orgRow?.plano ?? "free");
+  const limitCheck = canGenerateAiDoc(usage);
+  if (!limitCheck.ok) {
+    return {
+      ok: false,
+      error: `${limitCheck.reason} Faça upgrade do plano em /billing para gerar mais documentos.`,
+    };
   }
 
   const extracao =

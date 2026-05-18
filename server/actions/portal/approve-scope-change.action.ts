@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertPortalAccess } from "@/server/services/portal-loader";
+import { notify } from "@/server/services/notifications";
 
 const schema = z.object({
   token: z.string().uuid(),
@@ -73,6 +74,17 @@ export async function approveScopeChangeAction(
     payload: {},
     ip: aprovacao_meta.ip,
     user_agent: aprovacao_meta.user_agent,
+  });
+
+  await notify({
+    org_id: access.orgId,
+    type: parsed.data.decisao === "aprovado" ? "scope_change.approved" : "scope_change.rejected",
+    title:
+      parsed.data.decisao === "aprovado"
+        ? "Cliente aprovou um aditivo"
+        : "Cliente recusou um aditivo",
+    link_url: `/projetos/${parsed.data.project_id}`,
+    meta: { scope_change_id: parsed.data.scope_change_id },
   });
 
   revalidatePath(`/portal/${parsed.data.token}`);

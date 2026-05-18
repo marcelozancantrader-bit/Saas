@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertPortalAccess } from "@/server/services/portal-loader";
+import { notify } from "@/server/services/notifications";
 
 const schema = z.object({
   token: z.string().uuid(),
@@ -86,6 +87,19 @@ export async function approveDocumentAction(
     payload: { hash: conteudoHash, observacoes: parsed.data.observacoes ?? "" },
     ip: aprovacao_meta.ip,
     user_agent: aprovacao_meta.user_agent,
+  });
+
+  // In-app notification para o escritório.
+  await notify({
+    org_id: access.orgId,
+    type: parsed.data.decisao === "aprovado" ? "document.approved" : "document.rejected",
+    title:
+      parsed.data.decisao === "aprovado"
+        ? "Cliente aprovou um documento"
+        : "Cliente recusou um documento",
+    body: parsed.data.observacoes ?? undefined,
+    link_url: `/projetos/${parsed.data.project_id}/documentos/${parsed.data.document_id}`,
+    meta: { document_id: parsed.data.document_id, hash: conteudoHash },
   });
 
   revalidatePath(`/portal/${parsed.data.token}`);

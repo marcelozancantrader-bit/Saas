@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/features/shell/AppShell";
+import { loadRecentNotifications } from "@/server/services/notifications-load";
 
 type Membership = {
   org_id: string;
@@ -31,11 +32,14 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
     redirect("/login?error=no_org");
   }
 
+  const notifications = await loadRecentNotifications();
+
   return (
     <AppShell
       userEmail={user.email ?? ""}
       orgName={currentMembership.organizations.name}
       role={currentMembership.role}
+      notifications={notifications}
     >
       {children}
     </AppShell>
