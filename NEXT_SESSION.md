@@ -1,12 +1,12 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-18 (Sprint 7 fechado — só falta Sprint 8 Polish + Beta)
+**Última pausa:** 2026-05-18 — **8/8 sprints DONE. MVP pronto para beta.**
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
 
 ---
 
-## ✅ Sprints concluídos (7 de 8)
+## 🎯 MVP COMPLETO — todos os 8 sprints fechados
 
 | Sprint                                                        | Tag             | DoD                                                 | Commit final |
 | ------------------------------------------------------------- | --------------- | --------------------------------------------------- | ------------ |
@@ -17,8 +17,30 @@
 | 5 — F5 Documentos por IA (4 tipos, Sonnet 4.6 + Tiptap + PDF) | `sprint-5-done` | 4/4 docs live: 539s, $0.55, RLS isolada             | `6a937ae`    |
 | 6 — F6 Portal do Cliente (DIFERENCIAL)                        | `sprint-6-done` | 21 asserts: token + aprovação + scope cycle + audit | `1282154`    |
 | 7 — F7 Dashboard + F8 Billing (Asaas + notifications)         | `sprint-7-done` | 22 asserts: plan limits + KPIs + RLS + upgrade flow | `f203616`    |
+| 8 — Polish + Beta (LGPD + legal + landing + observabilidade)  | `sprint-8-done` | 24 asserts: LGPD export + delete cascade            | `9877f03`    |
 
-**Status do prod:** GitHub→Vercel conectado, auto-deploy a cada push em `main`. Migrations aplicadas manualmente via Supabase Dashboard SQL editor (CLI db push bloqueado pelo classifier).
+**Status do prod:** GitHub→Vercel conectado, auto-deploy a cada push em `main`. Migrations aplicadas via Supabase Dashboard SQL editor.
+
+---
+
+## ✅ Sprint 8 — Polish + Beta PASSED
+
+**DoD live (24 asserts), commit `9877f03`:**
+
+- **LGPD compliance:**
+  - `GET /api/lgpd/export` → JSON download com TODOS os dados do usuário (organizations, members, clients, projects, project_files, documents, scope_changes, budgets, subscriptions, notifications, audit_log_recent)
+  - `deleteAccountAction` com confirmação por digitação "DELETAR MINHA CONTA" → deleta org (CASCADE em FK cobre tudo) onde é owner, remove só membership de orgs alheias, deleta auth user
+  - `/configuracoes` ganhou seção Privacidade com export + delete dialog
+- **Páginas públicas (fora do middleware gate, robots: noindex no portal):**
+  - `/privacidade` — 9 seções LGPD-completo (bases legais, art. 18, retenção, DPO, segurança)
+  - `/termos` — 12 seções (responsabilidade técnica, MP 2.200-2/2001 sobre assinatura, planos, uso aceitável, foro Curitiba/PR)
+  - `/sobre` — landing com 4 dores resolvidas + 4 cards de plano + CTAs signup/login
+- **Observabilidade stubs (sem SDK pesado, gated em envs):**
+  - `lib/observability/sentry.ts` — HTTP-direto na ingest API quando `SENTRY_DSN` setado; no-op + console.error senão
+  - `lib/observability/posthog.ts` — `capture()` via sendBeacon; gated em `NEXT_PUBLIC_POSTHOG_KEY`
+  - Pra SDKs full: instalar `@sentry/nextjs` e `posthog-js` depois
+
+---
 
 ---
 
@@ -137,6 +159,7 @@ npx tsx scripts/sprint4-dod-test.ts   # SINAPI orçamento
 npx tsx scripts/sprint5-dod-test.ts   # AI docs (gasta ~$0.55, ~9min — 4 chamadas Claude)
 npx tsx scripts/sprint6-dod-test.ts   # Portal do Cliente (sem custo, ~5s)
 npx tsx scripts/sprint7-dod-test.ts   # Dashboard + Billing + Notifications (sem custo, ~5s)
+npx tsx scripts/sprint8-dod-test.ts   # LGPD export + delete cascade (sem custo, ~3s)
 
 # Deploy
 vercel deploy --prod --token "$VERCEL_TOKEN" --yes
@@ -190,15 +213,27 @@ app/(app)/projetos/[id]/documentos/
 
 ---
 
-## 🎯 Como retomar
+## 🎯 Como retomar — beta launch
+
+MVP completo. Para abrir beta:
 
 1. `cd C:\dev\memorial-ai`
-2. Diga uma das opções no Claude Code:
-   - **"Go Sprint 8"** → Polish + Beta: LGPD endpoints, onboarding, landing, Sentry+PostHog, beta invites
-   - **"Configurar Asaas"** → guia setup de conta + envs ASAAS_API_KEY/ASAAS_WEBHOOK_TOKEN + smoke test do fluxo PIX
-   - **"Configurar Resend"** → envia e-mail real ao enviar doc ao portal (hoje só clipboard)
-   - **"Polish Sprint 6 ou 7"** → "ordem de alteração" PDF auto, WhatsApp Z-API, cron jobs de stale projects
-   - **"Tem bug em [X]"** → debug específico
+2. **Configurar envs em prod (Vercel):**
+   - `ASAAS_API_KEY` + `ASAAS_WEBHOOK_TOKEN` → habilita cobrança PIX real (sandbox: https://docs.asaas.com)
+   - `RESEND_API_KEY` + `RESEND_FROM_EMAIL` → e-mail para cliente ao enviar doc ao portal
+   - `SENTRY_DSN` → captura de exceções server-side em prod
+   - `NEXT_PUBLIC_POSTHOG_KEY` (+ `NEXT_PUBLIC_POSTHOG_HOST`) → analytics de ativação
+3. **Configurar webhook Asaas:** painel Asaas → URL `https://memorial-ai-mu.vercel.app/api/webhooks/asaas`, token = `ASAAS_WEBHOOK_TOKEN`
+4. **Smoke test end-to-end:** signup → criar projeto → upload planta → confirmar extração → gerar 4 docs → enviar ao portal → cliente aprova → solicitar alteração → profissional define valor → cliente aprova aditivo
+5. **Convidar primeiros 10 escritórios beta** (manualmente por e-mail; produto está pronto)
+
+Opções no Claude Code:
+
+- **"Instalar Sentry/PostHog SDKs"** → migração de stubs para SDKs full
+- **"Cron jobs stale projects"** → notificação automática de projetos sem atualização há 14+d
+- **"Onboarding tour"** → react-joyride com tour das 6 features principais no primeiro login
+- **"Configurar Asaas"** → guia setup de conta + envs + smoke test do fluxo PIX
+- **"Tem bug em [X]"** → debug específico
 
 ---
 
