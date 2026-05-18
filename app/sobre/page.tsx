@@ -38,7 +38,7 @@ export default function SobrePage() {
       <header className="border-b border-zinc-200 dark:border-zinc-800">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
           <Link href="/sobre" className="text-lg font-semibold tracking-tight">
-            Memorial.ai
+            Memorial<span className="text-primary">.ai</span>
           </Link>
           <nav className="flex items-center gap-3">
             <Link
@@ -59,7 +59,7 @@ export default function SobrePage() {
           Para arquitetos e engenheiros civis no Brasil
         </p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
-          Da planta ao contrato em <span className="text-zinc-500">horas</span>, não semanas.
+          Da planta ao contrato em <span className="text-primary">horas</span>, não semanas.
         </h1>
         <p className="mt-5 text-lg text-zinc-600 dark:text-zinc-400">
           Memorial descritivo, orçamento SINAPI, proposta e contrato gerados pela IA com seus dados.

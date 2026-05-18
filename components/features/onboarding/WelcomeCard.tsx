@@ -52,10 +52,10 @@ export function WelcomeCard() {
   }
 
   return (
-    <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white dark:border-emerald-900 dark:from-emerald-950 dark:to-zinc-900">
+    <Card className="border-primary/30 from-primary/5 dark:border-primary/40 dark:from-primary/10 bg-gradient-to-br to-white dark:to-zinc-900">
       <CardContent className="space-y-6 p-6">
         <div>
-          <p className="text-xs font-medium tracking-wider text-emerald-600 uppercase dark:text-emerald-400">
+          <p className="text-primary text-xs font-medium tracking-wider uppercase">
             Bem-vindo ao Memorial.ai
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight">
@@ -67,7 +67,7 @@ export function WelcomeCard() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-lg border border-emerald-300 bg-white p-4 sm:flex-row sm:items-center sm:justify-between dark:border-emerald-800 dark:bg-zinc-900">
+        <div className="border-primary/40 dark:border-primary/50 flex flex-col gap-3 rounded-lg border bg-white p-4 sm:flex-row sm:items-center sm:justify-between dark:bg-zinc-900">
           <div className="min-w-0">
             <p className="font-medium">🚀 Quero ver o produto funcionando agora</p>
             <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
