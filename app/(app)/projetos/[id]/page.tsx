@@ -203,7 +203,16 @@ export default async function ProjetoDetailPage({ params }: Props) {
           <CardTitle className="text-base">Próximas seções</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-          <p>📊 Orçamento SINAPI — chega no Sprint 4 (consumirá a extração acima)</p>
+          <p>
+            📊{" "}
+            <Link
+              href={`/projetos/${project.id}/orcamento`}
+              className="font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-50"
+            >
+              Orçamento SINAPI
+            </Link>{" "}
+            — gere a partir da extração acima (Sprint 4 ✅)
+          </p>
           <p>📄 Documentos por IA (memorial, caderno, proposta, contrato) — Sprint 5</p>
           <p>👤 Portal do cliente com aprovação digital — Sprint 6</p>
         </CardContent>
