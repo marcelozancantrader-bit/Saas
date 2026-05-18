@@ -5,6 +5,15 @@ import Big from "big.js";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { applyRulesV1, RULES_VERSION, type ExtractedPlanta } from "@/lib/budget/rules/v1";
+import {
+  DISCIPLINE_RULES_VERSION,
+  rulesElectricalSinapi,
+  rulesHydraulicSinapi,
+  rulesStructuralSinapi,
+  type ElectricalData,
+  type HydraulicData,
+  type StructuralData,
+} from "@/lib/budget/rules/disciplines.v1";
 import { applyBdi, sumMoney, toDbNumeric } from "@/lib/utils/money";
 
 const generateSchema = z.object({
@@ -86,10 +95,34 @@ export async function generateBudgetAction(
       area_servico_externa: false,
     },
   };
-  const ruleItems = applyRulesV1(planta);
-  if (ruleItems.length === 0) {
+  const archItems = applyRulesV1(planta);
+  if (archItems.length === 0) {
     return { ok: false, error: "Nenhuma regra retornou itens — verifique os dados da planta." };
   }
+
+  // 2b. Disciplinas complementares confirmadas — somam itens SINAPI ao mesmo orçamento.
+  const extracoesDisc =
+    (meta.extracoes_disciplinas as
+      | Record<string, { data?: unknown; confirmed_by_user?: boolean } | undefined>
+      | undefined) ?? {};
+
+  const electricalConfirmed = extracoesDisc.electrical?.confirmed_by_user
+    ? (extracoesDisc.electrical.data as ElectricalData)
+    : null;
+  const hydraulicConfirmed = extracoesDisc.hydraulic?.confirmed_by_user
+    ? (extracoesDisc.hydraulic.data as HydraulicData)
+    : null;
+  const structuralConfirmed = extracoesDisc.structural?.confirmed_by_user
+    ? (extracoesDisc.structural.data as StructuralData)
+    : null;
+
+  const disciplineItems = [
+    ...(electricalConfirmed ? rulesElectricalSinapi(electricalConfirmed) : []),
+    ...(hydraulicConfirmed ? rulesHydraulicSinapi(hydraulicConfirmed) : []),
+    ...(structuralConfirmed ? rulesStructuralSinapi(structuralConfirmed) : []),
+  ];
+
+  const ruleItems = [...archItems, ...disciplineItems];
 
   // 3. Bulk fetch SINAPI prices for the codes we need
   const uniqueCodes = [...new Set(ruleItems.map((i) => i.codigo_sinapi))];
@@ -111,12 +144,18 @@ export async function generateBudgetAction(
   );
 
   const missing = uniqueCodes.filter((c) => !priceByCode.has(c));
-  if (missing.length > 0) {
+  const archCodes = new Set(archItems.map((i) => i.codigo_sinapi));
+  const missingArch = missing.filter((c) => archCodes.has(c));
+  // Faltas no arquitetônico bloqueiam — sem preço base não tem orçamento.
+  if (missingArch.length > 0) {
     return {
       ok: false,
-      error: `Códigos SINAPI não encontrados para UF=${uf}, ${mes_referencia}, desonerado=${desonerado}: ${missing.join(", ")}. Importe o SINAPI completo ou ajuste os parâmetros.`,
+      error: `Códigos SINAPI não encontrados para UF=${uf}, ${mes_referencia}, desonerado=${desonerado}: ${missingArch.join(", ")}. Importe o SINAPI completo ou ajuste os parâmetros.`,
     };
   }
+  // Faltas em disciplinas complementares → descarta esses itens e segue.
+  const ruleItemsFiltered = ruleItems.filter((i) => priceByCode.has(i.codigo_sinapi));
+  const discDropped = ruleItems.length - ruleItemsFiltered.length;
 
   // 4. Compute next versão
   const { data: existingBudgets } = await supabase
@@ -128,7 +167,7 @@ export async function generateBudgetAction(
   const nextVersao = ((existingBudgets?.[0]?.versao as number | undefined) ?? 0) + 1;
 
   // 5. Compute totals
-  const itemsForInsert = ruleItems.map((item, idx) => {
+  const itemsForInsert = ruleItemsFiltered.map((item, idx) => {
     const sinapi = priceByCode.get(item.codigo_sinapi)!;
     const precoUnitario = new Big(sinapi.preco);
     return {
@@ -157,7 +196,17 @@ export async function generateBudgetAction(
       bdi_pct,
       total_bruto: toDbNumeric(totalBruto),
       total_com_bdi: toDbNumeric(totalComBdi),
-      observacoes: `Gerado automaticamente (rules ${RULES_VERSION}) a partir da extração confirmada da planta.`,
+      observacoes: [
+        `Gerado automaticamente (rules ${RULES_VERSION}+${DISCIPLINE_RULES_VERSION}).`,
+        electricalConfirmed ? "Inclui itens elétricos." : null,
+        hydraulicConfirmed ? "Inclui itens hidráulicos." : null,
+        structuralConfirmed ? "Inclui itens estruturais." : null,
+        discDropped > 0
+          ? `${discDropped} item(ns) de disciplinas complementares descartados por falta de preço SINAPI.`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" "),
       status: "rascunho",
     })
     .select("id")

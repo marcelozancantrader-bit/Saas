@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { deleteFileAction } from "@/server/actions/files/delete-file.action";
 import { ExtractionStatusBadge } from "@/components/features/extraction/ExtractionStatusBadge";
+import { DISCIPLINA_SHORT, type Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 import { toast } from "sonner";
 
 export type ProjectFileRow = {
@@ -16,6 +17,7 @@ export type ProjectFileRow = {
   mime_type: string | null;
   tamanho_bytes: number | null;
   tipo: "planta_pdf" | "dwg" | "imagem" | "doc_gerado" | "outro";
+  disciplina?: Disciplina;
   created_at: string;
   extracao_status?: "pendente" | "processando" | "concluida" | "erro" | null;
 };
@@ -88,6 +90,9 @@ export function FilesList({ files }: Props) {
             <p className="truncate text-sm font-medium">{f.nome_original}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
               <Badge variant="outline">{TIPO_LABEL[f.tipo]}</Badge>
+              {f.disciplina && f.disciplina !== "architectural" ? (
+                <Badge variant="secondary">{DISCIPLINA_SHORT[f.disciplina]}</Badge>
+              ) : null}
               <ExtractionStatusBadge status={f.extracao_status} />
               <span>{formatBytes(f.tamanho_bytes)}</span>
               <span>· {new Date(f.created_at).toLocaleString("pt-BR")}</span>

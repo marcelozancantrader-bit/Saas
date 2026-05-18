@@ -31,6 +31,8 @@ import type { ArtRrtData } from "@/lib/art-rrt/fields";
 import { NbrChecksCard } from "@/components/features/nbr-checks/NbrChecksCard";
 import { ZoneamentoCard } from "@/components/features/zoneamento/ZoneamentoCard";
 import { ProjectProgress } from "@/components/features/projects/ProjectProgress";
+import { DisciplineExtractionsCard } from "@/components/features/extraction/DisciplineExtractionsCard";
+import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 
 export const dynamic = "force-dynamic";
 
@@ -62,11 +64,21 @@ type BriefingRow = {
 };
 
 type ExtractionFileRow = ProjectFileRow & {
+  disciplina: Disciplina;
   extracao_status: "pendente" | "processando" | "concluida" | "erro" | null;
   extracao_resultado:
     | (ExtractionData & { _meta?: { prompt_version?: string; usage?: { usd_cost?: number } } })
     | null;
   extracao_erro: string | null;
+};
+
+type ExtracaoDisciplinaEntry = {
+  source_file_id: string;
+  data: Record<string, unknown>;
+  extracted_at: string;
+  confirmed_by_user?: boolean;
+  prompt_version?: string;
+  usd_cost?: number;
 };
 
 export default async function ProjetoDetailPage({ params }: Props) {
@@ -95,7 +107,7 @@ export default async function ProjetoDetailPage({ params }: Props) {
     supabase
       .from("project_files")
       .select(
-        "id, nome_original, storage_path, mime_type, tamanho_bytes, tipo, created_at, extracao_status, extracao_resultado, extracao_erro",
+        "id, nome_original, storage_path, mime_type, tamanho_bytes, tipo, disciplina, created_at, extracao_status, extracao_resultado, extracao_erro",
       )
       .eq("project_id", id)
       .order("created_at", { ascending: false })
@@ -163,14 +175,24 @@ export default async function ProjetoDetailPage({ params }: Props) {
     notFound();
   }
 
-  // Find the most recent successful extraction for the review UI.
+  // Find the most recent successful ARCHITECTURAL extraction for the review UI.
   const completedExtraction = (files ?? []).find(
-    (f) => f.extracao_status === "concluida" && f.extracao_resultado,
+    (f) =>
+      (f.disciplina ?? "architectural") === "architectural" &&
+      f.extracao_status === "concluida" &&
+      f.extracao_resultado,
   );
-  const errorExtraction = (files ?? []).find((f) => f.extracao_status === "erro");
+  const errorExtraction = (files ?? []).find(
+    (f) => (f.disciplina ?? "architectural") === "architectural" && f.extracao_status === "erro",
+  );
   const inFlight = (files ?? []).some(
     (f) => f.extracao_status === "pendente" || f.extracao_status === "processando",
   );
+
+  const extracoesDisciplinas =
+    ((project.meta as Record<string, unknown> | null)?.extracoes_disciplinas as
+      | Partial<Record<Disciplina, ExtracaoDisciplinaEntry>>
+      | undefined) ?? {};
 
   const confirmedByUser = !!(
     project.meta?.extracao_planta as { confirmed_by_user?: boolean } | undefined
@@ -318,6 +340,12 @@ export default async function ProjetoDetailPage({ params }: Props) {
               sozinha quando terminar.
             </CardContent>
           </Card>
+        ) : null}
+
+        {Object.keys(extracoesDisciplinas).length > 0 ? (
+          <div className="mt-4">
+            <DisciplineExtractionsCard projectId={project.id} extracoes={extracoesDisciplinas} />
+          </div>
         ) : null}
       </section>
 

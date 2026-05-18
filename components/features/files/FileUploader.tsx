@@ -4,8 +4,22 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { registerUploadAction } from "@/server/actions/files/register-upload.action";
+import {
+  DISCIPLINAS,
+  DISCIPLINA_LABEL,
+  type Disciplina,
+} from "@/lib/ai/prompts/_shared-extraction-schema";
 import { toast } from "sonner";
 
 const MAX_BYTES = 50 * 1024 * 1024; // 50 MB
@@ -36,6 +50,7 @@ function detectTipo(mime: string, filename: string): "planta_pdf" | "dwg" | "ima
 export function FileUploader({ projectId, orgId }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [disciplina, setDisciplina] = useState<Disciplina>("architectural");
   const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -73,14 +88,14 @@ export function FileUploader({ projectId, orgId }: Props) {
           mime_type: file.type || "application/octet-stream",
           tamanho_bytes: file.size,
           tipo: detectTipo(file.type, file.name),
+          disciplina,
         });
         if (result.ok) {
-          toast.success(`Arquivo "${file.name}" enviado`);
+          toast.success(`Arquivo "${file.name}" enviado (${DISCIPLINA_LABEL[disciplina]})`);
           router.refresh();
           if (inputRef.current) inputRef.current.value = "";
         } else {
           toast.error(result.error);
-          // best-effort cleanup of orphan storage object
           await supabase.storage
             .from("project-files")
             .remove([storagePath])
@@ -100,23 +115,54 @@ export function FileUploader({ projectId, orgId }: Props) {
   const busy = uploading || pending;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-3">
-        <Input
-          ref={inputRef}
-          type="file"
-          accept=".pdf,.png,.jpg,.jpeg,.webp,.dwg,application/pdf,image/*"
-          onChange={onChange}
-          disabled={busy}
-          className="max-w-md cursor-pointer file:cursor-pointer"
-        />
-        {busy ? (
-          <Button disabled variant="outline" size="sm">
-            Enviando…
-          </Button>
-        ) : null}
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:max-w-md">
+        <div className="space-y-1.5">
+          <Label htmlFor="upload_disciplina">Disciplina</Label>
+          <Select
+            value={disciplina}
+            onValueChange={(v) => v && setDisciplina(v as Disciplina)}
+            disabled={busy}
+          >
+            <SelectTrigger id="upload_disciplina" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {DISCIPLINAS.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {DISCIPLINA_LABEL[d]}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-zinc-500">
+            A IA extrai dados específicos de cada disciplina (pontos, circuitos, vigas etc).
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="upload_file">Arquivo</Label>
+          <div className="flex items-center gap-3">
+            <Input
+              id="upload_file"
+              ref={inputRef}
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg,.webp,.dwg,application/pdf,image/*"
+              onChange={onChange}
+              disabled={busy}
+              className="cursor-pointer file:cursor-pointer"
+            />
+            {busy ? (
+              <Button disabled variant="outline" size="sm">
+                Enviando…
+              </Button>
+            ) : null}
+          </div>
+          <p className="text-xs text-zinc-500">PDF, PNG, JPG, WEBP ou DWG (até 50 MB).</p>
+        </div>
       </div>
-      <p className="text-xs text-zinc-500">PDF, PNG, JPG, WEBP ou DWG (até 50 MB).</p>
     </div>
   );
 }

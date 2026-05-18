@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { inngest } from "@/lib/inngest/client";
+import { DISCIPLINAS } from "@/lib/ai/prompts/_shared-extraction-schema";
 
 const registerSchema = z.object({
   project_id: z.string().uuid(),
@@ -14,6 +15,7 @@ const registerSchema = z.object({
   tamanho_bytes: z.number().int().positive(),
   hash_sha256: z.string().optional(),
   tipo: z.enum(["planta_pdf", "dwg", "imagem", "doc_gerado", "outro"]).default("outro"),
+  disciplina: z.enum(DISCIPLINAS).default("architectural"),
 });
 
 export type RegisterUploadInput = z.infer<typeof registerSchema>;
@@ -28,7 +30,7 @@ export async function registerUploadAction(
     return { ok: false, error: "Dados de upload inválidos." };
   }
 
-  // Set initial extracao_status so the UI can show a "queued" state immediately
+  // Initial status: only PDFs go through AI extraction.
   const initialStatus = parsed.data.tipo === "planta_pdf" ? "pendente" : null;
 
   const supabase = await createClient();
@@ -42,9 +44,7 @@ export async function registerUploadAction(
     return { ok: false, error: error?.message ?? "Falha ao registrar arquivo." };
   }
 
-  // If this is a planta PDF, fire the Inngest event for async extraction.
-  // We swallow Inngest errors — the file is registered either way; missing
-  // INNGEST_EVENT_KEY in local dev (no Inngest dev server) shouldn't break the upload.
+  // Fire Inngest event for async extraction. Swallow errors — file is registered either way.
   if (parsed.data.tipo === "planta_pdf") {
     try {
       const org = await getCurrentOrg();
@@ -57,6 +57,7 @@ export async function registerUploadAction(
           storage_path: parsed.data.storage_path,
           mime_type: parsed.data.mime_type,
           tipo: parsed.data.tipo,
+          disciplina: parsed.data.disciplina,
         },
       });
     } catch (err) {

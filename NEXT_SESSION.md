@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-18 — **MVP + Tier A + Tier B parcial entregues. Próximo: Sprint 9+10 (multi-disciplina).**
+**Última pausa:** 2026-05-18 — **Sprint 9+10 entregues: multi-disciplina (upload+extração+orçamento). Próximo: Sprint 11 (análise cruzada IA) é opcional, ou aplicar migration e validar live.**
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
 **App live:** https://memorial-ai-mu.vercel.app
@@ -8,9 +8,35 @@
 
 ---
 
-## 🚀 PRÓXIMO: Sprint 9 + 10 — Multi-disciplina (upload + orçamento por disciplina)
+## ✅ Sprint 9 + 10 — Multi-disciplina (entregue)
 
-**Acordado com o usuário:** vai para Sprint 9+10. Sprint 11 (análise cruzada IA) fica condicional a confirmar depois.
+**Status:** código entregue, typecheck/lint/build limpos. **Falta:** aplicar migration `20260718000001_project_files_disciplina.sql` no Supabase Dashboard antes que o feature funcione em prod.
+
+**Entregas:**
+
+- Migration `20260718000001_project_files_disciplina.sql` — adiciona `project_files.disciplina` text (check constraint + default 'architectural') + index `(project_id, disciplina)`.
+- 5 novos prompts `lib/ai/prompts/extract-{electrical,hydraulic,structural,gas,hvac}.v1.ts` + `_shared-extraction-schema.ts` com DISCIPLINAS / DISCIPLINA_LABEL / DISCIPLINA_SHORT / pontoAmbienteSchema.
+- `lib/ai/extract-discipline.ts` — extractor genérico (Claude Sonnet 4.6 + tool_use, dispatch por disciplina).
+- `lib/budget/rules/disciplines.v1.ts` — regras SINAPI elétrica (cabos 91929/91931/91933, quadro 91295, disjuntores), hidráulica (PVC 89711/89714/89732, pontos 89351/89352, fossa 74104/001) e estrutural (concreto 92478/92479, aço 92797). Gás e HVAC retornam `MarketItem[]` com preço de referência (sem SINAPI direto).
+- FileUploader UI ganhou Select de disciplina; `register-upload.action` propaga via Inngest event.
+- `process-floor-plan.ts` (Inngest) faz dispatch: `architectural` → fluxo legado em `meta.extracao_planta`; demais → `meta.extracoes_disciplinas[<disc>]`.
+- `DisciplineExtractionsCard` mostra resumo + Confirmar por disciplina; ação `confirm-discipline-extraction.action.ts`.
+- `BudgetDisciplinasCard` na página `/orcamento` mostra status + preço de mercado para gás/HVAC.
+- `generate-budget.action` soma itens de disciplinas confirmadas ao orçamento SINAPI; itens com código não-seedado são descartados com observação (não bloqueia).
+
+**Códigos SINAPI novos que podem precisar de seed manual** (gerados pelas novas regras): 91934, 91935, 91952, 91953, 97586, 93653, 93654, 93655, 92479, 74104/001. O orçamento arquitetônico segue funcionando se eles estiverem ausentes (são apenas descartados).
+
+**Como aplicar:**
+
+1. Copiar `supabase/migrations/20260718000001_project_files_disciplina.sql` no SQL editor do Supabase Dashboard.
+2. Push em main → Vercel auto-deploya.
+3. Smoke test: criar projeto, subir PDF marcando disciplina "Elétrico", aguardar extração (~1min), confirmar, gerar orçamento e ver itens elétricos somados.
+
+---
+
+## 🚀 PRÓXIMO (opcional): Sprint 11 — Análise cruzada IA
+
+**Histórico — escopo original (já entregue):**
 
 ### Sprint 9 — Multi-disciplina upload + extração separada (~1 sprint)
 

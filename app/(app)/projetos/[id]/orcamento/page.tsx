@@ -13,6 +13,8 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { formatBRL } from "@/lib/utils/money";
 import { GenerateBudgetButton } from "@/components/features/budgets/GenerateBudgetButton";
+import { BudgetDisciplinasCard } from "@/components/features/budgets/BudgetDisciplinasCard";
+import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +58,11 @@ export default async function OrcamentosPage({ params }: Props) {
     | undefined;
   const canGenerate = !!extracao?.confirmed_by_user && !!extracao.area_total_m2;
 
+  const extracoesDisciplinas = ((project.meta as Record<string, unknown> | null)
+    ?.extracoes_disciplinas ?? {}) as Partial<
+    Record<Disciplina, { data?: Record<string, unknown>; confirmed_by_user?: boolean }>
+  >;
+
   return (
     <div className="space-y-6">
       <div>
@@ -80,6 +87,8 @@ export default async function OrcamentosPage({ params }: Props) {
           </CardContent>
         </Card>
       ) : null}
+
+      <BudgetDisciplinasCard extracoes={extracoesDisciplinas} />
 
       {!budgets || budgets.length === 0 ? (
         <Card>
