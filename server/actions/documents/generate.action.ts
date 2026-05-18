@@ -124,7 +124,7 @@ export async function generateDocumentAction(
             : null,
       },
     },
-    { timeoutMs: 180_000 },
+    { timeoutMs: 290_000 },
   );
 
   if (!result.ok) {
