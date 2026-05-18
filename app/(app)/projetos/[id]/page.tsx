@@ -15,6 +15,11 @@ import type {
   STATUS_VALUES,
   TIPOLOGIA_VALUES,
 } from "@/lib/validators/projects.schema";
+import {
+  ExtractionReview,
+  type ExtractionData,
+} from "@/components/features/extraction/ExtractionReview";
+import { ExtractionPoller } from "@/components/features/extraction/ExtractionPoller";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +36,15 @@ type ProjectDetail = {
   endereco_completo: string | null;
   status: (typeof STATUS_VALUES)[number];
   clients: { id: string; nome: string } | null;
+  meta: Record<string, unknown> | null;
+};
+
+type ExtractionFileRow = ProjectFileRow & {
+  extracao_status: "pendente" | "processando" | "concluida" | "erro" | null;
+  extracao_resultado:
+    | (ExtractionData & { _meta?: { prompt_version?: string; usage?: { usd_cost?: number } } })
+    | null;
+  extracao_erro: string | null;
 };
 
 export default async function ProjetoDetailPage({ params }: Props) {
@@ -41,7 +55,7 @@ export default async function ProjetoDetailPage({ params }: Props) {
     supabase
       .from("projects")
       .select(
-        "id, nome, client_id, tipologia, area_prevista_m2, padrao_construtivo, endereco_cep, endereco_completo, status, clients ( id, nome )",
+        "id, nome, client_id, tipologia, area_prevista_m2, padrao_construtivo, endereco_cep, endereco_completo, status, meta, clients ( id, nome )",
       )
       .eq("id", id)
       .single<ProjectDetail>(),
@@ -52,10 +66,12 @@ export default async function ProjetoDetailPage({ params }: Props) {
       .returns<Array<{ id: string; nome: string }>>(),
     supabase
       .from("project_files")
-      .select("id, nome_original, storage_path, mime_type, tamanho_bytes, tipo, created_at")
+      .select(
+        "id, nome_original, storage_path, mime_type, tamanho_bytes, tipo, created_at, extracao_status, extracao_resultado, extracao_erro",
+      )
       .eq("project_id", id)
       .order("created_at", { ascending: false })
-      .returns<ProjectFileRow[]>(),
+      .returns<ExtractionFileRow[]>(),
     getCurrentOrg(),
   ]);
 
@@ -63,8 +79,23 @@ export default async function ProjetoDetailPage({ params }: Props) {
     notFound();
   }
 
+  // Find the most recent successful extraction for the review UI.
+  const completedExtraction = (files ?? []).find(
+    (f) => f.extracao_status === "concluida" && f.extracao_resultado,
+  );
+  const errorExtraction = (files ?? []).find((f) => f.extracao_status === "erro");
+  const inFlight = (files ?? []).some(
+    (f) => f.extracao_status === "pendente" || f.extracao_status === "processando",
+  );
+
+  const confirmedByUser = !!(
+    project.meta?.extracao_planta as { confirmed_by_user?: boolean } | undefined
+  )?.confirmed_by_user;
+
   return (
     <div className="space-y-6">
+      <ExtractionPoller anyInFlight={inFlight} />
+
       <div className="flex items-end justify-between gap-4">
         <div>
           <Link
@@ -84,6 +115,56 @@ export default async function ProjetoDetailPage({ params }: Props) {
         </div>
         <DeleteProjectControl id={project.id} />
       </div>
+
+      {completedExtraction?.extracao_resultado ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Extração da planta (IA)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ExtractionReview
+              projectId={project.id}
+              sourceFileId={completedExtraction.id}
+              extraction={completedExtraction.extracao_resultado}
+              confirmedByUser={confirmedByUser}
+              promptVersion={completedExtraction.extracao_resultado._meta?.prompt_version}
+              usdCost={completedExtraction.extracao_resultado._meta?.usage?.usd_cost}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {errorExtraction && !completedExtraction ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Extração da planta (IA)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100">
+              <p className="font-medium">Falha ao extrair dados</p>
+              <p className="mt-1 text-xs">{errorExtraction.extracao_erro ?? "Erro desconhecido"}</p>
+              <p className="mt-2 text-xs">
+                Tente fazer upload de outra versão do PDF (mais legível, com cotas) ou edite os
+                dados manualmente abaixo.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {inFlight && !completedExtraction ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Extração da planta (IA)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Claude está analisando o PDF da planta. Isso pode levar até 1 minuto — a página
+              atualiza sozinha quando terminar.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -122,7 +203,7 @@ export default async function ProjetoDetailPage({ params }: Props) {
           <CardTitle className="text-base">Próximas seções</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-          <p>📊 Orçamento SINAPI — chega no Sprint 4</p>
+          <p>📊 Orçamento SINAPI — chega no Sprint 4 (consumirá a extração acima)</p>
           <p>📄 Documentos por IA (memorial, caderno, proposta, contrato) — Sprint 5</p>
           <p>👤 Portal do cliente com aprovação digital — Sprint 6</p>
         </CardContent>

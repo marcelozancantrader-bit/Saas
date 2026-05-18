@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { deleteFileAction } from "@/server/actions/files/delete-file.action";
+import { ExtractionStatusBadge } from "@/components/features/extraction/ExtractionStatusBadge";
 import { toast } from "sonner";
 
 export type ProjectFileRow = {
@@ -16,6 +17,7 @@ export type ProjectFileRow = {
   tamanho_bytes: number | null;
   tipo: "planta_pdf" | "dwg" | "imagem" | "doc_gerado" | "outro";
   created_at: string;
+  extracao_status?: "pendente" | "processando" | "concluida" | "erro" | null;
 };
 
 const TIPO_LABEL: Record<ProjectFileRow["tipo"], string> = {
@@ -84,8 +86,9 @@ export function FilesList({ files }: Props) {
         <li key={f.id} className="flex items-center justify-between gap-3 py-3">
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{f.nome_original}</p>
-            <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500">
+            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
               <Badge variant="outline">{TIPO_LABEL[f.tipo]}</Badge>
+              <ExtractionStatusBadge status={f.extracao_status} />
               <span>{formatBytes(f.tamanho_bytes)}</span>
               <span>· {new Date(f.created_at).toLocaleString("pt-BR")}</span>
             </div>

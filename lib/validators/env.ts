@@ -13,6 +13,10 @@ const envSchema = z.object({
     .transform((v) => v === "true"),
 
   ANTHROPIC_API_KEY: z.string().optional(),
+
+  // Inngest — optional in dev (uses local dev server at :8288)
+  INNGEST_EVENT_KEY: z.string().optional(),
+  INNGEST_SIGNING_KEY: z.string().optional(),
 });
 
 type Env = z.infer<typeof envSchema>;
