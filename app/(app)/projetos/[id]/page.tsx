@@ -32,11 +32,15 @@ import { NbrChecksCard } from "@/components/features/nbr-checks/NbrChecksCard";
 import { ZoneamentoCard } from "@/components/features/zoneamento/ZoneamentoCard";
 import { ProjectProgress } from "@/components/features/projects/ProjectProgress";
 import { DisciplineExtractionsCard } from "@/components/features/extraction/DisciplineExtractionsCard";
+import { ProjectTabs, type TabKey } from "@/components/features/projects/ProjectTabs";
 import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+};
 
 type ProjectDetail = {
   id: string;
@@ -81,8 +85,14 @@ type ExtracaoDisciplinaEntry = {
   usd_cost?: number;
 };
 
-export default async function ProjetoDetailPage({ params }: Props) {
+const VALID_TABS: TabKey[] = ["visao", "planta", "validacao", "briefing", "art-rrt", "escopo"];
+
+export default async function ProjetoDetailPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const sp = await searchParams;
+  const tabParam = sp.tab as TabKey | undefined;
+  const currentTab: TabKey = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "visao";
+
   const supabase = await createClient();
 
   const [
@@ -129,7 +139,6 @@ export default async function ProjetoDetailPage({ params }: Props) {
     .eq("project_id", id)
     .maybeSingle<BriefingRow>();
 
-  // Contadores pro stepper de progresso
   const [{ count: totalDocsCount }, { count: approvedDocsCount }] = await Promise.all([
     supabase.from("documents").select("id", { count: "exact", head: true }).eq("project_id", id),
     supabase
@@ -139,7 +148,6 @@ export default async function ProjetoDetailPage({ params }: Props) {
       .not("aprovacao_meta", "is", null),
   ]);
 
-  // ART/RRT pre-fill: precisa de dados completos do cliente + org.
   const [{ data: orgFull }, { data: clientFull }] = await Promise.all([
     supabase
       .from("organizations")
@@ -175,7 +183,6 @@ export default async function ProjetoDetailPage({ params }: Props) {
     notFound();
   }
 
-  // Find the most recent successful ARCHITECTURAL extraction for the review UI.
   const completedExtraction = (files ?? []).find(
     (f) =>
       (f.disciplina ?? "architectural") === "architectural" &&
@@ -205,6 +212,28 @@ export default async function ProjetoDetailPage({ params }: Props) {
       : briefingRow.status === "aguardando_cliente"
         ? "aguardando"
         : "none";
+
+  const escopoPendentes = (scopeChanges ?? []).filter(
+    (s) => s.status === "pendente_analise" || s.status === "aguardando_cliente",
+  ).length;
+
+  const tabs: Array<{ key: TabKey; label: string; badge?: number | string }> = [
+    { key: "visao", label: "Visão geral" },
+    { key: "planta", label: "Planta & IA", badge: (files ?? []).length || undefined },
+    {
+      key: "validacao",
+      label: "Validações",
+      badge: confirmedByUser ? undefined : "—",
+    },
+    {
+      key: "briefing",
+      label: "Briefing",
+      badge:
+        briefingStatus === "preenchido" ? "✓" : briefingStatus === "aguardando" ? "…" : undefined,
+    },
+    { key: "art-rrt", label: "ART/RRT" },
+    { key: "escopo", label: "Alterações", badge: escopoPendentes || undefined },
+  ];
 
   return (
     <div className="space-y-6">
@@ -243,144 +272,192 @@ export default async function ProjetoDetailPage({ params }: Props) {
         hasArtRrtData={!!orgFull?.registro_cau || !!orgFull?.registro_crea}
       />
 
-      {/* ====== 1. DADOS DO PROJETO ====== */}
-      <section id="dados-projeto" className="scroll-mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">1. Dados do projeto</CardTitle>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">
-              Cliente, tipologia, endereço da obra e cidade/zona para validação automática do
-              zoneamento.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <ProjectForm
-              initial={{
-                id: project.id,
-                nome: project.nome,
-                client_id: project.client_id,
-                tipologia: project.tipologia,
-                area_prevista_m2: project.area_prevista_m2,
-                padrao_construtivo: project.padrao_construtivo,
-                endereco_cep: project.endereco_cep ?? undefined,
-                endereco_completo: project.endereco_completo ?? undefined,
-                status: project.status,
-                cidade_codigo: project.cidade_codigo,
-                zoneamento: project.zoneamento,
-                area_terreno_m2: project.area_terreno_m2,
-              }}
-              clients={clients ?? []}
-            />
-          </CardContent>
-        </Card>
-      </section>
+      {/* ====== AÇÕES RÁPIDAS (sempre visíveis) ====== */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link
+          href={`/projetos/${project.id}/documentos`}
+          className="group rounded-lg border border-zinc-200 p-4 transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
+        >
+          <p className="font-medium">📄 Documentos por IA</p>
+          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+            Memorial, caderno, proposta, contrato, cronograma + 5 técnicos por disciplina.
+          </p>
+          <p className="mt-2 text-xs font-medium text-zinc-900 group-hover:underline dark:text-zinc-50">
+            Abrir →
+          </p>
+        </Link>
 
-      {/* ====== 2. PLANTA + EXTRAÇÃO IA ====== */}
-      <section id="arquivos" className="scroll-mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">2. Planta e arquivos</CardTitle>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">
-              Envie a planta em PDF. A IA extrai ambientes, áreas e elementos especiais
-              automaticamente em ~1 minuto.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FileUploader projectId={project.id} orgId={org.orgId} />
-            <FilesList files={files ?? []} />
-          </CardContent>
-        </Card>
+        <Link
+          href={`/projetos/${project.id}/orcamento`}
+          className="group rounded-lg border border-zinc-200 p-4 transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
+        >
+          <p className="font-medium">📊 Orçamento SINAPI</p>
+          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+            Composição automática com BDI + breakdown por disciplina.
+          </p>
+          <p className="mt-2 text-xs font-medium text-zinc-900 group-hover:underline dark:text-zinc-50">
+            Abrir →
+          </p>
+        </Link>
+      </div>
 
-        {completedExtraction?.extracao_resultado ? (
-          <Card className="mt-4">
+      {/* ====== TABS ====== */}
+      <ProjectTabs tabs={tabs} current={currentTab} />
+
+      {/* ====== TAB: VISÃO GERAL ====== */}
+      {currentTab === "visao" ? (
+        <section className="space-y-4">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-base">Extração da planta (IA)</CardTitle>
+              <CardTitle className="text-base">Dados do projeto</CardTitle>
               <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                Revise os ambientes detectados. Quando confirmar, os documentos por IA ficam
-                liberados.
+                Cliente, tipologia, endereço da obra e cidade/zona para validação automática do
+                zoneamento.
               </p>
             </CardHeader>
             <CardContent>
-              <ExtractionReview
-                projectId={project.id}
-                sourceFileId={completedExtraction.id}
-                extraction={completedExtraction.extracao_resultado}
-                confirmedByUser={confirmedByUser}
-                promptVersion={completedExtraction.extracao_resultado._meta?.prompt_version}
-                usdCost={completedExtraction.extracao_resultado._meta?.usage?.usd_cost}
+              <ProjectForm
+                initial={{
+                  id: project.id,
+                  nome: project.nome,
+                  client_id: project.client_id,
+                  tipologia: project.tipologia,
+                  area_prevista_m2: project.area_prevista_m2,
+                  padrao_construtivo: project.padrao_construtivo,
+                  endereco_cep: project.endereco_cep ?? undefined,
+                  endereco_completo: project.endereco_completo ?? undefined,
+                  status: project.status,
+                  cidade_codigo: project.cidade_codigo,
+                  zoneamento: project.zoneamento,
+                  area_terreno_m2: project.area_terreno_m2,
+                }}
+                clients={clients ?? []}
               />
             </CardContent>
           </Card>
-        ) : null}
-
-        {errorExtraction && !completedExtraction ? (
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle className="text-base">Extração falhou</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100">
-                <p className="font-medium">Não conseguimos ler essa planta</p>
-                <p className="mt-1 text-xs">
-                  {errorExtraction.extracao_erro ?? "Erro desconhecido"}
-                </p>
-                <p className="mt-2 text-xs">
-                  Tente outra versão do PDF (mais legível, com cotas) ou edite os dados manualmente
-                  em &quot;Dados do projeto&quot;.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {inFlight && !completedExtraction ? (
-          <Card className="mt-4">
-            <CardContent className="p-4 text-sm text-zinc-600 dark:text-zinc-400">
-              ⏳ Claude está analisando o PDF da planta. Isso leva até 1 minuto — a página atualiza
-              sozinha quando terminar.
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {Object.keys(extracoesDisciplinas).length > 0 ? (
-          <div className="mt-4">
-            <DisciplineExtractionsCard projectId={project.id} extracoes={extracoesDisciplinas} />
-          </div>
-        ) : null}
-      </section>
-
-      {/* ====== 3. VALIDAÇÃO (NBR + Zoneamento) ====== */}
-      {completedExtraction?.extracao_resultado && confirmedByUser ? (
-        <section id="validacao" className="scroll-mt-4 space-y-4">
-          <NbrChecksCard
-            extracao={{
-              area_total_m2: completedExtraction.extracao_resultado.area_total_m2 ?? null,
-              numero_pavimentos: completedExtraction.extracao_resultado.numero_pavimentos ?? null,
-              ambientes:
-                completedExtraction.extracao_resultado.ambientes?.map((a) => ({
-                  nome: a.nome,
-                  area_m2: a.area_m2 ?? null,
-                  tipo: a.tipo,
-                })) ?? [],
-            }}
-          />
-          <ZoneamentoCard
-            cidade_codigo={project.cidade_codigo}
-            zona_codigo={project.zoneamento}
-            area_terreno_m2={project.area_terreno_m2}
-            area_construida_total_m2={
-              completedExtraction.extracao_resultado.area_total_m2 ?? project.area_prevista_m2
-            }
-            numero_pavimentos={completedExtraction.extracao_resultado.numero_pavimentos ?? null}
-            tem_garagem={
-              completedExtraction.extracao_resultado.elementos_especiais?.garagem ?? false
-            }
-          />
         </section>
       ) : null}
 
-      {/* ====== 4. BRIEFING DO CLIENTE ====== */}
-      <section id="briefing" className="scroll-mt-4">
+      {/* ====== TAB: PLANTA & IA ====== */}
+      {currentTab === "planta" ? (
+        <section className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Planta e arquivos</CardTitle>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                Envie a planta em PDF. A IA extrai ambientes, áreas e elementos especiais
+                automaticamente em ~1 minuto.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FileUploader projectId={project.id} orgId={org.orgId} />
+              <FilesList files={files ?? []} />
+            </CardContent>
+          </Card>
+
+          {completedExtraction?.extracao_resultado ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Extração da planta (IA)</CardTitle>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                  Revise os ambientes detectados. Quando confirmar, os documentos por IA ficam
+                  liberados.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <ExtractionReview
+                  projectId={project.id}
+                  sourceFileId={completedExtraction.id}
+                  extraction={completedExtraction.extracao_resultado}
+                  confirmedByUser={confirmedByUser}
+                  promptVersion={completedExtraction.extracao_resultado._meta?.prompt_version}
+                  usdCost={completedExtraction.extracao_resultado._meta?.usage?.usd_cost}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {errorExtraction && !completedExtraction ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Extração falhou</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100">
+                  <p className="font-medium">Não conseguimos ler essa planta</p>
+                  <p className="mt-1 text-xs">
+                    {errorExtraction.extracao_erro ?? "Erro desconhecido"}
+                  </p>
+                  <p className="mt-2 text-xs">
+                    Tente outra versão do PDF (mais legível, com cotas) ou edite os dados
+                    manualmente em &quot;Visão geral&quot;.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {inFlight && !completedExtraction ? (
+            <Card>
+              <CardContent className="p-4 text-sm text-zinc-600 dark:text-zinc-400">
+                ⏳ Claude está analisando o PDF da planta. Isso leva até 1 minuto — a página
+                atualiza sozinha quando terminar.
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {Object.keys(extracoesDisciplinas).length > 0 ? (
+            <DisciplineExtractionsCard projectId={project.id} extracoes={extracoesDisciplinas} />
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* ====== TAB: VALIDAÇÕES ====== */}
+      {currentTab === "validacao" ? (
+        completedExtraction?.extracao_resultado && confirmedByUser ? (
+          <section className="space-y-4">
+            <NbrChecksCard
+              extracao={{
+                area_total_m2: completedExtraction.extracao_resultado.area_total_m2 ?? null,
+                numero_pavimentos: completedExtraction.extracao_resultado.numero_pavimentos ?? null,
+                ambientes:
+                  completedExtraction.extracao_resultado.ambientes?.map((a) => ({
+                    nome: a.nome,
+                    area_m2: a.area_m2 ?? null,
+                    tipo: a.tipo,
+                  })) ?? [],
+              }}
+            />
+            <ZoneamentoCard
+              cidade_codigo={project.cidade_codigo}
+              zona_codigo={project.zoneamento}
+              area_terreno_m2={project.area_terreno_m2}
+              area_construida_total_m2={
+                completedExtraction.extracao_resultado.area_total_m2 ?? project.area_prevista_m2
+              }
+              numero_pavimentos={completedExtraction.extracao_resultado.numero_pavimentos ?? null}
+              tem_garagem={
+                completedExtraction.extracao_resultado.elementos_especiais?.garagem ?? false
+              }
+            />
+          </section>
+        ) : (
+          <Card>
+            <CardContent className="p-6 text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                Validações ainda não disponíveis
+              </p>
+              <p className="mt-1">
+                Suba a planta arquitetônica na aba <b>Planta & IA</b> e confirme a extração — aí as
+                verificações de NBR e zoneamento aparecem aqui.
+              </p>
+            </CardContent>
+          </Card>
+        )
+      ) : null}
+
+      {/* ====== TAB: BRIEFING ====== */}
+      {currentTab === "briefing" ? (
         <BriefingCard
           projectId={project.id}
           briefing={briefingRow ?? null}
@@ -388,51 +465,10 @@ export default async function ProjetoDetailPage({ params }: Props) {
             project.clients?.portal_token ? `/portal/${project.clients.portal_token}` : null
           }
         />
-      </section>
+      ) : null}
 
-      {/* ====== 5. DOCUMENTOS + ORÇAMENTO (CTAs) ====== */}
-      <section id="documentos" className="scroll-mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">5. Documentos do projeto</CardTitle>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">
-              Memoriais técnicos, proposta, contrato, cronograma e orçamento — todos gerados pela IA
-              com base nos dados acima.
-            </p>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            <Link
-              href={`/projetos/${project.id}/documentos`}
-              className="group rounded-lg border border-zinc-200 p-4 transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
-            >
-              <p className="font-medium">📄 Documentos por IA</p>
-              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                Memorial, caderno, proposta, contrato, cronograma, estrutural, hidrossanitário,
-                elétrico, PPCI, impermeabilização.
-              </p>
-              <p className="mt-2 text-xs font-medium text-zinc-900 group-hover:underline dark:text-zinc-50">
-                Abrir →
-              </p>
-            </Link>
-
-            <Link
-              href={`/projetos/${project.id}/orcamento`}
-              className="group rounded-lg border border-zinc-200 p-4 transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
-            >
-              <p className="font-medium">📊 Orçamento SINAPI</p>
-              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                Composição automática com base na extração da planta — BDI incluso, R$/m² calculado.
-              </p>
-              <p className="mt-2 text-xs font-medium text-zinc-900 group-hover:underline dark:text-zinc-50">
-                Abrir →
-              </p>
-            </Link>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* ====== 6. ART/RRT ====== */}
-      <section id="art-rrt" className="scroll-mt-4">
+      {/* ====== TAB: ART/RRT ====== */}
+      {currentTab === "art-rrt" ? (
         <ArtRrtCard
           filename={`art-rrt-${project.nome.replace(/\s+/g, "-")}`}
           initial={
@@ -471,12 +507,10 @@ export default async function ProjetoDetailPage({ params }: Props) {
             } satisfies ArtRrtData
           }
         />
-      </section>
+      ) : null}
 
-      {/* ====== 7. ALTERAÇÕES DE ESCOPO ====== */}
-      <section id="scope-changes" className="scroll-mt-4">
-        <ScopeChangesCard scopeChanges={scopeChanges ?? []} />
-      </section>
+      {/* ====== TAB: ALTERAÇÕES DE ESCOPO ====== */}
+      {currentTab === "escopo" ? <ScopeChangesCard scopeChanges={scopeChanges ?? []} /> : null}
     </div>
   );
 }

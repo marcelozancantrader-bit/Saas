@@ -45,7 +45,7 @@ export default async function DashboardPage() {
 
   const planInfo = getPlanInfo(orgRow?.plano ?? "free");
 
-  const KPI = [
+  const KPI: Array<{ label: string; value: string; hint: string; href?: string }> = [
     {
       label: "Projetos ativos",
       value: metrics.activeProjects.toString(),
@@ -53,16 +53,19 @@ export default async function DashboardPage() {
         planInfo.limits.maxActiveProjects !== null
           ? `de ${planInfo.limits.maxActiveProjects} no plano ${planInfo.label}`
           : "sem limite",
+      href: "/projetos?status=em_andamento",
     },
     {
       label: "Faturamento previsto",
       value: brl(metrics.approvedRevenueCents),
       hint: "contratos aprovados pelos clientes",
+      href: "/projetos?status=concluido",
     },
     {
       label: "Docs aguardando cliente",
       value: metrics.pendingDocuments.toString(),
       hint: "enviados ao portal sem decisão",
+      href: "/projetos?status=aguardando_cliente",
     },
     {
       label: "Alterações de escopo",
@@ -78,6 +81,7 @@ export default async function DashboardPage() {
       label: "Projetos parados",
       value: metrics.staleProjects.toString(),
       hint: "sem atualização há 14+ dias",
+      href: "/projetos",
     },
   ];
 
@@ -101,19 +105,35 @@ export default async function DashboardPage() {
       {metrics.activeProjects === 0 ? <WelcomeCard /> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {KPI.map((kpi) => (
-          <Card key={kpi.label}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                {kpi.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold">{kpi.value}</p>
-              <p className="mt-1 text-xs text-zinc-500">{kpi.hint}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {KPI.map((kpi) => {
+          const inner = (
+            <Card
+              className={
+                kpi.href
+                  ? "h-full transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
+                  : "h-full"
+              }
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center justify-between text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  <span>{kpi.label}</span>
+                  {kpi.href ? <span className="text-xs text-zinc-400">→</span> : null}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold">{kpi.value}</p>
+                <p className="mt-1 text-xs text-zinc-500">{kpi.hint}</p>
+              </CardContent>
+            </Card>
+          );
+          return kpi.href ? (
+            <Link key={kpi.label} href={kpi.href} className="block">
+              {inner}
+            </Link>
+          ) : (
+            <div key={kpi.label}>{inner}</div>
+          );
+        })}
       </div>
 
       <Card>

@@ -19,10 +19,18 @@ export type ClientRow = {
   endereco_uf: string | null;
 };
 
-type Props = { rows: ClientRow[] };
+type Props = { rows: ClientRow[]; hasFilters?: boolean };
 
-export function ClientsTable({ rows }: Props) {
+export function ClientsTable({ rows, hasFilters = false }: Props) {
   if (rows.length === 0) {
+    if (hasFilters) {
+      return (
+        <div className="rounded-md border border-dashed p-8 text-center">
+          <p className="text-base font-medium">Nenhum cliente encontrado</p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Ajuste a busca acima.</p>
+        </div>
+      );
+    }
     return (
       <div className="rounded-md border border-dashed p-8 text-center">
         <p className="text-base font-medium">Nenhum cliente ainda</p>

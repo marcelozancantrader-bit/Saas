@@ -31,10 +31,20 @@ const STATUS_BADGE: Record<Status, "default" | "secondary" | "destructive" | "ou
   arquivado: "outline",
 };
 
-type Props = { rows: ProjectRow[] };
+type Props = { rows: ProjectRow[]; hasFilters?: boolean };
 
-export function ProjectsTable({ rows }: Props) {
+export function ProjectsTable({ rows, hasFilters = false }: Props) {
   if (rows.length === 0) {
+    if (hasFilters) {
+      return (
+        <div className="rounded-md border border-dashed p-8 text-center">
+          <p className="text-base font-medium">Nenhum projeto encontrado</p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Ajuste a busca ou os filtros acima.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="rounded-md border border-dashed p-8 text-center">
         <p className="text-base font-medium">Nenhum projeto ainda</p>
