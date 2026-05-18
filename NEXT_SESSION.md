@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-18 · **Após:** Sprint 3 deployado + fix do "page couldn't load" deployado
+**Última pausa:** 2026-05-18 · **Após:** Sprint 3 fechado e validado em prod. Pendências de housekeeping resolvidas. Pronto para Sprint 4.
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
 
@@ -44,62 +44,18 @@
 
 ---
 
-## ⏳ O que falta verificar / pendências da última sessão
+## ✅ Pendências resolvidas no fim da última sessão
 
-### 1. Validar o fix do redirect (deploy `12d26c6` em prod)
+1. **Fix do redirect (`12d26c6`)** — usuário validou criação de cliente/projeto em prod. Sem mais "This page couldn't load" do Edge.
+2. **"Confirm email" no Supabase Auth** — usuário desligou no painel. Signups novos podem logar direto.
+3. **Sprint 3 — smoke test end-to-end com PDF real** — fica como teste opcional que o usuário pode rodar a qualquer momento; o pipeline já passou no DoD live com PDF sintético ($0.0198 em 7.6s).
 
-**Sintoma original:** após criar cliente OU projeto, o Edge mostrava "This page couldn't load".
+### Pendência opcional ainda em aberto
 
-**Causa identificada:** `redirect()` dentro de Server Action chamada via `startTransition` no client não interceptava limpo em Next 16.
-
-**Fix aplicado:**
-
-- `createClientAction` / `createProjectAction` agora retornam `{ ok: true, id }` em vez de chamar `redirect()`.
-- `ClientForm` / `ProjectForm` chamam `router.push(/clientes/${id})` ou `/projetos/${id}` após sucesso.
-- `deleteClientAction` / `deleteProjectAction` idem (retornam `{ ok: true }`).
-- `DeleteButton` ganhou props `redirectAfterSuccess` + `successMessage`.
-
-**Para validar (próxima sessão):**
-
-```
-1. Abrir https://memorial-ai-mu.vercel.app/clientes/novo
-2. Preencher + Submeter
-3. Esperado: toast "Cliente criado" + navegação para /clientes/[id]
-4. Repetir para /projetos/novo
-```
-
-### 2. Desligar "Confirm email" no Supabase Auth
-
-Cada signup novo trava em login até a confirmação manual. **Solução permanente** (enquanto Sprint 6 não chega com Resend):
-
-👉 https://supabase.com/dashboard/project/fittavwljhbwiljvhqsv/auth/providers
-→ Email → desce até "Confirm email" → desativa → Save.
-
-**Solução interina** (para emails já cadastrados sem confirmação):
-
-```bash
-cd C:\dev\memorial-ai
-npx tsx scripts/confirm-user-email.ts <email>
-```
-
-### 3. Smoke test end-to-end do Sprint 3 com PDF real
-
-Já provado em DoD com PDF sintético. Falta testar com PDF de planta real:
-
-```
-1. /clientes/novo → cria 1 cliente
-2. /projetos/novo → cria 1 projeto vinculado
-3. Em /projetos/[id], faz upload de PDF de planta (até 50MB)
-4. Badge "Na fila" → "Processando IA…" → "Extraído" (~10–30s)
-5. Seção "Extração da planta (IA)" mostra dados + revisar/confirmar
-```
-
-Cada extração custa ~$0.01–0.05 dependendo do tamanho do PDF.
-
-### 4. (Opcional) Conectar GitHub no Vercel
-
-Hoje deploys são manuais via `vercel deploy --prod`. Para auto-deploy ao push:
+**Conectar GitHub no Vercel** (para auto-deploy ao push):
 → Vercel dashboard → memorial-ai → Settings → Git → Connect GitHub Account.
+
+Hoje deploys são manuais via `vercel deploy --prod --token "$VERCEL_TOKEN" --yes`.
 
 ---
 
