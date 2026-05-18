@@ -12,6 +12,7 @@ import { deleteDocumentAction } from "@/server/actions/documents/delete.action";
 import { DOCUMENT_LABELS, type DocumentTipo } from "@/lib/ai/generate-document";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 type Props = { params: Promise<{ id: string; documentId: string }> };
 

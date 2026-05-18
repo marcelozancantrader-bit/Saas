@@ -18,11 +18,11 @@ export const sectionContentSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("bullet_list"),
-    items: z.array(z.string().min(1).max(500)).min(1).max(50),
+    items: z.array(z.string().min(1).max(2000)).min(1).max(50),
   }),
   z.object({
     type: z.literal("ordered_list"),
-    items: z.array(z.string().min(1).max(500)).min(1).max(50),
+    items: z.array(z.string().min(1).max(2000)).min(1).max(50),
   }),
   z.object({
     type: z.literal("subheading"),
@@ -46,7 +46,7 @@ export const generatedDocumentSchema = z.object({
   sections: z.array(sectionSchema).min(1).max(20),
   observacoes_internas: z
     .string()
-    .max(1000)
+    .max(4000)
     .optional()
     .describe(
       "Notas para o profissional (não vai no documento final). Use para sinalizar pontos que precisam de revisão manual ou dados ausentes.",
@@ -126,8 +126,9 @@ export const GENERATED_DOCUMENT_TOOL_INPUT_SCHEMA = {
     },
     observacoes_internas: {
       type: "string",
+      maxLength: 4000,
       description:
-        "Notas para o profissional (não vai no documento final). Use para sinalizar pontos que precisam revisão manual ou dados ausentes.",
+        "Notas para o profissional (não vai no documento final). Use para sinalizar pontos que precisam revisão manual ou dados ausentes. Máx 4000 caracteres.",
     },
   },
   required: ["titulo", "sections"],

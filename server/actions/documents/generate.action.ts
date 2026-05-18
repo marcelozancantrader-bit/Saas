@@ -105,7 +105,7 @@ export async function generateDocumentAction(
             : null,
       },
     },
-    { timeoutMs: 90_000 },
+    { timeoutMs: 180_000 },
   );
 
   if (!result.ok) {

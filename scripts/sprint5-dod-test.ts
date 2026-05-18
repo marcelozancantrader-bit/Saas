@@ -185,13 +185,13 @@ async function main() {
             >[0]["context"]["extracao_planta"],
           },
         },
-        { timeoutMs: 120_000 },
+        { timeoutMs: 290_000 },
       );
       const elapsedMs = Date.now() - t0;
       totalMs += elapsedMs;
 
       if (!result.ok) {
-        console.error(`  ❌ ${tipo}: ${result.error}`);
+        console.error(`  ❌ ${tipo}: ${result.error}${result.detail ? ` — ${result.detail}` : ""}`);
         failures += 1;
         continue;
       }

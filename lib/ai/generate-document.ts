@@ -152,7 +152,7 @@ export async function generateDocument(
   input: GenerateDocumentInput,
   options: { timeoutMs?: number } = {},
 ): Promise<GenerateDocumentResult> {
-  const timeoutMs = options.timeoutMs ?? 90_000;
+  const timeoutMs = options.timeoutMs ?? 290_000;
   const model = ANTHROPIC_MODELS.sonnet;
 
   const { SYSTEM_PROMPT, TOOL_DEFINITION, PROMPT_VERSION } = await loadPromptForTipo(input.tipo);
@@ -162,10 +162,13 @@ export async function generateDocument(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await client.messages.create(
+    // Streaming keeps the HTTP connection alive (SSE pings) and avoids 60s drops
+    // by intermediate proxies on long generations (90-180s). Functionally equivalent
+    // to .create() — we only consume the final Message via .finalMessage().
+    const stream = client.messages.stream(
       {
         model,
-        max_tokens: 8192,
+        max_tokens: 16384,
         system: [
           {
             type: "text",
@@ -184,6 +187,7 @@ export async function generateDocument(
       },
       { signal: controller.signal },
     );
+    const response = await stream.finalMessage();
 
     const toolUse = response.content.find(
       (b) => b.type === "tool_use" && b.name === RECORD_DOCUMENT_TOOL_NAME,
@@ -200,9 +204,12 @@ export async function generateDocument(
 
     const parsed = generatedDocumentSchema.safeParse(toolUse.input);
     if (!parsed.success) {
+      const truncated = response.stop_reason === "max_tokens";
       return {
         ok: false,
-        error: "Resposta da IA não passou pela validação do schema.",
+        error: truncated
+          ? "Documento truncado: a IA atingiu o limite de tokens antes de finalizar."
+          : "Resposta da IA não passou pela validação do schema.",
         detail: parsed.error.issues
           .slice(0, 3)
           .map((i) => `${i.path.join(".")}: ${i.message}`)
@@ -229,11 +236,12 @@ export async function generateDocument(
       };
     }
     if (err && typeof err === "object" && "status" in err) {
-      const status = (err as { status: number }).status;
+      const status = (err as { status: unknown }).status;
       const msg = (err as { message?: string }).message ?? "erro desconhecido";
+      const statusText = typeof status === "number" ? String(status) : "erro de transporte";
       return {
         ok: false,
-        error: `Anthropic API retornou ${status}.`,
+        error: `Anthropic API retornou ${statusText}.`,
         detail: msg,
         promptVersion: PROMPT_VERSION,
         model,
