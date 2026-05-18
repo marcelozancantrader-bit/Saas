@@ -69,9 +69,9 @@ export default async function DocumentEditorPage({ params }: Props) {
         >
           ← Documentos · {projectName}
         </Link>
-        <div className="mt-1 flex items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
+        <div className="mt-1 flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
               <span>{tipoLabel(doc.tipo)}</span>
               <span>·</span>
               <span>v{doc.versao}</span>
@@ -88,7 +88,9 @@ export default async function DocumentEditorPage({ params }: Props) {
                 </>
               ) : null}
             </div>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{doc.titulo}</h1>
+            <h1 className="mt-1 text-xl font-semibold tracking-tight break-words sm:text-2xl">
+              {doc.titulo}
+            </h1>
             <Badge variant={doc.status === "rascunho" ? "outline" : "default"} className="mt-2">
               {doc.status === "rascunho"
                 ? "Rascunho — RASCUNHO aparece como marca d'água no PDF"
@@ -96,7 +98,7 @@ export default async function DocumentEditorPage({ params }: Props) {
             </Badge>
           </div>
 
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
             <DocumentStatusToggle documentId={doc.id} status={doc.status} />
             <SendToPortalButton documentId={doc.id} envioMeta={doc.envio_meta} />
             <DocumentPdfExport

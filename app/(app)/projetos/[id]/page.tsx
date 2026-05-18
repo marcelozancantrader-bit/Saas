@@ -114,16 +114,18 @@ export default async function ProjetoDetailPage({ params }: Props) {
     <div className="space-y-6">
       <ExtractionPoller anyInFlight={inFlight} />
 
-      <div className="flex items-end justify-between gap-4">
-        <div>
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <Link
             href="/projetos"
             className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50"
           >
             ← Projetos
           </Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">{project.nome}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight break-words sm:text-2xl">
+              {project.nome}
+            </h1>
             <Badge variant="outline">{STATUS_LABEL[project.status]}</Badge>
           </div>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">

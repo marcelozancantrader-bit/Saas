@@ -27,15 +27,17 @@ export default async function ClienteDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <Link
             href="/clientes"
             className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50"
           >
             ← Clientes
           </Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{client.nome}</h1>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight break-words sm:text-2xl">
+            {client.nome}
+          </h1>
         </div>
         <DeleteClientControl id={client.id} />
       </div>

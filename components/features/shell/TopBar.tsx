@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { logoutAction } from "@/server/actions/auth/logout.action";
 import { NotificationsBell } from "./NotificationsBell";
+import { MobileNav } from "./MobileNav";
 import type { NotificationRow } from "@/server/services/notifications-load";
 
 type Props = {
@@ -32,9 +33,13 @@ export function TopBar({ userEmail, orgName, role, notifications }: Props) {
   const [pending, startTransition] = useTransition();
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-zinc-200 bg-white px-4 md:px-6 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="text-sm text-zinc-500">
-        {orgName} <span className="text-zinc-400">·</span> {ROLE_LABEL[role]}
+    <header className="flex h-14 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-2 md:px-6 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex min-w-0 items-center gap-1">
+        <MobileNav orgName={orgName} />
+        <div className="hidden truncate text-sm text-zinc-500 sm:block">
+          <span className="truncate">{orgName}</span> <span className="text-zinc-400">·</span>{" "}
+          {ROLE_LABEL[role]}
+        </div>
       </div>
 
       <div className="flex items-center gap-1">

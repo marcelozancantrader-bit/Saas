@@ -77,9 +77,11 @@ export default async function BudgetDetailPage({ params }: Props) {
         >
           ← Orçamentos · {project?.nome ?? "Projeto"}
         </Link>
-        <div className="mt-1 flex items-end justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">Orçamento v{budget.versao}</h1>
+        <div className="mt-1 flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              Orçamento v{budget.versao}
+            </h1>
             <Badge variant={budget.status === "finalizado" ? "default" : "outline"}>
               {budget.status === "finalizado" ? "Finalizado" : "Rascunho"}
             </Badge>

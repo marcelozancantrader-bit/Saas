@@ -17,7 +17,7 @@ export function AppShell({ children, userEmail, orgName, role, notifications }: 
       <Sidebar orgName={orgName} />
       <div className="flex flex-1 flex-col">
         <TopBar userEmail={userEmail} orgName={orgName} role={role} notifications={notifications} />
-        <main className="flex-1 px-6 py-6 md:px-8 md:py-8">{children}</main>
+        <main className="flex-1 px-4 py-5 md:px-8 md:py-8">{children}</main>
       </div>
     </div>
   );
