@@ -1,59 +1,78 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-18 (Sprint 5 WIP — código pronto, faltam DoD live + deploy + tag)
+**Última pausa:** 2026-05-18 (Sprint 5 DoD OK + tag pushado; só falta deploy Vercel manual)
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
 
 ---
 
-## ✅ Sprints concluídos (4 de 8)
+## ✅ Sprints concluídos (5 de 8)
 
-| Sprint                                                        | Tag             | DoD                                    | Commit final        |
-| ------------------------------------------------------------- | --------------- | -------------------------------------- | ------------------- |
-| 1 — Fundação (Next 16 + Supabase + Auth + RLS)                | `sprint-1-done` | 8/8 RLS cross-tenant clients           | `cc1ea0d`/`8176c49` |
-| 2 — F2 Projetos/Clientes (CRUD + ViaCEP + CPF/CNPJ + Storage) | `sprint-2-done` | 8/8 RLS projects/files/Storage         | `e8cca8e`           |
-| 3 — F3 Extração planta IA (Claude Sonnet 4.6 + Inngest)       | `sprint-3-done` | 4/4 schema + live: 92.5m²/7.6s/$0.0198 | `2460113`           |
-| 4 — F4 SINAPI + Orçamento (heurístico, sem IA)                | `sprint-4-done` | 9 asserts: 29 itens R$193k/656ms + RLS | `cb7bc6d`           |
+| Sprint                                                        | Tag             | DoD                                     | Commit final        |
+| ------------------------------------------------------------- | --------------- | --------------------------------------- | ------------------- |
+| 1 — Fundação (Next 16 + Supabase + Auth + RLS)                | `sprint-1-done` | 8/8 RLS cross-tenant clients            | `cc1ea0d`/`8176c49` |
+| 2 — F2 Projetos/Clientes (CRUD + ViaCEP + CPF/CNPJ + Storage) | `sprint-2-done` | 8/8 RLS projects/files/Storage          | `e8cca8e`           |
+| 3 — F3 Extração planta IA (Claude Sonnet 4.6 + Inngest)       | `sprint-3-done` | 4/4 schema + live: 92.5m²/7.6s/$0.0198  | `2460113`           |
+| 4 — F4 SINAPI + Orçamento (heurístico, sem IA)                | `sprint-4-done` | 9 asserts: 29 itens R$193k/656ms + RLS  | `cb7bc6d`           |
+| 5 — F5 Documentos por IA (4 tipos, Sonnet 4.6 + Tiptap + PDF) | `sprint-5-done` | 4/4 docs live: 539s, $0.55, RLS isolada | `6a937ae`           |
 
 **Últimos commits úteis:**
 
-- `12d26c6` — fix redirect em Server Actions (Edge "page couldn't load")
-- `436725a` — fix env validator (process.env iteration bug)
-- `9825c89` — **Sprint 5 WIP** (código completo, DoD não rodou)
+- `9825c89` — Sprint 5 WIP inicial (código completo)
+- `6a937ae` — **Sprint 5 robustez** (streaming, max_tokens 16K, timeouts 290s, schema bumps)
 
 ---
 
-## ⏳ Sprint 5 — Documentos por IA (em validação)
+## ✅ Sprint 5 — DoD live PASSED
 
-**Status:** código pronto e em prod (commit `9825c89` deployado em Vercel via deploy automático? NÃO — ainda precisa rodar `vercel deploy --prod`). Migration `20260531000001_documents_rls.sql` **já aplicada no Supabase** (policies criadas).
+**DoD live (sonnet-4-6), commit `6a937ae`:**
 
-**O que entrou:**
+| Tipo      | Latência | Seções | Custo     |
+| --------- | -------- | ------ | --------- |
+| memorial  | 114s     | 11     | $0.11     |
+| caderno   | 233s     | 14     | $0.23     |
+| proposta  | 60s      | 8      | $0.06     |
+| contrato  | 133s     | 13     | $0.14     |
+| **Total** | **539s** | **46** | **$0.55** |
 
-- 4 prompts versionados em `lib/ai/prompts/`: `memorial.v1`, `caderno.v1`, `proposta.v1`, `contrato.v1`
-- Schema comum em `_shared-document-schema.ts` (titulo + sections)
-- Pipeline `lib/ai/generate-document.ts` (Claude Sonnet 4.6 + tool_use + zod)
-- Conversor Tiptap em `lib/tiptap/from-sections.ts`
-- Server Actions: generate, save, finalize, delete
-- Components: TiptapEditor (com toolbar), DocumentPdfExport (com marca d'água RASCUNHO + disclaimer obrigatório), GenerateDocumentMenu (dropdown), DocumentStatusToggle
-- Pages: `/projetos/[id]/documentos` (lista) + `/documentos/[documentId]` (editor)
-- Build local OK (17 rotas), tsc + eslint + prettier limpos
+- RLS: Bruno (outra org) vê 0 documentos do projeto da Camila ✅
+- 4/4 tipos persistidos, prompt_versão registrada ✅
+- Custo real: ~$0.55/projeto completo. Caderno é o gargalo (denso, 14 seções, $0.23). Acima do orçado USD 0.20/doc, mas ainda viável (R$2,75/projeto a USD≈R$5)
 
-**Pendências para fechar Sprint 5:**
+**Fixes em `6a937ae` para fechar DoD (mudanças vs Sprint 5 WIP):**
 
-1. **Rodar DoD test live** — `npx tsx scripts/sprint5-dod-test.ts` faz 4 chamadas reais Claude (~$0.10 total, ~2-4min). Foi cancelado pelo usuário antes de rodar. Re-rodar antes de tag.
+- `client.messages.stream` em vez de `.create` (HTTP keep-alive em geração de 100-230s)
+- `max_tokens` 8192 → 16384 (caderno truncava JSON antes)
+- `observacoes_internas` max 1000 → 4000 chars (Claude excede facilmente)
+- `bullet/ordered_list` items max 500 → 2000 chars (cláusulas contratuais longas)
+- `timeoutMs` default 90s → 290s; test 120s → 290s
+- `maxDuration = 300` nas pages `/projetos/[id]/documentos[/:id]` (Vercel)
+- Erros: status `undefined` agora reporta "erro de transporte"; stop_reason=max_tokens vira mensagem explícita
 
-2. **Deploy Vercel** — `vercel deploy --prod --token "$VERCEL_TOKEN" --yes`
+---
 
-3. **Smoke test em prod** pelo usuário:
-   - Abrir um projeto com extração confirmada
-   - Clicar "Documentos por IA" no card "Próximas seções"
-   - Gerar memorial → revisar no editor Tiptap → exportar PDF (deve ter marca d'água RASCUNHO se status=rascunho)
-   - Marcar como "Finalizado" → exportar PDF de novo (sem marca d'água)
-   - Idem para os outros 3 tipos
+## ⏳ Pendência única: deploy Vercel
 
-4. **Tag `sprint-5-done`** + final report
+**`vercel deploy --prod` ainda não rodou** — `vercel` CLI não está no PATH do PowerShell global, OAuth login não rodou. Tag `sprint-5-done` aponta para `6a937ae` (já pushado pra `origin`), código está em GitHub, mas https://memorial-ai-mu.vercel.app ainda está no commit `9825c89` (WIP, sem os fixes).
 
-5. **Custo médio esperado:** ~$0.05/doc Sonnet 4.6 → R$ 0,30 por projeto completo com os 4 docs. Bem abaixo do orçado USD 0.20/doc do spec.
+**Para deploy:**
+
+```powershell
+cd C:\dev\memorial-ai
+npm i -g vercel          # ou: npx vercel deploy --prod --yes
+vercel login             # 1ª vez, abre browser OAuth
+vercel deploy --prod --yes
+```
+
+Alternativa robusta: conectar GitHub no Vercel (Settings → Git → Connect Repository) — daí cada `git push origin main` auto-deploya. Recomendado antes do Sprint 6.
+
+**Smoke test pós-deploy** (5min):
+
+- Login → abrir projeto com extração confirmada
+- "Documentos por IA" → gerar memorial (espera 2min)
+- Editor Tiptap → exportar PDF (com marca d'água RASCUNHO)
+- Toggle "Finalizado" → exportar PDF (sem marca d'água)
+- Repetir para caderno (5min!), proposta, contrato
 
 ---
 
@@ -144,14 +163,15 @@ app/(app)/projetos/[id]/documentos/
 
 1. `cd C:\dev\memorial-ai`
 2. Diga uma das opções no Claude Code:
-   - **"Rodar DoD Sprint 5 e finalizar"** → roda o teste live, deploya, taggea
-   - **"Pular DoD test, só deploy + tag"** → apenas deploy + tag (mais arriscado)
+   - **"Deploy Sprint 5 agora"** → orienta install do vercel CLI + login + deploy + smoke
+   - **"Conectar GitHub no Vercel"** → setup auto-deploy (resolve a pendência principal de housekeeping)
    - **"Tem bug em [X]"** → debug específico
-   - **"Go Sprint 6"** → começa F6 Portal do Cliente (deixa Sprint 5 como WIP)
+   - **"Go Sprint 6"** → começa F6 Portal do Cliente (Sprint 5 já taggeada e DoD OK; só prod fica desatualizado até deploy manual)
 
 ---
 
-## ⚠️ Pendências de housekeeping antigas (não bloqueantes)
+## ⚠️ Pendências de housekeeping (não bloqueantes)
 
+- **Vercel CLI não está no PATH do PowerShell global** — usar `npx vercel` ou `npm i -g vercel`
 - Conectar GitHub no Vercel (Settings → Git) para auto-deploy ao push, em vez do `vercel deploy --prod` manual
 - Confirmar Inngest está sincronizado e processFloorPlan funciona end-to-end (já validado no Sprint 3 mas usuário não testou com PDF real ainda)
