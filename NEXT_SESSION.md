@@ -1,8 +1,88 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-18 — **8/8 sprints DONE. MVP pronto para beta.**
+**Última pausa:** 2026-05-18 — **MVP + Tier A + Tier B parcial entregues. Próximo: Sprint 9+10 (multi-disciplina).**
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
+**App live:** https://memorial-ai-mu.vercel.app
+**Repo:** https://github.com/marcelozancantrader-bit/Saas
+
+---
+
+## 🚀 PRÓXIMO: Sprint 9 + 10 — Multi-disciplina (upload + orçamento por disciplina)
+
+**Acordado com o usuário:** vai para Sprint 9+10. Sprint 11 (análise cruzada IA) fica condicional a confirmar depois.
+
+### Sprint 9 — Multi-disciplina upload + extração separada (~1 sprint)
+
+- Migration: adicionar `project_files.disciplina` enum:
+  `architectural` (atual default) | `electrical` | `hydraulic` | `structural` | `gas` | `hvac`
+- 5 novos prompts de extração em `lib/ai/prompts/extract-*.v1.ts`:
+  - `extract-electrical.v1.ts` — nº pontos por ambiente, circuitos, quadro, bitolas
+  - `extract-hydraulic.v1.ts` — pontos água/esgoto, ralos, reservatório, fossa
+  - `extract-structural.v1.ts` — tipo fundação, pilares, vigas, dimensões nominais
+  - `extract-gas.v1.ts` — pontos de gás, comprimento tubulação, abrigo
+  - `extract-hvac.v1.ts` — pontos AC, dutos, exaustão
+- UI no `FileUploader`: ao subir, escolhe disciplina via Select
+- Cada extração roda como Inngest job (mesmo padrão do Sprint 3)
+- Card de revisão por disciplina (clone de `ExtractionReview`)
+- Schema de extração genérico em `lib/ai/prompts/_shared-extraction-schema.ts` que cada disciplina especializa
+
+### Sprint 10 — Quantitativos + orçamento por disciplina (~1 sprint)
+
+- Da extração de cada PDF: gerar quantitativos com composições SINAPI específicas:
+  - Elétrico: m fio 1,5/2,5/4mm² (SINAPI 91931, 91933, 91929), tomadas, disjuntores, quadro
+  - Hidráulico: m PVC 25/32/100mm + conexões (SINAPI 89711, 89714, 89732), registros, caixa d'água
+  - Estrutural: m³ concreto + kg aço CA-50 (SINAPI 92478, 92797)
+  - Gás: m tubulação cobre + registros (SINAPI tabela própria)
+  - HVAC: split BTU + dutos (referência mercado, não tem SINAPI direto)
+- Soma tudo no orçamento total do projeto (arquitetônico + complementares)
+- Card "Orçamento por disciplina" no `/projetos/[id]/orcamento` com breakdown
+
+### Sprint 11 — Análise cruzada IA (CONDICIONAL — usuário não confirmou)
+
+- NÃO é clash detection BIM-style (não dá com PDF, exigiria Solibri/Navisworks)
+- Best-effort: Claude Vision lê 2-3 PDFs simultâneo → warnings sobre padrões típicos
+- Disclaimer pesado: "Não substitui compatibilização técnica via BIM/Revit"
+
+---
+
+## ✅ Tier B parcial — Zoneamento por cidade (entregue)
+
+**Commit `c4faacc`** — 5 capitais curadas (Curitiba/SP/POA/RJ/BH), 17 zonas residenciais.
+Schema: `projects.cidade_codigo`, `zoneamento`, `area_terreno_m2`.
+Lógica em `lib/zoneamento/{cidades.ts,check.ts}`, UI em `components/features/zoneamento/{ZoneamentoFields,ZoneamentoCard}.tsx`.
+Calcula CA, TO, altura, vagas; recuos e permeabilidade ficam como warn (não dá pra medir pela extração).
+
+---
+
+## ✅ Tier A — completo
+
+**Commit `80518a4`** — 5 sprints em 1 sessão:
+
+1. **+5 novos docs IA** (estrutural, hidrossanitário, elétrico, PPCI, impermeabilização) +1 bônus (cronograma)
+   - Prompts em `lib/ai/prompts/{memorial-estrutural,memorial-hidrossanitario,memorial-eletrico,ppci,impermeabilizacao,cronograma}.v1.ts`
+   - Migration `20260705000001_more_document_types.sql` — enum de 12 valores
+   - DocumentTipo extendido + DOCUMENT_LABELS + loadPromptForTipo
+2. **ART/RRT pré-preenchida** — `lib/art-rrt/fields.ts` + `components/features/art-rrt/{ArtRrtCard,ArtRrtExport}.tsx`
+3. **Chat da Planta** no portal — `server/actions/portal/chat.action.ts` + `components/features/portal/ChatDaPlanta.tsx` (Claude Haiku 4.5, $0.001-0.005/pergunta)
+4. **Análise NBR** — `lib/nbr-checks/index.ts` (heurístico, sem IA) + `NbrChecksCard.tsx`
+
+---
+
+## ✅ UX Overhaul + Branding (entregue)
+
+- **Commit `7f26207`**: `ProjectProgress` stepper (7 etapas), sections numeradas no `/projetos/[id]`, menu Gerar Documento agrupado (Memoriais gerais/Comercial/Técnicos), `WelcomeCard` no dashboard, empty states explicativos
+- **Commit `ad0eb51`**: Projeto demo em 1 clique — `lib/demo/seed-data.ts` (~400 linhas) + `createDemoProjectAction`. Reduz time-to-value de 5min para 5s.
+- **Commit `5715c8b`**: Brand colors azul OKLCH (hue 252°) — todas as CSS vars `--primary`, `--ring`, etc. Dark mode ajustado.
+- **Commit `4725297`**: Logo SVG + favicon + apple-icon + OG image dinâmica via `@vercel/og` + `<Logo>` component + email template branded com header gradient + metadata global SEO.
+
+---
+
+## 🐛 Bugs corrigidos pós-MVP
+
+- `813e83c` — Base UI #31 no `DropdownMenuLabel` (precisava de `Menu.Group`)
+- `1f5dd3c` — `organizations.name` (não `nome`) em send-to-portal + portal-loader
+- `ed3bd3c` — timeout 180s → 290s no generate.action (caderno aborted)
 
 ---
 
