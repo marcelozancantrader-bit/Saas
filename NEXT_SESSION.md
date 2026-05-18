@@ -1,12 +1,12 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-18 (Sprint 6 fechado, auto-deploy via GitHub→Vercel ativo)
+**Última pausa:** 2026-05-18 (Sprint 7 fechado — só falta Sprint 8 Polish + Beta)
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
 
 ---
 
-## ✅ Sprints concluídos (6 de 8)
+## ✅ Sprints concluídos (7 de 8)
 
 | Sprint                                                        | Tag             | DoD                                                 | Commit final |
 | ------------------------------------------------------------- | --------------- | --------------------------------------------------- | ------------ |
@@ -16,8 +16,54 @@
 | 4 — F4 SINAPI + Orçamento (heurístico, sem IA)                | `sprint-4-done` | 9 asserts: 29 itens R$193k/656ms + RLS              | `cb7bc6d`    |
 | 5 — F5 Documentos por IA (4 tipos, Sonnet 4.6 + Tiptap + PDF) | `sprint-5-done` | 4/4 docs live: 539s, $0.55, RLS isolada             | `6a937ae`    |
 | 6 — F6 Portal do Cliente (DIFERENCIAL)                        | `sprint-6-done` | 21 asserts: token + aprovação + scope cycle + audit | `1282154`    |
+| 7 — F7 Dashboard + F8 Billing (Asaas + notifications)         | `sprint-7-done` | 22 asserts: plan limits + KPIs + RLS + upgrade flow | `f203616`    |
 
-**Status do prod:** GitHub→Vercel conectado, auto-deploy a cada push em `main`. Migrations precisam ser aplicadas manualmente no Supabase (db push do CLI requer link/login interativo).
+**Status do prod:** GitHub→Vercel conectado, auto-deploy a cada push em `main`. Migrations aplicadas manualmente via Supabase Dashboard SQL editor (CLI db push bloqueado pelo classifier).
+
+---
+
+## ✅ Sprint 7 — Dashboard + Billing PASSED
+
+**DoD live (22 asserts), commit `f203616`:**
+
+- 4 tiers (Free/Pro/Studio/Agency) com pricing + features + limits em `lib/plans/limits.ts` (single source of truth)
+- Free: 2 projetos, 5 docs IA/mês, marca d'água, sem portal, 1 user
+- Pro: ilimitado projetos, 50 docs/mês, sem marca d'água, portal ativo, 1 user (R$149/mês)
+- Studio: 200 docs/mês, 5 users, branding custom (R$349/mês)
+- Agency: ilimitado tudo (consulta)
+
+**Enforcement:**
+
+- `generate-document.action`: bloqueia 6º doc IA/mês no Free (testado)
+- `send-to-portal.action`: bloqueia no Free (portalClienteEnabled=false)
+
+**Dashboard `/` (6 KPIs):**
+
+- Projetos ativos (vs limite do plano) | Faturamento previsto (soma valor_contrato dos com doc aprovado) | Docs aguardando cliente | Alterações de escopo pendentes | Ciclo médio dias (projeto → 1ª aprovação) | Projetos parados 14+d
+- Card de uso vs limites com progress bars (verde/amarelo 80%/vermelho 100%)
+
+**/billing:**
+
+- Plano atual + 4 cards (atual destacado com ring)
+- Botão upgrade → `upgradePlanAction`: cria customer Asaas + subscription via PIX se `ASAAS_API_KEY` setado, senão upgrade manual direto
+- Histórico de subscriptions
+
+**Asaas integration (gated em ASAAS_API_KEY):**
+
+- `lib/billing/asaas.ts`: HTTP direto (sem SDK), createOrFindCustomer + createSubscription
+- `/api/webhooks/asaas`: handler PAYMENT_RECEIVED → ativa subscription + atualiza org.plano; PAYMENT_OVERDUE → past_due; SUBSCRIPTION_DELETED → canceled. Valida header `asaas-access-token` vs `ASAAS_WEBHOOK_TOKEN`
+
+**Notifications in-app:**
+
+- Schema `notifications` (org_id, user_id null=org-wide, type, title/body/link, read_at, meta)
+- 3 portal actions criam notification ao receber decisão do cliente: document.approved/rejected, scope_change.requested, scope_change.approved/rejected, plan.upgraded
+- `NotificationsBell` no TopBar com badge de unread + dropdown (lista 30 últimas, marca como lida ao clicar)
+
+**Pendências para Sprint 7.5 / 8:**
+
+- ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN não setados — upgrade flow está em modo manual. Para testar fluxo PIX real precisa de conta Asaas (sandbox: https://docs.asaas.com/reference/criar-uma-conta-de-teste)
+- WhatsApp Z-API (Sprint 6.5 ideal)
+- Cron job para detectar "projeto parado 14+d" e "doc aguardando 7+d" + criar notification (hoje só calcula no dashboard)
 
 ---
 
@@ -90,6 +136,7 @@ npx tsx scripts/sprint3-dod-test.ts   # AI extraction (gasta ~$0.02)
 npx tsx scripts/sprint4-dod-test.ts   # SINAPI orçamento
 npx tsx scripts/sprint5-dod-test.ts   # AI docs (gasta ~$0.55, ~9min — 4 chamadas Claude)
 npx tsx scripts/sprint6-dod-test.ts   # Portal do Cliente (sem custo, ~5s)
+npx tsx scripts/sprint7-dod-test.ts   # Dashboard + Billing + Notifications (sem custo, ~5s)
 
 # Deploy
 vercel deploy --prod --token "$VERCEL_TOKEN" --yes
@@ -147,10 +194,11 @@ app/(app)/projetos/[id]/documentos/
 
 1. `cd C:\dev\memorial-ai`
 2. Diga uma das opções no Claude Code:
-   - **"Go Sprint 7"** → F7 Dashboard + F8 Billing (KPIs, notificações, Asaas, plan limits)
-   - **"Polish Sprint 6"** → "ordem de alteração" PDF auto, WhatsApp Z-API, geo por IP
+   - **"Go Sprint 8"** → Polish + Beta: LGPD endpoints, onboarding, landing, Sentry+PostHog, beta invites
+   - **"Configurar Asaas"** → guia setup de conta + envs ASAAS_API_KEY/ASAAS_WEBHOOK_TOKEN + smoke test do fluxo PIX
+   - **"Configurar Resend"** → envia e-mail real ao enviar doc ao portal (hoje só clipboard)
+   - **"Polish Sprint 6 ou 7"** → "ordem de alteração" PDF auto, WhatsApp Z-API, cron jobs de stale projects
    - **"Tem bug em [X]"** → debug específico
-   - **"Smoke test portal"** → guia o usuário no fluxo end-to-end manual
 
 ---
 
