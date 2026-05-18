@@ -22,6 +22,9 @@ export async function updateProjectAction(
     endereco_cep: formData.get("endereco_cep"),
     endereco_completo: formData.get("endereco_completo"),
     status: formData.get("status") ?? "rascunho",
+    cidade_codigo: formData.get("cidade_codigo"),
+    zoneamento: formData.get("zoneamento"),
+    area_terreno_m2: formData.get("area_terreno_m2"),
   });
 
   if (!parsed.success) {

@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CepInput } from "@/components/features/address/CepInput";
+import { ZoneamentoFields } from "@/components/features/zoneamento/ZoneamentoFields";
 import { createProjectAction } from "@/server/actions/projects/create.action";
 import { updateProjectAction } from "@/server/actions/projects/update.action";
 import {
@@ -38,6 +39,9 @@ type ProjectFormValues = {
   endereco_cep?: string;
   endereco_completo?: string;
   status?: (typeof STATUS_VALUES)[number];
+  cidade_codigo?: string | null;
+  zoneamento?: string | null;
+  area_terreno_m2?: number | null;
 };
 
 type ClientOption = { id: string; nome: string };
@@ -238,6 +242,15 @@ export function ProjectForm({ initial, clients }: Props) {
               placeholder="Rua, número, bairro, cidade/UF"
             />
           }
+        />
+      </Section>
+
+      <Section title="Plano diretor da cidade (opcional — habilita validação de zoneamento)">
+        <ZoneamentoFields
+          initialCidade={initial?.cidade_codigo ?? null}
+          initialZona={initial?.zoneamento ?? null}
+          initialAreaTerreno={initial?.area_terreno_m2 ?? null}
+          disabled={pending}
         />
       </Section>
 

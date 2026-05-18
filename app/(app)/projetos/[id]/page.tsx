@@ -29,6 +29,7 @@ import type { BriefingRespostas } from "@/lib/validators/briefing.schema";
 import { ArtRrtCard } from "@/components/features/art-rrt/ArtRrtCard";
 import type { ArtRrtData } from "@/lib/art-rrt/fields";
 import { NbrChecksCard } from "@/components/features/nbr-checks/NbrChecksCard";
+import { ZoneamentoCard } from "@/components/features/zoneamento/ZoneamentoCard";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,9 @@ type ProjectDetail = {
   endereco_cep: string | null;
   endereco_completo: string | null;
   status: (typeof STATUS_VALUES)[number];
+  cidade_codigo: string | null;
+  zoneamento: string | null;
+  area_terreno_m2: number | null;
   clients: { id: string; nome: string; portal_token: string } | null;
   meta: Record<string, unknown> | null;
 };
@@ -78,7 +82,7 @@ export default async function ProjetoDetailPage({ params }: Props) {
     supabase
       .from("projects")
       .select(
-        "id, nome, client_id, tipologia, area_prevista_m2, padrao_construtivo, endereco_cep, endereco_completo, status, meta, clients ( id, nome, portal_token )",
+        "id, nome, client_id, tipologia, area_prevista_m2, padrao_construtivo, endereco_cep, endereco_completo, status, cidade_codigo, zoneamento, area_terreno_m2, meta, clients ( id, nome, portal_token )",
       )
       .eq("id", id)
       .single<ProjectDetail>(),
@@ -219,6 +223,19 @@ export default async function ProjetoDetailPage({ params }: Props) {
               }}
             />
           ) : null}
+
+          <ZoneamentoCard
+            cidade_codigo={project.cidade_codigo}
+            zona_codigo={project.zoneamento}
+            area_terreno_m2={project.area_terreno_m2}
+            area_construida_total_m2={
+              completedExtraction.extracao_resultado.area_total_m2 ?? project.area_prevista_m2
+            }
+            numero_pavimentos={completedExtraction.extracao_resultado.numero_pavimentos ?? null}
+            tem_garagem={
+              completedExtraction.extracao_resultado.elementos_especiais?.garagem ?? false
+            }
+          />
         </>
       ) : null}
 
@@ -280,6 +297,9 @@ export default async function ProjetoDetailPage({ params }: Props) {
               endereco_cep: project.endereco_cep ?? undefined,
               endereco_completo: project.endereco_completo ?? undefined,
               status: project.status,
+              cidade_codigo: project.cidade_codigo,
+              zoneamento: project.zoneamento,
+              area_terreno_m2: project.area_terreno_m2,
             }}
             clients={clients ?? []}
           />

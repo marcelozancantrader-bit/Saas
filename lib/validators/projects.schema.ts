@@ -39,6 +39,9 @@ export const projectSchema = z.object({
   ),
   endereco_completo: z.preprocess(trimOrUndefined, z.string().optional()),
   status: z.enum(STATUS_VALUES).default("rascunho"),
+  cidade_codigo: z.preprocess(trimOrUndefined, z.string().max(40).optional()),
+  zoneamento: z.preprocess(trimOrUndefined, z.string().max(40).optional()),
+  area_terreno_m2: numericOptional,
 });
 
 export type ProjectInput = z.infer<typeof projectSchema>;
