@@ -48,7 +48,7 @@ export const gasExtractionSchema = z.object({
       qtd_cilindros: z.number().int().positive().nullable(),
     })
     .describe("Dados da central de GLP — só preenche se tipo=glp"),
-  observacoes: z.string().max(500),
+  observacoes: z.string().max(2000),
   confianca: z.enum(CONFIANCA),
 });
 
@@ -93,7 +93,7 @@ export const TOOL_DEFINITION: {
         },
         required: ["tem_central", "capacidade_kg", "qtd_cilindros"],
       },
-      observacoes: { type: "string", maxLength: 500 },
+      observacoes: { type: "string", maxLength: 2000 },
       confianca: { type: "string", enum: [...CONFIANCA] },
     },
     required: [

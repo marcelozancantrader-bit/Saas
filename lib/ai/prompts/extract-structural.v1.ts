@@ -72,7 +72,7 @@ export const structuralExtractionSchema = z.object({
     .positive()
     .nullable()
     .describe("Massa total estimada de aço CA-50 + CA-60. null se não estimar."),
-  observacoes: z.string().max(500),
+  observacoes: z.string().max(2000),
   confianca: z.enum(CONFIANCA),
 });
 
@@ -141,7 +141,7 @@ export const TOOL_DEFINITION: {
       },
       volume_concreto_m3: { type: ["number", "null"] },
       aco_kg_total: { type: ["number", "null"] },
-      observacoes: { type: "string", maxLength: 500 },
+      observacoes: { type: "string", maxLength: 2000 },
       confianca: { type: "string", enum: [...CONFIANCA] },
     },
     required: [

@@ -62,7 +62,7 @@ export const hydraulicExtractionSchema = z.object({
     pvc_50mm_metros: z.number().nonnegative().nullable().describe("PVC 50mm (esgoto secundário)"),
     pvc_100mm_metros: z.number().nonnegative().nullable().describe("PVC 100mm (esgoto primário)"),
   }),
-  observacoes: z.string().max(500),
+  observacoes: z.string().max(2000),
   confianca: z.enum(CONFIANCA),
 });
 
@@ -132,7 +132,7 @@ export const TOOL_DEFINITION: {
         },
         required: ["pvc_25mm_metros", "pvc_32mm_metros", "pvc_50mm_metros", "pvc_100mm_metros"],
       },
-      observacoes: { type: "string", maxLength: 500 },
+      observacoes: { type: "string", maxLength: 2000 },
       confianca: { type: "string", enum: [...CONFIANCA] },
     },
     required: [

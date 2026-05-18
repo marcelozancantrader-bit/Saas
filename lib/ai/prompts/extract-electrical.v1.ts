@@ -74,8 +74,8 @@ export const electricalExtractionSchema = z.object({
   }),
   observacoes: z
     .string()
-    .max(500)
-    .describe("Observações relevantes pro profissional. Máx 500 chars."),
+    .max(2000)
+    .describe("Observações relevantes pro profissional. Máx 2000 chars."),
   confianca: z.enum(CONFIANCA).describe("Confiança geral na extração"),
 });
 
@@ -139,7 +139,7 @@ export const TOOL_DEFINITION: {
         },
         required: ["quantidade", "disjuntores_total", "tem_dps", "tem_dr"],
       },
-      observacoes: { type: "string", maxLength: 500 },
+      observacoes: { type: "string", maxLength: 2000 },
       confianca: { type: "string", enum: [...CONFIANCA] },
     },
     required: [

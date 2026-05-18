@@ -53,7 +53,7 @@ export const hvacExtractionSchema = z.object({
     .nonnegative()
     .nullable()
     .describe("Comprimento de dutos (só central dutado/VRF). null se split direto."),
-  observacoes: z.string().max(500),
+  observacoes: z.string().max(2000),
   confianca: z.enum(CONFIANCA),
 });
 
@@ -101,7 +101,7 @@ export const TOOL_DEFINITION: {
       total_splits: { type: ["integer", "null"], minimum: 0 },
       capacidade_total_btu: { type: ["integer", "null"] },
       duto_metros: { type: ["number", "null"] },
-      observacoes: { type: "string", maxLength: 500 },
+      observacoes: { type: "string", maxLength: 2000 },
       confianca: { type: "string", enum: [...CONFIANCA] },
     },
     required: [
