@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/resend";
+import { renderDocumentSentEmail } from "@/lib/email/templates";
 import { env } from "@/lib/validators/env";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 
@@ -93,18 +94,18 @@ export async function sendDocumentToPortalAction(
   if (project.clients.email) {
     const portalUrl = `${env.NEXT_PUBLIC_APP_URL}/portal/${project.clients.portal_token}`;
     const orgName = project.organizations?.name ?? "Memorial.ai";
+    const { html, text, subject } = renderDocumentSentEmail({
+      orgName,
+      clientName: project.clients.nome,
+      projectName: project.nome,
+      documentTitle: doc.titulo,
+      portalUrl,
+    });
     const r = await sendEmail({
       to: project.clients.email,
-      subject: `${orgName}: novo documento para sua aprovação — ${doc.titulo}`,
-      html: `
-        <p>Olá ${project.clients.nome},</p>
-        <p>Você recebeu um novo documento para revisar e aprovar no projeto
-        <strong>${project.nome}</strong>: <em>${doc.titulo}</em>.</p>
-        <p><a href="${portalUrl}" style="display:inline-block;background:#111;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">Abrir portal do projeto</a></p>
-        <p style="color:#666;font-size:12px">Ou copie e cole este link: ${portalUrl}</p>
-        <p style="color:#666;font-size:12px">${orgName} via Memorial.ai</p>
-      `,
-      text: `Olá ${project.clients.nome},\n\nNovo documento para sua aprovação: ${doc.titulo}\nProjeto: ${project.nome}\n\nAbra o portal: ${portalUrl}\n\n${orgName} via Memorial.ai`,
+      subject,
+      html,
+      text,
       tag: "portal.document_sent",
     });
     emailSent = r.ok;

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { PLANS, formatBrlFromCents } from "@/lib/plans/limits";
+import { Logo } from "@/components/brand/Logo";
 
 export const metadata = {
   title: "Memorial.ai — Da planta ao contrato em horas, não semanas",
@@ -37,8 +38,8 @@ export default function SobrePage() {
     <main className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
       <header className="border-b border-zinc-200 dark:border-zinc-800">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link href="/sobre" className="text-lg font-semibold tracking-tight">
-            Memorial<span className="text-primary">.ai</span>
+          <Link href="/sobre" aria-label="Memorial.ai">
+            <Logo size={28} />
           </Link>
           <nav className="flex items-center gap-3">
             <Link

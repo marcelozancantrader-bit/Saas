@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
+import { Logo } from "@/components/brand/Logo";
 
 export const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
@@ -19,8 +20,13 @@ export function SidebarContent({ orgName, onNavigate }: Props) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-14 items-center border-b border-zinc-200 px-4 dark:border-zinc-800">
-        <Link href="/" onClick={onNavigate} className="text-lg font-semibold tracking-tight">
-          Memorial<span className="text-primary">.ai</span>
+        <Link
+          href="/"
+          onClick={onNavigate}
+          className="inline-flex items-center"
+          aria-label="Memorial.ai"
+        >
+          <Logo size={24} />
         </Link>
       </div>
       <div className="px-3 py-3">
