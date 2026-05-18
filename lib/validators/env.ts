@@ -27,6 +27,11 @@ const envSchema = z.object({
   // não configurado, upgrade vira "manual" (atualiza plano direto sem cobrança).
   ASAAS_API_KEY: z.string().optional(),
   ASAAS_WEBHOOK_TOKEN: z.string().optional(),
+
+  // Observabilidade — Sprint 8 beta. Optional: stubs no-op se não setado.
+  SENTRY_DSN: z.string().url().optional(),
+  NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
+  NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
 });
 
 type Env = z.infer<typeof envSchema>;
@@ -57,6 +62,9 @@ function parseEnv(): Env {
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     ASAAS_API_KEY: process.env.ASAAS_API_KEY,
     ASAAS_WEBHOOK_TOKEN: process.env.ASAAS_WEBHOOK_TOKEN,
+    SENTRY_DSN: process.env.SENTRY_DSN,
+    NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+    NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
   });
   if (!parsed.success) {
     const issues = parsed.error.issues
