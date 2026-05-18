@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import React, { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Table,
@@ -18,6 +18,7 @@ import { updateBudgetItemAction } from "@/server/actions/budgets/update-item.act
 import { deleteBudgetItemAction } from "@/server/actions/budgets/delete-item.action";
 import { AddItemDialog } from "./AddItemDialog";
 import type { BudgetItem } from "@/app/(app)/projetos/[id]/orcamento/[budgetId]/page";
+import { DISCIPLINA_LABEL, type Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 import { toast } from "sonner";
 
 type Props = {
@@ -111,7 +112,7 @@ export function BudgetItemsTable({ items, budgetId, uf, mesReferencia, desonerad
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => {
+            {items.map((item, idx) => {
               const edit = editing[item.id];
               const isEditing = !!edit;
               const currentQty = edit?.qty ?? Number(item.quantidade).toFixed(2);
@@ -123,65 +124,79 @@ export function BudgetItemsTable({ items, budgetId, uf, mesReferencia, desonerad
                       Number(edit.preco || item.preco_unitario)
                     ).toFixed(2)
                   : item.total;
+              const prev = idx > 0 ? items[idx - 1]?.disciplina : null;
+              const showDisciplinaHeader = item.disciplina !== prev;
               return (
-                <TableRow key={item.id}>
-                  <TableCell className="text-xs text-zinc-500">{item.ordem}</TableCell>
-                  <TableCell className="text-xs text-zinc-600 dark:text-zinc-400">
-                    {item.composicao_codigo ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-sm">{item.descricao}</p>
-                    {item.origem !== "sinapi" ? (
-                      <Badge variant="outline" className="mt-1 capitalize">
-                        {item.origem.replace("_", " ")}
-                      </Badge>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="text-xs text-zinc-600 dark:text-zinc-400">
-                    {item.unidade}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={currentQty}
-                      onChange={(e) => setField(item.id, "qty", e.target.value)}
-                      disabled={pending}
-                      className="h-8 w-24 text-right text-sm"
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={currentPreco}
-                      onChange={(e) => setField(item.id, "preco", e.target.value)}
-                      disabled={pending}
-                      className="h-8 w-28 text-right text-sm"
-                    />
-                  </TableCell>
-                  <TableCell className="text-right text-sm font-medium">
-                    {formatBRL(computedTotal)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {isEditing ? (
-                      <Button size="sm" onClick={() => saveItem(item)} disabled={pending}>
-                        Salvar
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeItem(item)}
-                        disabled={pending}
+                <React.Fragment key={item.id}>
+                  {showDisciplinaHeader ? (
+                    <TableRow className="bg-zinc-50 dark:bg-zinc-900">
+                      <TableCell
+                        colSpan={8}
+                        className="py-1.5 text-xs font-semibold tracking-wide text-zinc-600 uppercase dark:text-zinc-400"
                       >
-                        Remover
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
+                        {DISCIPLINA_LABEL[item.disciplina as Disciplina]}
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                  <TableRow>
+                    <TableCell className="text-xs text-zinc-500">{item.ordem}</TableCell>
+                    <TableCell className="text-xs text-zinc-600 dark:text-zinc-400">
+                      {item.composicao_codigo ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm">{item.descricao}</p>
+                      {item.origem !== "sinapi" ? (
+                        <Badge variant="outline" className="mt-1 capitalize">
+                          {item.origem.replace("_", " ")}
+                        </Badge>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-xs text-zinc-600 dark:text-zinc-400">
+                      {item.unidade}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={currentQty}
+                        onChange={(e) => setField(item.id, "qty", e.target.value)}
+                        disabled={pending}
+                        className="h-8 w-24 text-right text-sm"
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={currentPreco}
+                        onChange={(e) => setField(item.id, "preco", e.target.value)}
+                        disabled={pending}
+                        className="h-8 w-28 text-right text-sm"
+                      />
+                    </TableCell>
+                    <TableCell className="text-right text-sm font-medium">
+                      {formatBRL(computedTotal)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {isEditing ? (
+                        <Button size="sm" onClick={() => saveItem(item)} disabled={pending}>
+                          Salvar
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeItem(item)}
+                          disabled={pending}
+                        >
+                          Remover
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
               );
             })}
           </TableBody>

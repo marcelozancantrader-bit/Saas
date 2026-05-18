@@ -179,6 +179,7 @@ export async function generateBudgetAction(
       preco_unitario: precoUnitario.round(4, Big.roundHalfUp).toFixed(4),
       total_calc: item.quantidade.times(precoUnitario), // só pra somar — o banco gera o stored
       origem: "sinapi" as const,
+      disciplina: item.disciplina ?? "architectural",
     };
   });
   const totalBruto = sumMoney(itemsForInsert.map((i) => i.total_calc));
@@ -227,6 +228,7 @@ export async function generateBudgetAction(
       quantidade: item.quantidade,
       preco_unitario: item.preco_unitario,
       origem: item.origem,
+      disciplina: item.disciplina,
     })),
   );
 

@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import Big from "big.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
-import { formatBRL } from "@/lib/utils/money";
+import { formatBRL, applyBdi, toDbNumeric } from "@/lib/utils/money";
 import { BudgetItemsTable } from "@/components/features/budgets/BudgetItemsTable";
 import { BudgetHeader } from "@/components/features/budgets/BudgetHeader";
 import { CurvaABC } from "@/components/features/budgets/CurvaABC";
 import { ExportButtons } from "@/components/features/budgets/ExportButtons";
+import { DISCIPLINA_LABEL, type Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,7 @@ export type BudgetItem = {
   preco_unitario: string;
   total: string;
   origem: "sinapi" | "custom" | "composicao_propria";
+  disciplina: Disciplina;
 };
 
 export default async function BudgetDetailPage({ params }: Props) {
@@ -55,7 +58,7 @@ export default async function BudgetDetailPage({ params }: Props) {
       supabase
         .from("budget_items")
         .select(
-          "id, ordem, composicao_codigo, descricao, unidade, quantidade, preco_unitario, total, origem",
+          "id, ordem, composicao_codigo, descricao, unidade, quantidade, preco_unitario, total, origem, disciplina",
         )
         .eq("budget_id", budgetId)
         .order("ordem", { ascending: true })
@@ -67,6 +70,26 @@ export default async function BudgetDetailPage({ params }: Props) {
   if (budget.project_id !== projectId) notFound();
 
   const itemsList = items ?? [];
+
+  const bdi = new Big(budget.bdi_pct);
+  const subtotaisPorDisc = new Map<Disciplina, { bruto: Big; comBdi: Big; count: number }>();
+  for (const it of itemsList) {
+    const cur = subtotaisPorDisc.get(it.disciplina) ?? {
+      bruto: new Big(0),
+      comBdi: new Big(0),
+      count: 0,
+    };
+    const total = new Big(it.total);
+    cur.bruto = cur.bruto.plus(total);
+    cur.comBdi = cur.comBdi.plus(applyBdi(total, Number(bdi)));
+    cur.count += 1;
+    subtotaisPorDisc.set(it.disciplina, cur);
+  }
+  const subtotaisOrdenados = (
+    Array.from(subtotaisPorDisc.entries()) as Array<
+      [Disciplina, { bruto: Big; comBdi: Big; count: number }]
+    >
+  ).sort((a, b) => b[1].comBdi.cmp(a[1].comBdi));
 
   return (
     <div className="space-y-6">
@@ -99,6 +122,69 @@ export default async function BudgetDetailPage({ params }: Props) {
       </div>
 
       <BudgetHeader budget={budget} />
+
+      {subtotaisOrdenados.length > 1 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Total por disciplina</CardTitle>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+              Quebra do orçamento por disciplina, com subtotal bruto e já com BDI aplicado.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-zinc-50 text-xs text-zinc-500 uppercase dark:bg-zinc-900">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium">Disciplina</th>
+                    <th className="px-3 py-2 text-right font-medium">Itens</th>
+                    <th className="px-3 py-2 text-right font-medium">Bruto</th>
+                    <th className="px-3 py-2 text-right font-medium">c/ BDI</th>
+                    <th className="px-3 py-2 text-right font-medium">% do total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {subtotaisOrdenados.map(([disc, t]) => {
+                    const pct = t.comBdi
+                      .times(100)
+                      .div(new Big(budget.total_com_bdi).eq(0) ? 1 : new Big(budget.total_com_bdi));
+                    return (
+                      <tr key={disc}>
+                        <td className="px-3 py-2 font-medium">{DISCIPLINA_LABEL[disc]}</td>
+                        <td className="px-3 py-2 text-right text-zinc-600 dark:text-zinc-400">
+                          {t.count}
+                        </td>
+                        <td className="px-3 py-2 text-right text-zinc-600 dark:text-zinc-400">
+                          {formatBRL(toDbNumeric(t.bruto))}
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium">
+                          {formatBRL(toDbNumeric(t.comBdi))}
+                        </td>
+                        <td className="px-3 py-2 text-right text-zinc-600 dark:text-zinc-400">
+                          {pct.toFixed(1)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="bg-zinc-50 dark:bg-zinc-900">
+                    <td className="px-3 py-2 text-sm font-semibold">Total consolidado</td>
+                    <td className="px-3 py-2 text-right text-sm font-semibold">
+                      {itemsList.length}
+                    </td>
+                    <td className="px-3 py-2 text-right text-sm font-semibold">
+                      {formatBRL(budget.total_bruto)}
+                    </td>
+                    <td className="px-3 py-2 text-right text-sm font-semibold">
+                      {formatBRL(budget.total_com_bdi)}
+                    </td>
+                    <td className="px-3 py-2 text-right text-sm font-semibold">100%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         <Card>

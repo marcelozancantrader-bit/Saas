@@ -12,6 +12,7 @@
  */
 
 import Big from "big.js";
+import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 
 // =============================================================================
 // Tipos
@@ -46,6 +47,8 @@ export type RuleItem = {
   quantidade: Big;
   /** Para auditoria — qual regra gerou este item. */
   rule_id: string;
+  /** Tag de disciplina pra agrupar UI e subtotal. Default 'architectural'. */
+  disciplina?: Disciplina;
 };
 
 // =============================================================================
@@ -449,11 +452,14 @@ const RULES: Rule[] = [
 /**
  * Aplica todas as regras e retorna a lista consolidada de itens para o orçamento.
  * Pure function — sem I/O. Os preços vêm separadamente do sinapi_compositions.
+ * Todos os itens vêm tagueados como 'architectural'.
  */
 export function applyRulesV1(planta: ExtractedPlanta): RuleItem[] {
   const items: RuleItem[] = [];
   for (const rule of RULES) {
-    items.push(...rule(planta));
+    for (const item of rule(planta)) {
+      items.push({ ...item, disciplina: "architectural" });
+    }
   }
   return items;
 }

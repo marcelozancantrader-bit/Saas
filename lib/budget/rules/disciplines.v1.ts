@@ -13,12 +13,17 @@
  */
 
 import Big from "big.js";
+import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 import type { RuleItem } from "./v1";
 
 export const DISCIPLINE_RULES_VERSION = "disciplines.v1" as const;
 
 function big(n: number): Big {
   return new Big(n.toFixed(4));
+}
+
+function tag(items: RuleItem[], disciplina: Disciplina): RuleItem[] {
+  return items.map((i) => ({ ...i, disciplina }));
 }
 
 // =============================================================================
@@ -45,6 +50,10 @@ export type ElectricalData = {
 const COMPRIMENTO_MEDIO_CIRCUITO_M = 18; // metros médios de cabo por circuito residencial
 
 export function rulesElectricalSinapi(d: ElectricalData): RuleItem[] {
+  return tag(rulesElectricalSinapiRaw(d), "electrical");
+}
+
+function rulesElectricalSinapiRaw(d: ElectricalData): RuleItem[] {
   const items: RuleItem[] = [];
 
   // Cabos por bitola — agrupa metragem por mm²
@@ -170,6 +179,10 @@ const M_POR_PONTO_AF = 6; // metros de PVC 25mm por ponto de água fria
 const M_POR_PONTO_ESG = 4; // metros de PVC 50mm/100mm por ponto de esgoto
 
 export function rulesHydraulicSinapi(d: HydraulicData): RuleItem[] {
+  return tag(rulesHydraulicSinapiRaw(d), "hydraulic");
+}
+
+function rulesHydraulicSinapiRaw(d: HydraulicData): RuleItem[] {
   const items: RuleItem[] = [];
 
   const pvc25 =
@@ -263,6 +276,10 @@ export type StructuralData = {
 };
 
 export function rulesStructuralSinapi(d: StructuralData): RuleItem[] {
+  return tag(rulesStructuralSinapiRaw(d), "structural");
+}
+
+function rulesStructuralSinapiRaw(d: StructuralData): RuleItem[] {
   const items: RuleItem[] = [];
 
   if (d.volume_concreto_m3 && d.volume_concreto_m3 > 0) {
