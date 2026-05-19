@@ -1,10 +1,103 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-18 — **Sprint 9+10+10.1 fechados em prod: multi-disciplina (upload+extração+orçamento+breakdown por disciplina). Próximo: Sprint 11 (análise cruzada IA) opcional, ou polish (multi-upload, edição manual da extração das disciplinas).**
+**Última pausa:** 2026-05-19 — **Big push: landing pública, pricing high-ticket, Asaas sandbox 100% funcional, Google OAuth ativo, polish do signup/login/configuracoes/clientes. Próximo: Resend / Sentry / PostHog (integrações opcionais) ou backlog de produto.**
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
-**App live:** https://memorial-ai-mu.vercel.app
+**App live:** https://memorial-ai-mu.vercel.app · **Último commit:** `5700be6`
 **Repo:** https://github.com/marcelozancantrader-bit/Saas
+
+---
+
+## 📌 Resumo da sessão 2026-05-19 (em prod, sem pendências)
+
+### Landing pública + pricing high-ticket
+
+- `/` é landing pública (visitante não-logado). Logado redireciona pra `/dashboard`.
+- Dashboard movido pra `/dashboard`, middleware atualizado.
+- Pricing: **Free / Standard R$199,90 / Pro R$449,90 (recomendado) / Pro Max R$699,90 / Agência (consultar)**.
+- `lib/plans/limits.ts` reescrito com 5 tiers + `PLAN_ORDER`.
+- Migration `20260718000004_pricing_tiers.sql` (org constraint) + `20260719000001` (subscriptions constraint) aplicadas.
+- Landing: hero + 4 passos + 6 dores + 12 funcionalidades + ROI + 5 planos + FAQ + CTA.
+- SEO: `app/robots.ts`, `app/sitemap.ts`, `app/not-found.tsx`, `app/error.tsx`.
+
+### Asaas — cobrança PIX (sandbox 100% funcional)
+
+- `lib/billing/asaas.ts`: env `ASAAS_ENVIRONMENT` (sandbox/production), helpers `getFirstSubscriptionPayment` (retorna invoiceUrl com QR PIX) e `customerAreaUrl` (fallback).
+- `createOrFindCustomer` agora faz UPSERT (atualiza cpfCnpj/nome se customer já existe).
+- `upgradePlanAction`: retorna `needs_cpf_cnpj: true` se org sem CPF/CNPJ → dialog inline em `PlanUpgradeButton` pede documento, salva via `setOrgCpfCnpjAction` e re-tenta.
+- Webhook handler `/api/webhooks/asaas` trata PAYMENT_RECEIVED (ativa sub + cancela outras active da mesma org), PAYMENT_OVERDUE, PAYMENT_REFUNDED, SUBSCRIPTION_DELETED, SUBSCRIPTION_UPDATED.
+- Migration `20260719000003` dropa `webhook_log` (debug) + cancela subscriptions active duplicadas.
+- Checkout abre em nova aba (window.open).
+- **Setup ativo:** ASAAS_API_KEY (sandbox), ASAAS_WEBHOOK_TOKEN, ASAAS_ENVIRONMENT=sandbox no Vercel + webhook configurado em sandbox.asaas.com com 5 eventos marcados.
+- **Pra ir pra prod:** trocar para conta produção Asaas, novas keys, ASAAS_ENVIRONMENT=production.
+
+### Google OAuth
+
+- Configurado: Google Cloud OAuth Client (Web) → Supabase Auth provider → Vercel `NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED=true`.
+- Site URL + Redirect URLs no Supabase URL Config.
+- **App ainda em modo "Em teste"** no Google — pra publicar (qualquer e-mail logar) precisa preencher domínios + URLs privacidade/termos no Tela de Consentimento.
+
+### UX polish
+
+- **Signup/Login** com Logo SVG real, link pra landing, benefícios destacados, PasswordStrength (5 níveis), toggle Mostrar/Ocultar senha, mensagem clara pós-cadastro.
+- **TopBar dropdown** sem placeholders: Dashboard / Configurações / Plano e cobrança / Sair (vermelho).
+- **`/configuracoes`** — `AccountCard` novo (avatar + editar nome + trocar/definir senha com dialog completo) + Color picker visual (primária + secundária + preview ao vivo) + máscara automática CPF/CNPJ + labels PF/PJ em destaque. Migration `20260719000004` adiciona `organizations.cor_secundaria`.
+- **`/clientes/[id]`** virou hub do cliente: 4 KPIs + `PortalLinkCard` (URL copiável + botões Copiar/Abrir) + lista projetos + lista documentos enviados ao portal + lista alterações de escopo + form editável.
+- **`/projetos/novo?client_id=X`** pré-seleciona o cliente.
+
+### Cron + copy
+
+- `server/jobs/stale-projects-cron.ts`: Inngest function diária (9h Brasília) detecta projetos parados ≥14d e docs aguardando ≥7d → notificação org-wide com dedup 14d.
+- Pro Max copy: "API + integrações" → "API (em breve)", `apiAccess: false`.
+
+---
+
+## 📝 Migrations aplicadas nesta sessão (todas no Supabase Dashboard)
+
+1. `20260718000004_pricing_tiers.sql` — organizations.plano constraint (free/standard/pro/pro_max/agency)
+2. `20260719000001_subscriptions_pricing_tiers.sql` — subscriptions.plano constraint igual
+3. `20260719000002_webhook_log.sql` — criou tabela debug (depois dropada)
+4. `20260719000003_cleanup_webhook_debug.sql` — dropa webhook_log + cancela subs active duplicadas
+5. `20260719000004_org_cor_secundaria.sql` — organizations.cor_secundaria
+
+---
+
+## ⏳ Pendências de integração (opcionais, app funciona sem elas)
+
+### Resend (e-mail transacional do portal)
+
+- Código pronto: `lib/email/resend.ts` + template `lib/email/templates.ts` + `send-to-portal.action.ts` já chama sendEmail (gated).
+- Setup: criar conta resend.com → adicionar/verificar domínio (ou usar `onboarding@resend.dev` pra teste) → API key → setar `RESEND_API_KEY` + `RESEND_FROM_EMAIL` no Vercel + redeploy.
+- Desbloqueia: notificação do cliente quando recebe doc no portal, futuro envio de convites de membros.
+
+### Sentry (rastreio de erros)
+
+- Código pronto: `lib/observability/sentry.ts` (HTTP-direto, gated em SENTRY_DSN).
+- Setup: criar projeto Next.js no sentry.io → copiar DSN → setar `SENTRY_DSN` no Vercel + redeploy.
+
+### PostHog (analytics)
+
+- Código pronto: `lib/observability/posthog.ts` (sendBeacon, gated).
+- Setup: criar projeto posthog.com → setar `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST` no Vercel + redeploy.
+
+### Asaas em produção real
+
+- Hoje: sandbox (ASAAS_ENVIRONMENT=sandbox). Setup: conta produção Asaas + homologação (alguns dias) + trocar key e env.
+
+---
+
+## 🎯 Backlog de produto (opcional, ordem de impacto)
+
+1. **Convite/lista de membros da org** — tabela `invitations` + UI em /configuracoes + Resend pra e-mail
+2. **Trocar e-mail da conta** — Supabase `updateUser({ email })` com confirmação
+3. **Configurar notificações por e-mail** — usuário escolhe quais eventos receber (depende Resend)
+4. **Sprint 11 — análise cruzada IA** — best-effort Claude Vision lendo 2-3 PDFs juntos com disclaimer
+5. **Multi-upload de PDFs** (hoje 1 por vez)
+6. **Edição manual da extração das disciplinas** (hoje só confirma)
+7. **Publicar app Google OAuth** (sai do modo teste) — precisa privacidade + termos URLs no Tela de Consentimento + verificação Google ~3-5 dias
+8. **Excluir só workspace** sem deletar conta (se membro de várias)
+9. **Histórico de busca** localStorage nas listagens
+10. **Skeleton loading** entre filtros
 
 ---
 
