@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { maskCpfOrCnpj } from "@/lib/utils/brazilian-formatters";
+import { RowActions } from "@/components/features/shell/RowActions";
+import { deleteClientAction } from "@/server/actions/clients/delete.action";
 
 export type ClientRow = {
   id: string;
@@ -74,15 +76,34 @@ export function ClientsTable({ rows, hasFilters = false }: Props) {
               {c.endereco_cidade && c.endereco_uf ? `${c.endereco_cidade}/${c.endereco_uf}` : "—"}
             </TableCell>
             <TableCell className="text-right">
-              <Button
-                variant="ghost"
-                size="sm"
-                render={<Link href={`/clientes/${c.id}`}>Abrir</Link>}
-              />
+              <div className="flex items-center justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  render={<Link href={`/clientes/${c.id}`}>Abrir</Link>}
+                />
+                <ClientRowActions id={c.id} nome={c.nome} />
+              </div>
             </TableCell>
           </TableRow>
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+function ClientRowActions({ id, nome }: { id: string; nome: string }) {
+  const handleDelete = async () => {
+    "use server";
+    return await deleteClientAction(id);
+  };
+  return (
+    <RowActions
+      itemName={nome}
+      entityLabel="cliente"
+      deleteWarning="Projetos associados ficam sem cliente vinculado."
+      successMessage="Cliente excluído"
+      onDelete={handleDelete}
+    />
   );
 }

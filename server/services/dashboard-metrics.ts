@@ -17,6 +17,9 @@ export type DashboardMetrics = {
   /** Tempo médio em dias entre projeto criado e primeiro doc aprovado pelo cliente. */
   avgCycleDays: number | null;
   staleProjects: number; // projects sem atualização há 14+ dias e status != concluido/arquivado
+  /** Projetos criados por dia nos últimos 30 dias (do dia mais antigo ao mais recente). */
+  createdPerDay30d: number[];
+  createdLast30d: number;
 };
 
 const STALE_DAYS = 14;
@@ -26,7 +29,11 @@ export async function getDashboardMetrics(orgId: string): Promise<DashboardMetri
   const staleThreshold = new Date();
   staleThreshold.setUTCDate(staleThreshold.getUTCDate() - STALE_DAYS);
 
-  const [active, pendingDocs, pendingSc, projectsForRevenue, cycleSample, stale] =
+  const since30 = new Date();
+  since30.setUTCDate(since30.getUTCDate() - 29); // 30 dias incluindo hoje
+  since30.setUTCHours(0, 0, 0, 0);
+
+  const [active, pendingDocs, pendingSc, projectsForRevenue, cycleSample, stale, recentProjects] =
     await Promise.all([
       admin
         .from("projects")
@@ -60,6 +67,11 @@ export async function getDashboardMetrics(orgId: string): Promise<DashboardMetri
         .eq("org_id", orgId)
         .not("status", "in", "(concluido,arquivado)")
         .lt("updated_at", staleThreshold.toISOString()),
+      admin
+        .from("projects")
+        .select("created_at")
+        .eq("org_id", orgId)
+        .gte("created_at", since30.toISOString()),
     ]);
 
   // dedup projects with multiple aprovado docs
@@ -91,6 +103,15 @@ export async function getDashboardMetrics(orgId: string): Promise<DashboardMetri
   const avgCycleDays =
     cycles.length === 0 ? null : cycles.reduce((a, b) => a + b, 0) / cycles.length;
 
+  // Sparkline: agrupa por dia (UTC) e completa zeros.
+  const buckets: number[] = Array(30).fill(0);
+  for (const row of recentProjects.data ?? []) {
+    const ts = new Date(row.created_at as string);
+    const idx = Math.floor((ts.getTime() - since30.getTime()) / (1000 * 60 * 60 * 24));
+    if (idx >= 0 && idx < 30) buckets[idx] = (buckets[idx] ?? 0) + 1;
+  }
+  const createdLast30d = buckets.reduce((a, b) => a + b, 0);
+
   return {
     activeProjects: active.count ?? 0,
     pendingDocuments: pendingDocs.count ?? 0,
@@ -98,5 +119,7 @@ export async function getDashboardMetrics(orgId: string): Promise<DashboardMetri
     approvedRevenueCents,
     avgCycleDays,
     staleProjects: stale.count ?? 0,
+    createdPerDay30d: buckets,
+    createdLast30d,
   };
 }

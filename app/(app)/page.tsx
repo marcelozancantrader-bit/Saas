@@ -7,6 +7,7 @@ import { getDashboardMetrics } from "@/server/services/dashboard-metrics";
 import { getPlanUsage } from "@/server/services/plan-usage";
 import { getPlanInfo, type PlanId } from "@/lib/plans/limits";
 import { WelcomeCard } from "@/components/features/onboarding/WelcomeCard";
+import { Sparkline } from "@/components/features/dashboard/Sparkline";
 
 export const dynamic = "force-dynamic";
 
@@ -135,6 +136,26 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between text-base">
+            <span>Projetos criados (últimos 30 dias)</span>
+            <span className="text-sm font-normal text-zinc-500">
+              {metrics.createdLast30d} {metrics.createdLast30d === 1 ? "projeto" : "projetos"}
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {metrics.createdLast30d > 0 ? (
+            <Sparkline data={metrics.createdPerDay30d} />
+          ) : (
+            <p className="py-4 text-center text-sm text-zinc-500">
+              Nenhum projeto criado nos últimos 30 dias.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

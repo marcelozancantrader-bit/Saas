@@ -10,6 +10,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { STATUS_LABEL, TIPOLOGIA_LABEL } from "@/lib/validators/projects.schema";
+import { RowActions } from "@/components/features/shell/RowActions";
+import { deleteProjectAction } from "@/server/actions/projects/delete.action";
 
 type Status = keyof typeof STATUS_LABEL;
 type Tipologia = keyof typeof TIPOLOGIA_LABEL;
@@ -99,15 +101,34 @@ export function ProjectsTable({ rows, hasFilters = false }: Props) {
               <Badge variant={STATUS_BADGE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
             </TableCell>
             <TableCell className="text-right">
-              <Button
-                variant="ghost"
-                size="sm"
-                render={<Link href={`/projetos/${p.id}`}>Abrir</Link>}
-              />
+              <div className="flex items-center justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  render={<Link href={`/projetos/${p.id}`}>Abrir</Link>}
+                />
+                <ProjectRowActions id={p.id} nome={p.nome} />
+              </div>
             </TableCell>
           </TableRow>
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+function ProjectRowActions({ id, nome }: { id: string; nome: string }) {
+  const handleDelete = async () => {
+    "use server";
+    return await deleteProjectAction(id);
+  };
+  return (
+    <RowActions
+      itemName={nome}
+      entityLabel="projeto"
+      deleteWarning="Arquivos no Storage e documentos gerados também serão removidos."
+      successMessage="Projeto excluído"
+      onDelete={handleDelete}
+    />
   );
 }

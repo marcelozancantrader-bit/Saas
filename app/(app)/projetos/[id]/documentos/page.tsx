@@ -13,24 +13,30 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { GenerateDocumentMenu } from "@/components/features/documents/GenerateDocumentMenu";
 import { DOCUMENT_LABELS, type DocumentTipo } from "@/lib/ai/generate-document";
+import { DocumentStatusTabs } from "@/components/features/documents/DocumentStatusTabs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ status?: string }>;
+};
+
+type DocStatus = "rascunho" | "aguardando_aprovacao" | "aprovado" | "recusado" | "arquivado";
 
 type DocumentRow = {
   id: string;
   tipo: DocumentTipo | "briefing" | "aditivo";
   versao: number;
   titulo: string;
-  status: "rascunho" | "aguardando_aprovacao" | "aprovado" | "recusado" | "arquivado";
+  status: DocStatus;
   prompt_versao: string | null;
   created_at: string;
   updated_at: string;
 };
 
-const STATUS_LABEL: Record<DocumentRow["status"], string> = {
+const STATUS_LABEL: Record<DocStatus, string> = {
   rascunho: "Rascunho",
   aguardando_aprovacao: "Aguardando aprovação",
   aprovado: "Aprovado",
@@ -38,16 +44,21 @@ const STATUS_LABEL: Record<DocumentRow["status"], string> = {
   arquivado: "Arquivado",
 };
 
-const STATUS_VARIANT: Record<
-  DocumentRow["status"],
-  "default" | "outline" | "secondary" | "destructive"
-> = {
+const STATUS_VARIANT: Record<DocStatus, "default" | "outline" | "secondary" | "destructive"> = {
   rascunho: "outline",
   aguardando_aprovacao: "secondary",
   aprovado: "default",
   recusado: "destructive",
   arquivado: "outline",
 };
+
+const VALID_STATUS_FILTERS = new Set<DocStatus>([
+  "rascunho",
+  "aguardando_aprovacao",
+  "aprovado",
+  "recusado",
+  "arquivado",
+]);
 
 function tipoLabel(tipo: DocumentRow["tipo"]): string {
   if (tipo in DOCUMENT_LABELS) return DOCUMENT_LABELS[tipo as DocumentTipo];
@@ -56,8 +67,12 @@ function tipoLabel(tipo: DocumentRow["tipo"]): string {
   return tipo;
 }
 
-export default async function DocumentosPage({ params }: Props) {
+export default async function DocumentosPage({ params, searchParams }: Props) {
   const { id: projectId } = await params;
+  const sp = await searchParams;
+  const statusFilter =
+    sp.status && VALID_STATUS_FILTERS.has(sp.status as DocStatus) ? (sp.status as DocStatus) : null;
+
   const supabase = await createClient();
 
   const { data: project, error } = await supabase
@@ -67,12 +82,25 @@ export default async function DocumentosPage({ params }: Props) {
     .single();
   if (error || !project) notFound();
 
-  const { data: documents } = await supabase
+  const { data: allDocuments } = await supabase
     .from("documents")
     .select("id, tipo, versao, titulo, status, prompt_versao, created_at, updated_at")
     .eq("project_id", projectId)
     .order("created_at", { ascending: false })
     .returns<DocumentRow[]>();
+
+  const documents = allDocuments ?? [];
+
+  // Contadores por status (sempre dos documentos todos, não os filtrados)
+  const counts = documents.reduce(
+    (acc, d) => {
+      acc[d.status] = (acc[d.status] ?? 0) + 1;
+      return acc;
+    },
+    {} as Record<DocStatus, number>,
+  );
+
+  const filtered = statusFilter ? documents.filter((d) => d.status === statusFilter) : documents;
 
   const extracao = (project.meta as Record<string, unknown> | null)?.extracao_planta as
     | { confirmed_by_user?: boolean }
@@ -110,7 +138,21 @@ export default async function DocumentosPage({ params }: Props) {
         </Card>
       ) : null}
 
-      {!documents || documents.length === 0 ? (
+      {documents.length > 0 ? (
+        <DocumentStatusTabs
+          counts={{
+            all: documents.length,
+            rascunho: counts.rascunho ?? 0,
+            aguardando_aprovacao: counts.aguardando_aprovacao ?? 0,
+            aprovado: counts.aprovado ?? 0,
+            recusado: counts.recusado ?? 0,
+            arquivado: counts.arquivado ?? 0,
+          }}
+          current={statusFilter}
+        />
+      ) : null}
+
+      {documents.length === 0 ? (
         <Card>
           <CardContent className="space-y-2 p-8 text-center">
             <p className="text-base font-medium">Nenhum documento gerado ainda</p>
@@ -130,10 +172,20 @@ export default async function DocumentosPage({ params }: Props) {
             ) : null}
           </CardContent>
         </Card>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <CardContent className="p-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+            Nenhum documento neste status. Use os filtros acima para ver outras categorias.
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Versões geradas</CardTitle>
+            <CardTitle className="text-base">
+              {statusFilter
+                ? `${STATUS_LABEL[statusFilter]} (${filtered.length})`
+                : "Todas as versões"}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -148,7 +200,7 @@ export default async function DocumentosPage({ params }: Props) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {documents.map((d) => (
+                {filtered.map((d) => (
                   <TableRow key={d.id}>
                     <TableCell className="font-medium">{tipoLabel(d.tipo)}</TableCell>
                     <TableCell className="text-sm text-zinc-700 dark:text-zinc-300">
