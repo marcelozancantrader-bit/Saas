@@ -27,6 +27,7 @@ export type WorkspaceInitial = {
   registro_crea: string;
   logo_url: string;
   cor_primaria: string;
+  cor_secundaria: string;
   bdi_padrao: number | null;
   pix_tipo: "" | "cpf" | "cnpj" | "email" | "telefone" | "aleatoria";
   pix_chave: string;
@@ -144,6 +145,7 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
         registro_crea: form.registro_crea || "",
         logo_url: form.logo_url || "",
         cor_primaria: form.cor_primaria || "",
+        cor_secundaria: form.cor_secundaria || "",
         bdi_padrao: form.bdi_padrao,
         pix_tipo: form.pix_tipo,
         pix_chave: form.pix_chave || "",
@@ -175,8 +177,8 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="pf">Pessoa Física (CPF)</SelectItem>
-              <SelectItem value="pj">Pessoa Jurídica (CNPJ)</SelectItem>
+              <SelectItem value="pf">PF — Pessoa Física (CPF)</SelectItem>
+              <SelectItem value="pj">PJ — Pessoa Jurídica (CNPJ)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -284,36 +286,30 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="cor">Cor primária</Label>
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="cor-picker"
-              className="flex h-10 w-12 shrink-0 cursor-pointer items-center justify-center rounded-md border border-zinc-300 transition hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-600"
-              style={{ backgroundColor: form.cor_primaria || "#1d4ed8" }}
-              aria-label="Abrir seletor de cor"
-              title="Clique para escolher a cor"
-            >
-              <input
-                id="cor-picker"
-                type="color"
-                value={form.cor_primaria || "#1d4ed8"}
-                onChange={(e) => field("cor_primaria", e.target.value)}
-                className="sr-only"
-              />
-            </label>
-            <Input
-              id="cor"
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label>Identidade visual</Label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ColorField
+              id="cor_primaria"
+              label="Cor primária"
               value={form.cor_primaria}
-              onChange={(e) => field("cor_primaria", e.target.value)}
-              placeholder="#1d4ed8"
-              maxLength={7}
-              className="font-mono"
+              onChange={(v) => field("cor_primaria", v)}
+              defaultColor="#1d4ed8"
+              hint="Usada em títulos, botões e capa dos PDFs."
+            />
+            <ColorField
+              id="cor_secundaria"
+              label="Cor secundária"
+              value={form.cor_secundaria}
+              onChange={(v) => field("cor_secundaria", v)}
+              defaultColor="#64748b"
+              hint="Usada em detalhes, separadores e textos de apoio."
             />
           </div>
-          <p className="text-xs text-zinc-500">
-            Clique no quadrado para abrir o seletor visual. Aparece em PDFs, portal e botões.
-          </p>
+          <ColorPreview
+            primaria={form.cor_primaria || "#1d4ed8"}
+            secundaria={form.cor_secundaria || "#64748b"}
+          />
         </div>
       </div>
 
@@ -371,5 +367,82 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
         ) : null}
       </div>
     </fieldset>
+  );
+}
+
+/**
+ * Campo de cor reutilizável: swatch grande clicável + input hex em monospace.
+ */
+function ColorField({
+  id,
+  label,
+  value,
+  onChange,
+  defaultColor,
+  hint,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  defaultColor: string;
+  hint: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={`${id}-text`}>{label}</Label>
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor={`${id}-picker`}
+          className="flex h-10 w-12 shrink-0 cursor-pointer items-center justify-center rounded-md border border-zinc-300 transition hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-600"
+          style={{ backgroundColor: value || defaultColor }}
+          aria-label={`Abrir seletor para ${label.toLowerCase()}`}
+          title="Clique para escolher a cor"
+        >
+          <input
+            id={`${id}-picker`}
+            type="color"
+            value={value || defaultColor}
+            onChange={(e) => onChange(e.target.value)}
+            className="sr-only"
+          />
+        </label>
+        <Input
+          id={`${id}-text`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={defaultColor}
+          maxLength={7}
+          className="font-mono"
+        />
+      </div>
+      <p className="text-xs text-zinc-500">{hint}</p>
+    </div>
+  );
+}
+
+/**
+ * Preview das duas cores aplicadas a um cartão típico — ajuda o usuário a
+ * imaginar como vai ficar no PDF / portal.
+ */
+function ColorPreview({ primaria, secundaria }: { primaria: string; secundaria: string }) {
+  return (
+    <div className="mt-2 overflow-hidden rounded-lg border" style={{ borderColor: secundaria }}>
+      <div
+        className="px-4 py-3 text-sm font-semibold text-white"
+        style={{ backgroundColor: primaria }}
+      >
+        Preview — capa do PDF
+      </div>
+      <div className="space-y-1 bg-white p-4 dark:bg-zinc-900">
+        <p className="text-sm font-medium" style={{ color: primaria }}>
+          Memorial descritivo
+        </p>
+        <p className="text-xs" style={{ color: secundaria }}>
+          Subtítulo / metadados / linha de separação
+        </p>
+        <div className="mt-2 h-1 w-16 rounded-full" style={{ backgroundColor: secundaria }} />
+      </div>
+    </div>
   );
 }

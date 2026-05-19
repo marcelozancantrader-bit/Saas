@@ -20,6 +20,7 @@ type OrgRow = {
   registro_crea: string | null;
   logo_url: string | null;
   cor_primaria: string | null;
+  cor_secundaria: string | null;
   bdi_padrao: number | null;
   dados_pix: { tipo?: string; chave?: string } | null;
 };
@@ -32,7 +33,7 @@ export default async function ConfiguracoesPage() {
     supabase
       .from("organizations")
       .select(
-        "name, cnpj, registro_cau, registro_crea, logo_url, cor_primaria, bdi_padrao, dados_pix",
+        "name, cnpj, registro_cau, registro_crea, logo_url, cor_primaria, cor_secundaria, bdi_padrao, dados_pix",
       )
       .eq("id", me.orgId)
       .single<OrgRow>(),
@@ -53,6 +54,7 @@ export default async function ConfiguracoesPage() {
     registro_crea: org?.registro_crea ?? "",
     logo_url: org?.logo_url ?? "",
     cor_primaria: org?.cor_primaria ?? "",
+    cor_secundaria: org?.cor_secundaria ?? "",
     bdi_padrao: org?.bdi_padrao ?? null,
     pix_tipo: (org?.dados_pix?.tipo as WorkspaceInitial["pix_tipo"]) ?? "",
     pix_chave: org?.dados_pix?.chave ?? "",

@@ -27,7 +27,15 @@ const schema = z.object({
     .string()
     .trim()
     .refine((v) => v === "" || corHexRegex.test(v), {
-      message: "Cor deve ser hex (ex: #1a1a1a).",
+      message: "Cor primária deve ser hex (ex: #1d4ed8).",
+    })
+    .optional()
+    .or(z.literal("")),
+  cor_secundaria: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || corHexRegex.test(v), {
+      message: "Cor secundária deve ser hex (ex: #64748b).",
     })
     .optional()
     .or(z.literal("")),
@@ -79,12 +87,12 @@ export async function updateOrganizationAction(
       : null;
 
   // Cor: normaliza sem # → com #
-  const cor =
-    parsed.data.cor_primaria && parsed.data.cor_primaria !== ""
-      ? parsed.data.cor_primaria.startsWith("#")
-        ? parsed.data.cor_primaria
-        : `#${parsed.data.cor_primaria}`
-      : null;
+  function normalizeColor(value: string | undefined): string | null {
+    if (!value || value === "") return null;
+    return value.startsWith("#") ? value : `#${value}`;
+  }
+  const cor = normalizeColor(parsed.data.cor_primaria);
+  const corSecundaria = normalizeColor(parsed.data.cor_secundaria);
 
   // Persiste só os dígitos (mais fácil pra integrar com Asaas e re-mascarar na UI).
   const cnpjDigits = parsed.data.cnpj ? parsed.data.cnpj.replace(/\D+/g, "") : "";
@@ -98,6 +106,7 @@ export async function updateOrganizationAction(
       registro_crea: parsed.data.registro_crea || null,
       logo_url: parsed.data.logo_url || null,
       cor_primaria: cor,
+      cor_secundaria: corSecundaria,
       bdi_padrao: parsed.data.bdi_padrao ?? null,
       dados_pix: dadosPix,
       updated_at: new Date().toISOString(),
