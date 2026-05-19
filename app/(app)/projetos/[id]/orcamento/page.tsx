@@ -58,6 +58,15 @@ export default async function OrcamentosPage({ params }: Props) {
     | undefined;
   const canGenerate = !!extracao?.confirmed_by_user && !!extracao.area_total_m2;
 
+  // Diferencia "sem extração" de "extração pendente confirmação" para mensagens específicas.
+  const extractionState: "missing" | "needs_confirm" | "needs_area" | "ready" = !extracao
+    ? "missing"
+    : !extracao.confirmed_by_user
+      ? "needs_confirm"
+      : !extracao.area_total_m2 || extracao.area_total_m2 <= 0
+        ? "needs_area"
+        : "ready";
+
   const extracoesDisciplinas = ((project.meta as Record<string, unknown> | null)
     ?.extracoes_disciplinas ?? {}) as Partial<
     Record<Disciplina, { data?: Record<string, unknown>; confirmed_by_user?: boolean }>
@@ -78,12 +87,58 @@ export default async function OrcamentosPage({ params }: Props) {
         </div>
       </div>
 
-      {!canGenerate ? (
+      {extractionState === "missing" ? (
         <Card>
-          <CardContent className="p-4 text-sm text-zinc-600 dark:text-zinc-400">
-            Confirme a extração da planta primeiro (faça upload do PDF na aba Arquivos do projeto e
-            clique em Confirmar na seção Extração). O orçamento usa esses dados para estimar
-            quantitativos.
+          <CardContent className="p-4 text-sm">
+            <p className="font-medium text-zinc-900 dark:text-zinc-50">
+              Falta subir a planta arquitetônica
+            </p>
+            <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+              O orçamento usa os dados da extração (área, ambientes, padrão) pra calcular
+              quantitativos SINAPI.
+            </p>
+            <Link
+              href={`/projetos/${projectId}?tab=planta`}
+              className="mt-3 inline-flex items-center text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-50"
+            >
+              Ir para Planta &amp; IA →
+            </Link>
+          </CardContent>
+        </Card>
+      ) : extractionState === "needs_confirm" ? (
+        <Card>
+          <CardContent className="p-4 text-sm">
+            <p className="font-medium text-zinc-900 dark:text-zinc-50">
+              A extração já foi feita — falta confirmar
+            </p>
+            <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+              Volte ao projeto e clique em <b>&quot;Confirmar e atualizar projeto&quot;</b> no card{" "}
+              <b>&quot;Extração da planta (IA)&quot;</b>. Depois disso o orçamento libera.
+            </p>
+            <Link
+              href={`/projetos/${projectId}?tab=planta`}
+              className="mt-3 inline-flex items-center text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-50"
+            >
+              Confirmar a extração →
+            </Link>
+          </CardContent>
+        </Card>
+      ) : extractionState === "needs_area" ? (
+        <Card>
+          <CardContent className="p-4 text-sm">
+            <p className="font-medium text-zinc-900 dark:text-zinc-50">
+              Falta a área total no card de extração
+            </p>
+            <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+              Edite o campo &quot;Área total (m²)&quot; e re-confirme — o orçamento precisa do valor
+              pra estimar quantitativos.
+            </p>
+            <Link
+              href={`/projetos/${projectId}?tab=planta`}
+              className="mt-3 inline-flex items-center text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-50"
+            >
+              Editar extração →
+            </Link>
           </CardContent>
         </Card>
       ) : null}

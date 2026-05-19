@@ -63,11 +63,19 @@ export async function generateBudgetAction(
       })
     | undefined;
 
-  if (!extracao || !extracao.confirmed_by_user) {
+  if (!extracao) {
     return {
       ok: false,
       error:
-        "É preciso confirmar a extração da planta antes de gerar o orçamento. Vá em Arquivos, faça upload do PDF, e clique em Confirmar na seção Extração.",
+        "Suba a planta arquitetônica em PDF na aba 'Planta & IA' do projeto. A IA leva ~1 minuto para extrair os dados.",
+    };
+  }
+
+  if (!extracao.confirmed_by_user) {
+    return {
+      ok: false,
+      error:
+        "A extração já foi feita — falta confirmar. Volte ao projeto, aba 'Planta & IA', e clique em 'Confirmar e atualizar projeto' no card 'Extração da planta (IA)'.",
     };
   }
 
@@ -75,7 +83,7 @@ export async function generateBudgetAction(
     return {
       ok: false,
       error:
-        "A extração não tem área total. Edite o valor na seção Extração e confirme antes de gerar o orçamento.",
+        "A extração não tem área total. Edite o valor no card 'Extração da planta (IA)' e re-confirme antes de gerar o orçamento.",
     };
   }
 
