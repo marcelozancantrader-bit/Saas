@@ -54,6 +54,41 @@ export async function POST(req: NextRequest) {
     `[asaas-webhook] received hasToken=${hasToken} hasExpected=${hasExpected} match=${tokenMatch}`,
   );
 
+  // Captura todos os headers + payload pra debug.
+  const headersObj: Record<string, string> = {};
+  req.headers.forEach((v, k) => {
+    headersObj[k] = v;
+  });
+
+  let rawBody: string | null = null;
+  try {
+    rawBody = await req.text();
+  } catch {
+    rawBody = null;
+  }
+  let parsedBody: AsaasEvent | null = null;
+  try {
+    parsedBody = rawBody ? (JSON.parse(rawBody) as AsaasEvent) : null;
+  } catch {
+    parsedBody = null;
+  }
+
+  const admin = createAdminClient();
+
+  // Persiste o webhook no log (best-effort, não bloqueia se falhar).
+  await admin
+    .from("webhook_log")
+    .insert({
+      provider: "asaas",
+      event: parsedBody?.event ?? null,
+      authorized: tokenMatch,
+      payload: parsedBody as unknown as Record<string, unknown> | null,
+      headers: headersObj,
+    })
+    .then(({ error }) => {
+      if (error) console.warn(`[asaas-webhook] log insert failed: ${error.message}`);
+    });
+
   if (!hasExpected || !tokenMatch) {
     console.warn(
       `[asaas-webhook] UNAUTHORIZED — verifique ASAAS_WEBHOOK_TOKEN no Vercel e no painel Asaas`,
@@ -61,14 +96,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  let body: AsaasEvent;
-  try {
-    body = (await req.json()) as AsaasEvent;
-  } catch {
+  if (!parsedBody) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
-
-  const admin = createAdminClient();
+  const body = parsedBody;
   const event = body.event;
   const now = new Date();
 
