@@ -22,7 +22,8 @@ export type UpgradePlanInput = z.infer<typeof schema>;
 export type UpgradePlanResult =
   | { ok: true; mode: "manual"; new_plan: PlanId }
   | { ok: true; mode: "asaas"; checkout_url: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string }
+  | { ok: false; needs_cpf_cnpj: true };
 
 /**
  * Upgrade/downgrade do plano da org. Comportamento:
@@ -60,10 +61,18 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
       .select("name, cnpj")
       .eq("id", me.orgId)
       .single();
+
+    // Asaas exige CPF ou CNPJ pra criar cobrança. Bloqueia early com um
+    // sinal estruturado pro client abrir um dialog pedindo o documento.
+    const cpfCnpjRaw = (orgRow?.cnpj ?? "").replace(/\D+/g, "");
+    if (!cpfCnpjRaw) {
+      return { ok: false, needs_cpf_cnpj: true };
+    }
+
     const customer = await createOrFindCustomer({
       name: orgRow?.name ?? me.orgName,
       email: me.email,
-      cpfCnpj: orgRow?.cnpj ?? undefined,
+      cpfCnpj: cpfCnpjRaw,
       externalReference: me.orgId,
     });
     if (!customer.ok) return { ok: false, error: `Asaas: ${customer.error}` };
