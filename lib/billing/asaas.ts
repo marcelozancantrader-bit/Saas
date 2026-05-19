@@ -102,7 +102,20 @@ export async function createOrFindCustomer(
     { method: "GET" },
   );
   if (search.ok && search.data.data.length > 0) {
-    return { ok: true, customerId: search.data.data[0]!.id };
+    const existingId = search.data.data[0]!.id;
+    // Customer já existe — faz UPSERT pra garantir que cpfCnpj/nome/email
+    // estejam atualizados (caso o usuário tenha adicionado o documento depois
+    // da criação inicial). Asaas aceita POST em /customers/{id} pra atualizar.
+    const upd = await call<AsaasCustomerResponse>(`/customers/${existingId}`, {
+      method: "POST",
+      body: input,
+    });
+    if (!upd.ok) {
+      // Mesmo se update falhar, retorna o customer existente — o erro real
+      // de cobrança vai aparecer no createSubscription se cpfCnpj for crítico.
+      console.warn(`[asaas] failed to update customer ${existingId}: ${upd.error}`);
+    }
+    return { ok: true, customerId: existingId };
   }
   const created = await call<AsaasCustomerResponse>("/customers", {
     method: "POST",
