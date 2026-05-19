@@ -5,13 +5,23 @@ import { ProjectForm } from "@/components/features/projects/ProjectForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function NovoProjetoPage() {
+type Props = {
+  searchParams: Promise<{ client_id?: string }>;
+};
+
+export default async function NovoProjetoPage({ searchParams }: Props) {
   const supabase = await createClient();
+  const sp = await searchParams;
+
   const { data: clients } = await supabase
     .from("clients")
     .select("id, nome")
     .order("nome", { ascending: true })
     .returns<Array<{ id: string; nome: string }>>();
+
+  // Se veio ?client_id=, valida que o cliente existe na lista do org (sem RLS bypass).
+  const preselectedClientId =
+    sp.client_id && clients?.some((c) => c.id === sp.client_id) ? sp.client_id : null;
 
   return (
     <div className="space-y-6">
@@ -22,7 +32,7 @@ export default async function NovoProjetoPage() {
         >
           ← Projetos
         </Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Novo projeto</h1>
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight">Novo projeto</h1>
       </div>
 
       <Card>
@@ -30,7 +40,10 @@ export default async function NovoProjetoPage() {
           <CardTitle className="text-base">Dados do projeto</CardTitle>
         </CardHeader>
         <CardContent>
-          <ProjectForm clients={clients ?? []} />
+          <ProjectForm
+            clients={clients ?? []}
+            initial={preselectedClientId ? { client_id: preselectedClientId } : undefined}
+          />
         </CardContent>
       </Card>
     </div>
