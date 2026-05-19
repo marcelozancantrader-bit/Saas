@@ -40,8 +40,13 @@ export function PlanUpgradeButton({ targetPlan }: Props) {
         return;
       }
       if (r.mode === "asaas") {
-        toast.success("Redirecionando para o checkout Asaas…");
-        window.location.href = r.checkout_url;
+        toast.success("Checkout aberto em nova aba. Conclua o pagamento por lá.");
+        // Abre em nova aba pra não perder o estado do app + voltar fácil
+        const newWindow = window.open(r.checkout_url, "_blank", "noopener,noreferrer");
+        if (!newWindow) {
+          // Pop-up bloqueado — fallback no mesmo tab
+          window.location.href = r.checkout_url;
+        }
         return;
       }
       toast.success(`Plano atualizado: ${r.new_plan.toUpperCase()}`);

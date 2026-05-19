@@ -46,7 +46,18 @@ type AsaasEvent = {
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get("asaas-access-token");
-  if (!env.ASAAS_WEBHOOK_TOKEN || token !== env.ASAAS_WEBHOOK_TOKEN) {
+  const hasToken = !!token;
+  const hasExpected = !!env.ASAAS_WEBHOOK_TOKEN;
+  const tokenMatch = hasExpected && token === env.ASAAS_WEBHOOK_TOKEN;
+
+  console.log(
+    `[asaas-webhook] received hasToken=${hasToken} hasExpected=${hasExpected} match=${tokenMatch}`,
+  );
+
+  if (!hasExpected || !tokenMatch) {
+    console.warn(
+      `[asaas-webhook] UNAUTHORIZED — verifique ASAAS_WEBHOOK_TOKEN no Vercel e no painel Asaas`,
+    );
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -60,6 +71,10 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient();
   const event = body.event;
   const now = new Date();
+
+  console.log(
+    `[asaas-webhook] event=${event} payment.sub=${body.payment?.subscription ?? "—"} sub.id=${body.subscription?.id ?? "—"}`,
+  );
 
   // ====== PAYMENT_RECEIVED — pagamento confirmado, ativa plano ======
   if (event === "PAYMENT_RECEIVED" && body.payment?.subscription) {
