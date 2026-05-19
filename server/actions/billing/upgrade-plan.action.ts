@@ -49,6 +49,11 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
   const wantsAsaas =
     isAsaasEnabled() && targetPlan !== "free" && targetPlan !== "agency" && planInfo.priceCents;
 
+  // Telemetria temporária — remover depois de confirmar funcionamento.
+  console.log(
+    `[upgrade-plan] org=${me.orgId} target=${targetPlan} asaasEnabled=${isAsaasEnabled()} priceCents=${planInfo.priceCents} wantsAsaas=${!!wantsAsaas}`,
+  );
+
   if (wantsAsaas) {
     const { data: orgRow } = await supabase
       .from("organizations")
