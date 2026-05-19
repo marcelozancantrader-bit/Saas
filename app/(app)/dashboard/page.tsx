@@ -90,14 +90,14 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-base text-zinc-600 dark:text-zinc-400">
             {org.orgName} · plano <strong>{planInfo.label}</strong>
           </p>
         </div>
         <Link
           href="/billing"
-          className="text-sm text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
+          className="text-base text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
         >
           Gerenciar plano →
         </Link>

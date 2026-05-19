@@ -52,7 +52,7 @@ export function DocumentStatusTabs({ counts, current }: Props) {
               type="button"
               onClick={() => setStatus(t.key)}
               className={[
-                "relative px-3 py-2 text-sm font-medium transition-colors",
+                "relative px-4 py-3 text-base font-medium transition-colors",
                 active
                   ? "text-zinc-900 dark:text-zinc-50"
                   : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
@@ -63,7 +63,7 @@ export function DocumentStatusTabs({ counts, current }: Props) {
                 {count > 0 ? (
                   <span
                     className={[
-                      "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-medium",
+                      "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-sm font-medium",
                       active
                         ? "bg-zinc-900 text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
                         : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",

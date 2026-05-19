@@ -195,29 +195,29 @@ export default async function HomePage() {
           <nav className="flex items-center gap-2 sm:gap-4">
             <a
               href="#funcionalidades"
-              className="hidden text-sm text-zinc-700 hover:text-zinc-900 sm:block dark:text-zinc-300 dark:hover:text-zinc-50"
+              className="hidden text-base text-zinc-700 hover:text-zinc-900 sm:block dark:text-zinc-300 dark:hover:text-zinc-50"
             >
               Funcionalidades
             </a>
             <a
               href="#planos"
-              className="hidden text-sm text-zinc-700 hover:text-zinc-900 sm:block dark:text-zinc-300 dark:hover:text-zinc-50"
+              className="hidden text-base text-zinc-700 hover:text-zinc-900 sm:block dark:text-zinc-300 dark:hover:text-zinc-50"
             >
               Planos
             </a>
             <a
               href="#faq"
-              className="hidden text-sm text-zinc-700 hover:text-zinc-900 sm:block dark:text-zinc-300 dark:hover:text-zinc-50"
+              className="hidden text-base text-zinc-700 hover:text-zinc-900 sm:block dark:text-zinc-300 dark:hover:text-zinc-50"
             >
               FAQ
             </a>
             <Link
               href="/login"
-              className="text-sm text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
+              className="text-base text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
             >
               Entrar
             </Link>
-            <Link href="/signup" className={buttonVariants({ size: "sm" })}>
+            <Link href="/signup" className={buttonVariants()}>
               Começar grátis
             </Link>
           </nav>
@@ -228,7 +228,7 @@ export default async function HomePage() {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-blue-50 via-white to-white dark:from-blue-950/30 dark:via-zinc-950 dark:to-zinc-950" />
         <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 lg:py-24">
-          <p className="text-xs tracking-wider text-blue-700 uppercase dark:text-blue-400">
+          <p className="text-sm tracking-wider text-blue-700 uppercase dark:text-blue-400">
             Para arquitetos e engenheiros civis no Brasil
           </p>
           <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
@@ -236,7 +236,7 @@ export default async function HomePage() {
             ,
             <br className="hidden sm:block" /> não semanas.
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 sm:text-xl dark:text-zinc-400">
             O copiloto de IA que extrai dados da planta, gera{" "}
             <strong>10 documentos técnicos</strong>, monta o orçamento SINAPI completo e formaliza a
             aprovação do cliente — tudo em uma sessão de trabalho.
@@ -249,7 +249,7 @@ export default async function HomePage() {
               Ver como funciona
             </a>
           </div>
-          <p className="mt-4 text-xs text-zinc-500">
+          <p className="mt-4 text-sm text-zinc-500">
             Plano Free com 2 projetos e 3 documentos IA/mês. Sem cartão de crédito.
           </p>
 
@@ -265,8 +265,8 @@ export default async function HomePage() {
                 key={m.l}
                 className="rounded-lg border border-zinc-200 bg-white p-4 text-center dark:border-zinc-800 dark:bg-zinc-900"
               >
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{m.v}</p>
-                <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{m.l}</p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{m.v}</p>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{m.l}</p>
               </div>
             ))}
           </div>
@@ -280,11 +280,11 @@ export default async function HomePage() {
       >
         <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
           <div className="text-center">
-            <p className="text-xs tracking-wider text-blue-700 uppercase dark:text-blue-400">
+            <p className="text-sm tracking-wider text-blue-700 uppercase dark:text-blue-400">
               Em 4 passos
             </p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Como funciona</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-base text-zinc-600 dark:text-zinc-400">
+            <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
               Do upload do PDF ao contrato assinado pelo cliente. Tudo em uma plataforma única, sem
               alternar entre Excel, Word, AutoCAD e WhatsApp.
             </p>
@@ -295,11 +295,13 @@ export default async function HomePage() {
                 key={p.passo}
                 className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-base font-bold text-white">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-lg font-bold text-white">
                   {p.passo}
                 </div>
-                <h3 className="mt-4 font-semibold">{p.titulo}</h3>
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{p.descricao}</p>
+                <h3 className="mt-4 text-lg font-semibold">{p.titulo}</h3>
+                <p className="mt-2 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  {p.descricao}
+                </p>
               </div>
             ))}
           </div>
@@ -309,7 +311,7 @@ export default async function HomePage() {
       {/* ====== DORES ====== */}
       <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
         <div className="text-center">
-          <p className="text-xs tracking-wider text-blue-700 uppercase dark:text-blue-400">
+          <p className="text-sm tracking-wider text-blue-700 uppercase dark:text-blue-400">
             Onde você perde mais tempo
           </p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">O que a IA resolve</h2>
@@ -321,15 +323,15 @@ export default async function HomePage() {
               className="flex flex-col rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
             >
               <div className="flex items-start justify-between gap-2">
-                <h3 className="font-semibold">{d.titulo}</h3>
-                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                <h3 className="text-lg font-semibold">{d.titulo}</h3>
+                <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-sm font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
                   {d.tempo}
                 </span>
               </div>
-              <p className="mt-3 text-sm text-zinc-500 italic dark:text-zinc-500">
+              <p className="mt-4 text-base leading-relaxed text-zinc-500 italic dark:text-zinc-500">
                 &ldquo;{d.antes}&rdquo;
               </p>
-              <p className="mt-3 text-sm text-zinc-700 dark:text-zinc-300">
+              <p className="mt-3 text-base leading-relaxed text-zinc-700 dark:text-zinc-300">
                 <span className="font-medium text-blue-600 dark:text-blue-400">→</span> {d.depois}
               </p>
             </div>
@@ -344,11 +346,11 @@ export default async function HomePage() {
       >
         <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
           <div className="text-center">
-            <p className="text-xs tracking-wider text-blue-700 uppercase dark:text-blue-400">
+            <p className="text-sm tracking-wider text-blue-700 uppercase dark:text-blue-400">
               Tudo em uma plataforma
             </p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Funcionalidades</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-base text-zinc-600 dark:text-zinc-400">
+            <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
               12 features cobrindo todo o fluxo: da extração à cobrança do cliente.
             </p>
           </div>
@@ -358,10 +360,12 @@ export default async function HomePage() {
                 key={f.titulo}
                 className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
               >
-                <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-400">
+                <h3 className="text-base font-semibold text-blue-700 dark:text-blue-400">
                   {f.titulo}
                 </h3>
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{f.descricao}</p>
+                <p className="mt-2 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  {f.descricao}
+                </p>
               </div>
             ))}
           </div>
@@ -371,32 +375,32 @@ export default async function HomePage() {
       {/* ====== ROI ====== */}
       <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
         <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-8 sm:p-12 dark:border-blue-900/50 dark:from-blue-950/40 dark:to-zinc-950">
-          <p className="text-xs tracking-wider text-blue-700 uppercase dark:text-blue-400">
+          <p className="text-sm tracking-wider text-blue-700 uppercase dark:text-blue-400">
             Estimativa de retorno
           </p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
             R$ 2.480 economizados por projeto
           </h2>
-          <p className="mt-4 text-base text-zinc-700 dark:text-zinc-300">
+          <p className="mt-4 text-lg leading-relaxed text-zinc-700 dark:text-zinc-300">
             Considerando o valor-hora típico de R$ 80 do profissional autônomo no Sul/Sudeste, e uma
             carga média de <strong>31 horas por projeto</strong> em trabalho documental (memorial,
             orçamento, proposta, contrato, ART/RRT, acompanhamento de aprovação).
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg bg-white p-4 text-center dark:bg-zinc-900">
-              <p className="text-xs text-zinc-500">Standard (R$ 199,90/mês)</p>
-              <p className="mt-1 text-xl font-bold text-blue-600 dark:text-blue-400">ROI 1.140%</p>
-              <p className="mt-1 text-xs text-zinc-500">Com 1 projeto/mês</p>
+            <div className="rounded-lg bg-white p-5 text-center dark:bg-zinc-900">
+              <p className="text-sm text-zinc-500">Standard (R$ 199,90/mês)</p>
+              <p className="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">ROI 1.140%</p>
+              <p className="mt-1 text-sm text-zinc-500">Com 1 projeto/mês</p>
             </div>
-            <div className="rounded-lg bg-white p-4 text-center dark:bg-zinc-900">
-              <p className="text-xs text-zinc-500">Pro (R$ 449,90/mês)</p>
-              <p className="mt-1 text-xl font-bold text-blue-600 dark:text-blue-400">ROI 2.656%</p>
-              <p className="mt-1 text-xs text-zinc-500">Com 5 projetos/mês</p>
+            <div className="rounded-lg bg-white p-5 text-center dark:bg-zinc-900">
+              <p className="text-sm text-zinc-500">Pro (R$ 449,90/mês)</p>
+              <p className="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">ROI 2.656%</p>
+              <p className="mt-1 text-sm text-zinc-500">Com 5 projetos/mês</p>
             </div>
-            <div className="rounded-lg bg-white p-4 text-center dark:bg-zinc-900">
-              <p className="text-xs text-zinc-500">Tempo livre</p>
-              <p className="mt-1 text-xl font-bold text-blue-600 dark:text-blue-400">4 dias/mês</p>
-              <p className="mt-1 text-xs text-zinc-500">Pra captar novos clientes</p>
+            <div className="rounded-lg bg-white p-5 text-center dark:bg-zinc-900">
+              <p className="text-sm text-zinc-500">Tempo livre</p>
+              <p className="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">4 dias/mês</p>
+              <p className="mt-1 text-sm text-zinc-500">Pra captar novos clientes</p>
             </div>
           </div>
         </div>
@@ -409,13 +413,13 @@ export default async function HomePage() {
       >
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <div className="text-center">
-            <p className="text-xs tracking-wider text-blue-700 uppercase dark:text-blue-400">
+            <p className="text-sm tracking-wider text-blue-700 uppercase dark:text-blue-400">
               Planos
             </p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
               Comece grátis. Faça upgrade quando fizer sentido.
             </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-base text-zinc-600 dark:text-zinc-400">
+            <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
               Sem fidelidade. Cancele a qualquer momento dentro do app.
             </p>
           </div>
@@ -434,19 +438,19 @@ export default async function HomePage() {
                   ].join(" ")}
                 >
                   {isHighlighted ? (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-1 text-sm font-medium text-white">
                       Recomendado
                     </span>
                   ) : null}
-                  <p className="text-base font-semibold">{p.label}</p>
-                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{p.description}</p>
+                  <p className="text-lg font-semibold">{p.label}</p>
+                  <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{p.description}</p>
                   <p className="mt-4 text-3xl font-bold">
                     {formatBrlFromCents(p.priceCents)}
                     {p.priceCents !== null && p.priceCents > 0 ? (
                       <span className="ml-1 text-sm font-normal text-zinc-500">/mês</span>
                     ) : null}
                   </p>
-                  <ul className="mt-4 flex-1 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+                  <ul className="mt-4 flex-1 space-y-2.5 text-base text-zinc-700 dark:text-zinc-300">
                     {p.features.map((f) => (
                       <li key={f} className="flex items-start gap-2">
                         <span className="mt-0.5 text-blue-600 dark:text-blue-400" aria-hidden>
@@ -459,7 +463,6 @@ export default async function HomePage() {
                   <Link
                     href={id === "agency" ? "mailto:contato@memorial.ai" : "/signup"}
                     className={buttonVariants({
-                      size: "sm",
                       variant: isHighlighted ? "default" : "outline",
                       className: "mt-6 w-full",
                     })}
@@ -480,7 +483,7 @@ export default async function HomePage() {
       {/* ====== FAQ ====== */}
       <section id="faq" className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <div className="text-center">
-          <p className="text-xs tracking-wider text-blue-700 uppercase dark:text-blue-400">
+          <p className="text-sm tracking-wider text-blue-700 uppercase dark:text-blue-400">
             Perguntas frequentes
           </p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">FAQ</h2>
@@ -491,13 +494,15 @@ export default async function HomePage() {
               key={item.q}
               className="group rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
             >
-              <summary className="flex cursor-pointer items-center justify-between text-base font-medium">
+              <summary className="flex cursor-pointer items-center justify-between gap-3 text-lg font-medium">
                 {item.q}
-                <span className="text-blue-600 transition-transform group-open:rotate-45 dark:text-blue-400">
+                <span className="text-2xl text-blue-600 transition-transform group-open:rotate-45 dark:text-blue-400">
                   +
                 </span>
               </summary>
-              <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">{item.a}</p>
+              <p className="mt-4 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+                {item.a}
+              </p>
             </details>
           ))}
         </div>
@@ -509,20 +514,20 @@ export default async function HomePage() {
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Pronto para reduzir 31 horas por projeto?
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-blue-100">
+          <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-blue-100">
             Comece grátis. Dois projetos completos pra testar tudo — incluindo extração de planta,
             geração de documentos e portal do cliente. Sem cartão de crédito.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/signup"
-              className="rounded-md bg-white px-6 py-3 text-sm font-medium text-blue-700 transition hover:bg-blue-50"
+              className="rounded-md bg-white px-6 py-3 text-base font-medium text-blue-700 transition hover:bg-blue-50"
             >
               Criar conta grátis →
             </Link>
             <Link
               href="/login"
-              className="rounded-md border border-white/30 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+              className="rounded-md border border-white/30 px-6 py-3 text-base font-medium text-white transition hover:bg-white/10"
             >
               Já tenho conta
             </Link>
@@ -535,10 +540,10 @@ export default async function HomePage() {
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-2">
             <Logo size={20} />
-            <span className="text-sm font-semibold">Memorial.ai</span>
-            <span className="text-xs text-zinc-500">© 2026</span>
+            <span className="text-base font-semibold">Memorial.ai</span>
+            <span className="text-sm text-zinc-500">© 2026</span>
           </div>
-          <div className="flex flex-wrap gap-4 text-xs text-zinc-500">
+          <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
             <Link href="/privacidade" className="hover:underline">
               Privacidade
             </Link>

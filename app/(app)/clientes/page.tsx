@@ -34,8 +34,8 @@ export default async function ClientesPage({ searchParams }: { searchParams: Sea
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-3xl font-semibold tracking-tight">Clientes</h1>
+          <p className="mt-1 text-base text-zinc-600 dark:text-zinc-400">
             Cadastro de clientes do escritório.
             {data && data.length > 0
               ? ` ${data.length} encontrado${data.length === 1 ? "" : "s"}.`

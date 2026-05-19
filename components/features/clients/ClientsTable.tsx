@@ -66,13 +66,13 @@ export function ClientsTable({ rows, hasFilters = false }: Props) {
                 {c.nome}
               </Link>
             </TableCell>
-            <TableCell className="text-sm text-zinc-600 dark:text-zinc-400">
+            <TableCell className="text-base text-zinc-600 dark:text-zinc-400">
               {c.cpf_cnpj ? maskCpfOrCnpj(c.cpf_cnpj) : "—"}
             </TableCell>
-            <TableCell className="text-sm text-zinc-600 dark:text-zinc-400">
+            <TableCell className="text-base text-zinc-600 dark:text-zinc-400">
               {c.email ?? "—"}
             </TableCell>
-            <TableCell className="text-sm text-zinc-600 dark:text-zinc-400">
+            <TableCell className="text-base text-zinc-600 dark:text-zinc-400">
               {c.endereco_cidade && c.endereco_uf ? `${c.endereco_cidade}/${c.endereco_uf}` : "—"}
             </TableCell>
             <TableCell className="text-right">

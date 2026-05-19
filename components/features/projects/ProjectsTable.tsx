@@ -88,13 +88,13 @@ export function ProjectsTable({ rows, hasFilters = false }: Props) {
                 {p.nome}
               </Link>
             </TableCell>
-            <TableCell className="text-sm text-zinc-600 dark:text-zinc-400">
+            <TableCell className="text-base text-zinc-600 dark:text-zinc-400">
               {p.clients?.nome ?? "—"}
             </TableCell>
-            <TableCell className="text-sm text-zinc-600 dark:text-zinc-400">
+            <TableCell className="text-base text-zinc-600 dark:text-zinc-400">
               {TIPOLOGIA_LABEL[p.tipologia]}
             </TableCell>
-            <TableCell className="text-sm text-zinc-600 dark:text-zinc-400">
+            <TableCell className="text-base text-zinc-600 dark:text-zinc-400">
               {p.area_prevista_m2 ? `${p.area_prevista_m2.toFixed(0)} m²` : "—"}
             </TableCell>
             <TableCell>
