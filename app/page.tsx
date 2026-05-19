@@ -171,7 +171,7 @@ const FAQ = [
   },
   {
     q: "Tem integração com Revit / AutoCAD?",
-    a: "Hoje aceitamos PDF (qualquer software exporta). Integração nativa com Revit via API está no roadmap do plano Pro Max.",
+    a: "Hoje aceitamos PDF (qualquer software exporta). API pública e integração nativa com Revit estão no roadmap — sem data fechada ainda. Se for crítico pro seu fluxo, fale com a gente em suporte@memorial.ai.",
   },
 ];
 

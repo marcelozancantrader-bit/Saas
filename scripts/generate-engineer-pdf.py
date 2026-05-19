@@ -833,7 +833,7 @@ planos = [
     ["ART/RRT pré-preenchida", "Sim", "Sim", "Sim", "Sim", "Sim"],
     ["Chat da planta (cliente)", "—", "Sim", "Sim", "Sim", "Sim"],
     ["Suporte prioritário", "—", "—", "Sim", "Sim", "Sim"],
-    ["API / integrações", "—", "—", "—", "Sim", "Sim"],
+    ["API / integrações", "—", "—", "—", "em breve", "em breve"],
     ["White-label", "—", "—", "—", "—", "Sim"],
 ]
 t_planos = Table(planos, colWidths=[5.4*cm, 1.9*cm, 2.2*cm, 2.2*cm, 2.2*cm, 2.1*cm])
@@ -870,7 +870,7 @@ story.append(Paragraph(
     "<b>Plano Standard (R$ 199,90/mês):</b> indicado para o profissional autônomo que faz "
     "até 1 projeto/mês — já libera o portal do cliente, branding e multi-disciplina, sem "
     "marca d'água. <b>Pro Max (R$ 699,90/mês):</b> escritórios com equipe maior (até 10 "
-    "usuários), API para integrações e 300 documentos IA/mês.",
+    "usuários), 300 documentos IA/mês e API pública (em breve).",
     style_small
 ))
 

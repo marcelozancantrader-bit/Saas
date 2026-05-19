@@ -123,14 +123,14 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     id: "pro_max",
     label: "Pro Max",
     priceCents: 69990,
-    description: "Escritório com equipe e necessidade de integrações.",
+    description: "Escritório com equipe e maior volume de projetos.",
     features: [
       "Projetos ilimitados",
       "300 documentos IA por mês",
       "10 usuários",
-      "API + integrações",
       "Branding completo",
       "Suporte prioritário",
+      "API (em breve)",
     ],
     limits: {
       maxActiveProjects: null,
@@ -140,7 +140,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       portalClienteEnabled: true,
       brandingCustom: true,
       prioritySupport: true,
-      apiAccess: true,
+      apiAccess: false,
     },
   },
   agency: {
