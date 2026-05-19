@@ -90,7 +90,7 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
 
     // Registra como pending. O webhook confirma e atualiza organizations.plano.
     const admin = createAdminClient();
-    await admin.from("subscriptions").insert({
+    const { error: insertErr } = await admin.from("subscriptions").insert({
       org_id: me.orgId,
       plano: targetPlan,
       status: "pending",
@@ -99,6 +99,10 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
       provider_subscription_id: sub.subscription.id,
       meta: { asaas_response: sub.subscription },
     });
+    if (insertErr) {
+      console.error(`[upgrade-plan] failed to insert pending subscription: ${insertErr.message}`);
+      return { ok: false, error: `Falha ao registrar assinatura: ${insertErr.message}` };
+    }
 
     // Pega a fatura concreta do primeiro payment — URL com QR Code PIX / boleto.
     // Fallback: área genérica do cliente.
