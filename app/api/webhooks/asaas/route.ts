@@ -9,6 +9,7 @@ import { PLANS, type PlanId } from "@/lib/plans/limits";
  * Asaas envia eventos POST aqui. Validamos via header `asaas-access-token`
  * comparado a ASAAS_WEBHOOK_TOKEN. Eventos tratados:
  *   - PAYMENT_RECEIVED      → ativa subscription + organizations.plano + notification
+ *                              + cancela subscriptions ativas anteriores da mesma org
  *   - PAYMENT_OVERDUE       → status='past_due' (cliente vê na tela de billing)
  *   - PAYMENT_REFUNDED      → status='canceled' + downgrade org pra free
  *   - SUBSCRIPTION_DELETED  → status='canceled'
@@ -19,9 +20,10 @@ import { PLANS, type PlanId } from "@/lib/plans/limits";
  * Docs: https://docs.asaas.com/reference/webhook
  *
  * **Setup no painel Asaas:**
- *   Notificações → Webhook → "Adicionar webhook"
+ *   Integrações → Webhooks → "Adicionar webhook"
  *   - URL: https://<seu-dominio>/api/webhooks/asaas
  *   - Token: o mesmo valor de ASAAS_WEBHOOK_TOKEN
+ *   - Ambos toggles ATIVOS ("Este webhook ficará ativo?" + "Fila de sincronização ativada?")
  *   - Eventos: marcar pelo menos PAYMENT_RECEIVED, PAYMENT_OVERDUE,
  *     PAYMENT_REFUNDED, SUBSCRIPTION_DELETED, SUBSCRIPTION_UPDATED
  */
@@ -46,66 +48,20 @@ type AsaasEvent = {
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get("asaas-access-token");
-  const hasToken = !!token;
-  const hasExpected = !!env.ASAAS_WEBHOOK_TOKEN;
-  const tokenMatch = hasExpected && token === env.ASAAS_WEBHOOK_TOKEN;
-
-  console.log(
-    `[asaas-webhook] received hasToken=${hasToken} hasExpected=${hasExpected} match=${tokenMatch}`,
-  );
-
-  // Captura todos os headers + payload pra debug.
-  const headersObj: Record<string, string> = {};
-  req.headers.forEach((v, k) => {
-    headersObj[k] = v;
-  });
-
-  let rawBody: string | null = null;
-  try {
-    rawBody = await req.text();
-  } catch {
-    rawBody = null;
-  }
-  let parsedBody: AsaasEvent | null = null;
-  try {
-    parsedBody = rawBody ? (JSON.parse(rawBody) as AsaasEvent) : null;
-  } catch {
-    parsedBody = null;
-  }
-
-  const admin = createAdminClient();
-
-  // Persiste o webhook no log (best-effort, não bloqueia se falhar).
-  await admin
-    .from("webhook_log")
-    .insert({
-      provider: "asaas",
-      event: parsedBody?.event ?? null,
-      authorized: tokenMatch,
-      payload: parsedBody as unknown as Record<string, unknown> | null,
-      headers: headersObj,
-    })
-    .then(({ error }) => {
-      if (error) console.warn(`[asaas-webhook] log insert failed: ${error.message}`);
-    });
-
-  if (!hasExpected || !tokenMatch) {
-    console.warn(
-      `[asaas-webhook] UNAUTHORIZED — verifique ASAAS_WEBHOOK_TOKEN no Vercel e no painel Asaas`,
-    );
+  if (!env.ASAAS_WEBHOOK_TOKEN || token !== env.ASAAS_WEBHOOK_TOKEN) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  if (!parsedBody) {
+  let body: AsaasEvent;
+  try {
+    body = (await req.json()) as AsaasEvent;
+  } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
-  const body = parsedBody;
+
+  const admin = createAdminClient();
   const event = body.event;
   const now = new Date();
-
-  console.log(
-    `[asaas-webhook] event=${event} payment.sub=${body.payment?.subscription ?? "—"} sub.id=${body.subscription?.id ?? "—"}`,
-  );
 
   // ====== PAYMENT_RECEIVED — pagamento confirmado, ativa plano ======
   if (event === "PAYMENT_RECEIVED" && body.payment?.subscription) {
@@ -116,11 +72,12 @@ export async function POST(req: NextRequest) {
       .eq("provider_subscription_id", subId)
       .maybeSingle();
     if (!sub) {
-      // Subscription criada manualmente direto no Asaas, sem record local.
       return NextResponse.json({ ok: true, ignored: "no_local_sub" });
     }
     const nextMonth = new Date(now);
     nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+
+    // 1. Ativa a subscription que acabou de ser paga.
     await admin
       .from("subscriptions")
       .update({
@@ -130,10 +87,23 @@ export async function POST(req: NextRequest) {
         updated_at: now.toISOString(),
       })
       .eq("id", sub.id);
+
+    // 2. Cancela quaisquer outras subscriptions active da MESMA org —
+    //    não faz sentido ter 2 active simultâneas.
+    await admin
+      .from("subscriptions")
+      .update({ status: "canceled", updated_at: now.toISOString() })
+      .eq("org_id", sub.org_id)
+      .eq("status", "active")
+      .neq("id", sub.id);
+
+    // 3. Atualiza org.plano.
     await admin
       .from("organizations")
       .update({ plano: sub.plano as PlanId, updated_at: now.toISOString() })
       .eq("id", sub.org_id);
+
+    // 4. Notifica.
     const planLabel = PLANS[sub.plano as PlanId]?.label ?? sub.plano;
     await admin.from("notifications").insert({
       org_id: sub.org_id,
