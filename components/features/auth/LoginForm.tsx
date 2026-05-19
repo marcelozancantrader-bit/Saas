@@ -14,6 +14,7 @@ type Props = { nextUrl?: string };
 export function LoginForm({ nextUrl }: Props) {
   const [pending, startTransition] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [showPassword, setShowPassword] = useState(false);
   const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED === "true";
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -44,35 +45,47 @@ export function LoginForm({ nextUrl }: Props) {
           autoComplete="email"
           required
           disabled={pending}
+          placeholder="voce@escritorio.com"
         />
         {fieldErrors.email?.[0] ? (
-          <p className="text-xs text-red-600">{fieldErrors.email[0]}</p>
+          <p className="text-sm text-red-600">{fieldErrors.email[0]}</p>
         ) : null}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="password">Senha</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          minLength={8}
-          disabled={pending}
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            minLength={8}
+            disabled={pending}
+            className="pr-20"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute top-1/2 right-2 -translate-y-1/2 rounded px-2 py-0.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+          >
+            {showPassword ? "Ocultar" : "Mostrar"}
+          </button>
+        </div>
         {fieldErrors.password?.[0] ? (
-          <p className="text-xs text-red-600">{fieldErrors.password[0]}</p>
+          <p className="text-sm text-red-600">{fieldErrors.password[0]}</p>
         ) : null}
       </div>
 
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button type="submit" className="w-full" disabled={pending} size="lg">
         {pending ? "Entrando…" : "Entrar"}
       </Button>
 
-      <div className="relative">
+      <div className="relative py-2">
         <Separator />
-        <span className="absolute inset-x-0 -top-2 mx-auto w-fit bg-zinc-50 px-2 text-xs text-zinc-500 dark:bg-zinc-950">
+        <span className="bg-card absolute inset-x-0 -top-0.5 mx-auto w-fit px-2 text-xs text-zinc-500">
           ou
         </span>
       </div>
