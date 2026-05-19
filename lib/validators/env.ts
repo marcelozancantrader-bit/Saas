@@ -27,6 +27,8 @@ const envSchema = z.object({
   // não configurado, upgrade vira "manual" (atualiza plano direto sem cobrança).
   ASAAS_API_KEY: z.string().optional(),
   ASAAS_WEBHOOK_TOKEN: z.string().optional(),
+  /** "sandbox" (default) ou "production". Define a base URL da API Asaas. */
+  ASAAS_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
 
   // Observabilidade — Sprint 8 beta. Optional: stubs no-op se não setado.
   SENTRY_DSN: z.string().url().optional(),
@@ -62,6 +64,7 @@ function parseEnv(): Env {
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     ASAAS_API_KEY: process.env.ASAAS_API_KEY,
     ASAAS_WEBHOOK_TOKEN: process.env.ASAAS_WEBHOOK_TOKEN,
+    ASAAS_ENVIRONMENT: process.env.ASAAS_ENVIRONMENT,
     SENTRY_DSN: process.env.SENTRY_DSN,
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,

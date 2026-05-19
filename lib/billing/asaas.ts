@@ -2,15 +2,32 @@ import "server-only";
 import { env } from "@/lib/validators/env";
 
 /**
- * Sprint 7 — wrapper Asaas (HTTP direto, sem SDK).
+ * Wrapper Asaas (HTTP direto, sem SDK).
  *
  * Docs: https://docs.asaas.com/reference
  *
  * Gated em ASAAS_API_KEY. Se não configurado, `isAsaasEnabled()` retorna false
- * e o caller decide o fallback (no Sprint 7 v0 = upgrade manual, sem cobrança).
+ * e o caller decide o fallback (upgrade manual, sem cobrança).
+ *
+ * Env vars:
+ *   ASAAS_API_KEY        — chave gerada no painel Asaas (Integrações → API Keys)
+ *   ASAAS_WEBHOOK_TOKEN  — string aleatória configurada também no painel Asaas
+ *                          em Notificações → Webhook → "Token de autenticação"
+ *   ASAAS_ENVIRONMENT    — "sandbox" (default) ou "production"
  */
 
-const ASAAS_BASE = "https://api.asaas.com/v3";
+function asaasBaseUrl(): string {
+  return env.ASAAS_ENVIRONMENT === "production"
+    ? "https://api.asaas.com/v3"
+    : "https://api-sandbox.asaas.com/v3";
+}
+
+/** URL pública do invoice/fatura (usada no checkout_url retornado pro frontend). */
+function asaasInvoiceBaseUrl(): string {
+  return env.ASAAS_ENVIRONMENT === "production"
+    ? "https://www.asaas.com"
+    : "https://sandbox.asaas.com";
+}
 
 export function isAsaasEnabled(): boolean {
   return !!env.ASAAS_API_KEY;
@@ -30,12 +47,12 @@ type AsaasCustomerResponse = {
 };
 
 export type AsaasSubscriptionCreate = {
-  customer: string; // customer id
-  billingType: "PIX" | "BOLETO" | "CREDIT_CARD";
+  customer: string;
+  billingType: "PIX" | "BOLETO" | "CREDIT_CARD" | "UNDEFINED";
   value: number; // in BRL (not cents)
   cycle: "MONTHLY" | "YEARLY";
   description: string;
-  externalReference: string; // org_id
+  externalReference: string;
   nextDueDate: string; // YYYY-MM-DD
 };
 
@@ -46,16 +63,25 @@ export type AsaasSubscriptionResponse = {
   value: number;
 };
 
+type AsaasPaymentResponse = {
+  id: string;
+  status: string;
+  value: number;
+  invoiceUrl: string;
+  bankSlipUrl?: string;
+};
+
 async function call<T>(
   path: string,
   options: { method: "GET" | "POST" | "PUT" | "DELETE"; body?: unknown },
 ): Promise<{ ok: true; data: T } | { ok: false; error: string; status?: number }> {
   if (!env.ASAAS_API_KEY) return { ok: false, error: "ASAAS_API_KEY não configurada." };
-  const res = await fetch(`${ASAAS_BASE}${path}`, {
+  const res = await fetch(`${asaasBaseUrl()}${path}`, {
     method: options.method,
     headers: {
       access_token: env.ASAAS_API_KEY,
       "Content-Type": "application/json",
+      "User-Agent": "memorial.ai/1.0",
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
@@ -95,4 +121,28 @@ export async function createSubscription(
   });
   if (!r.ok) return { ok: false, error: r.error };
   return { ok: true, subscription: r.data };
+}
+
+/**
+ * Após criar uma subscription, busca o primeiro payment dela para obter o
+ * `invoiceUrl` — link público que o cliente abre pra pagar via PIX/boleto/cartão.
+ *
+ * Tentativa best-effort: se falhar, caller pode usar a área genérica do cliente.
+ */
+export async function getFirstSubscriptionPayment(
+  subscriptionId: string,
+): Promise<{ ok: true; invoiceUrl: string; paymentId: string } | { ok: false; error: string }> {
+  const r = await call<{ data: AsaasPaymentResponse[] }>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}/payments?limit=1`,
+    { method: "GET" },
+  );
+  if (!r.ok) return { ok: false, error: r.error };
+  const first = r.data.data[0];
+  if (!first) return { ok: false, error: "Nenhum payment encontrado na subscription." };
+  return { ok: true, invoiceUrl: first.invoiceUrl, paymentId: first.id };
+}
+
+/** Link genérico da área do cliente — fallback se o invoice direto falhar. */
+export function customerAreaUrl(customerId: string): string {
+  return `${asaasInvoiceBaseUrl()}/c/${customerId}`;
 }

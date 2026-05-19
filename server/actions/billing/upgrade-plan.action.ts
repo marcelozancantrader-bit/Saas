@@ -5,7 +5,13 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentOrg } from "@/server/services/current-org";
-import { isAsaasEnabled, createOrFindCustomer, createSubscription } from "@/lib/billing/asaas";
+import {
+  isAsaasEnabled,
+  createOrFindCustomer,
+  createSubscription,
+  getFirstSubscriptionPayment,
+  customerAreaUrl,
+} from "@/lib/billing/asaas";
 import { PLANS, type PlanId } from "@/lib/plans/limits";
 
 const schema = z.object({
@@ -80,12 +86,15 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
       meta: { asaas_response: sub.subscription },
     });
 
-    // V0: redirecionamos para a área Asaas do cliente (no MVP real exibimos o QR code PIX
-    // direto via API /payments). Por enquanto, link genérico.
+    // Pega a fatura concreta do primeiro payment — URL com QR Code PIX / boleto.
+    // Fallback: área genérica do cliente.
+    const payment = await getFirstSubscriptionPayment(sub.subscription.id);
+    const checkoutUrl = payment.ok ? payment.invoiceUrl : customerAreaUrl(customer.customerId);
+
     return {
       ok: true,
       mode: "asaas",
-      checkout_url: `https://www.asaas.com/c/${customer.customerId}`,
+      checkout_url: checkoutUrl,
     };
   }
 

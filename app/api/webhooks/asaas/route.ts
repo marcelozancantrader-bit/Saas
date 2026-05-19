@@ -1,20 +1,29 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { env } from "@/lib/validators/env";
-import type { PlanId } from "@/lib/plans/limits";
+import { PLANS, type PlanId } from "@/lib/plans/limits";
 
 /**
- * Sprint 7 — webhook Asaas.
+ * Webhook Asaas.
  *
  * Asaas envia eventos POST aqui. Validamos via header `asaas-access-token`
- * comparado a ASAAS_WEBHOOK_TOKEN. Eventos relevantes:
- *   - SUBSCRIPTION_CREATED, SUBSCRIPTION_UPDATED, SUBSCRIPTION_DELETED
- *   - PAYMENT_RECEIVED, PAYMENT_OVERDUE, PAYMENT_REFUNDED
+ * comparado a ASAAS_WEBHOOK_TOKEN. Eventos tratados:
+ *   - PAYMENT_RECEIVED      → ativa subscription + organizations.plano + notification
+ *   - PAYMENT_OVERDUE       → status='past_due' (cliente vê na tela de billing)
+ *   - PAYMENT_REFUNDED      → status='canceled' + downgrade org pra free
+ *   - SUBSCRIPTION_DELETED  → status='canceled'
+ *   - SUBSCRIPTION_UPDATED  → atualiza next_due_date e valor cached
  *
- * Atualizamos subscriptions.status + organizations.plano conforme apropriado.
- * Idempotente — usa provider_subscription_id como chave.
+ * Idempotente — usa provider_subscription_id como chave de busca.
  *
  * Docs: https://docs.asaas.com/reference/webhook
+ *
+ * **Setup no painel Asaas:**
+ *   Notificações → Webhook → "Adicionar webhook"
+ *   - URL: https://<seu-dominio>/api/webhooks/asaas
+ *   - Token: o mesmo valor de ASAAS_WEBHOOK_TOKEN
+ *   - Eventos: marcar pelo menos PAYMENT_RECEIVED, PAYMENT_OVERDUE,
+ *     PAYMENT_REFUNDED, SUBSCRIPTION_DELETED, SUBSCRIPTION_UPDATED
  */
 
 export const runtime = "nodejs";
@@ -36,7 +45,6 @@ type AsaasEvent = {
 };
 
 export async function POST(req: NextRequest) {
-  // Auth: Asaas envia o token configurado no painel via header.
   const token = req.headers.get("asaas-access-token");
   if (!env.ASAAS_WEBHOOK_TOKEN || token !== env.ASAAS_WEBHOOK_TOKEN) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -51,7 +59,9 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient();
   const event = body.event;
+  const now = new Date();
 
+  // ====== PAYMENT_RECEIVED — pagamento confirmado, ativa plano ======
   if (event === "PAYMENT_RECEIVED" && body.payment?.subscription) {
     const subId = body.payment.subscription;
     const { data: sub } = await admin
@@ -59,49 +69,95 @@ export async function POST(req: NextRequest) {
       .select("id, org_id, plano")
       .eq("provider_subscription_id", subId)
       .maybeSingle();
+    if (!sub) {
+      // Subscription criada manualmente direto no Asaas, sem record local.
+      return NextResponse.json({ ok: true, ignored: "no_local_sub" });
+    }
+    const nextMonth = new Date(now);
+    nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+    await admin
+      .from("subscriptions")
+      .update({
+        status: "active",
+        current_period_start: now.toISOString(),
+        current_period_end: nextMonth.toISOString(),
+        updated_at: now.toISOString(),
+      })
+      .eq("id", sub.id);
+    await admin
+      .from("organizations")
+      .update({ plano: sub.plano as PlanId, updated_at: now.toISOString() })
+      .eq("id", sub.org_id);
+    const planLabel = PLANS[sub.plano as PlanId]?.label ?? sub.plano;
+    await admin.from("notifications").insert({
+      org_id: sub.org_id,
+      type: "plan.upgraded",
+      title: `Pagamento confirmado: plano ${planLabel}`,
+      body: "Sua assinatura está ativa. Bom trabalho!",
+      link_url: "/billing",
+    });
+    return NextResponse.json({ ok: true, event });
+  }
+
+  // ====== PAYMENT_OVERDUE — cliente atrasou ======
+  if (event === "PAYMENT_OVERDUE" && body.payment?.subscription) {
+    await admin
+      .from("subscriptions")
+      .update({ status: "past_due", updated_at: now.toISOString() })
+      .eq("provider_subscription_id", body.payment.subscription);
+    return NextResponse.json({ ok: true, event });
+  }
+
+  // ====== PAYMENT_REFUNDED — estornou: cancela e volta pro Free ======
+  if (event === "PAYMENT_REFUNDED" && body.payment?.subscription) {
+    const subId = body.payment.subscription;
+    const { data: sub } = await admin
+      .from("subscriptions")
+      .select("id, org_id")
+      .eq("provider_subscription_id", subId)
+      .maybeSingle();
     if (sub) {
-      const now = new Date();
-      const nextMonth = new Date(now);
-      nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
       await admin
         .from("subscriptions")
-        .update({
-          status: "active",
-          current_period_start: now.toISOString(),
-          current_period_end: nextMonth.toISOString(),
-          updated_at: now.toISOString(),
-        })
+        .update({ status: "canceled", updated_at: now.toISOString() })
         .eq("id", sub.id);
       await admin
         .from("organizations")
-        .update({ plano: sub.plano as PlanId, updated_at: now.toISOString() })
+        .update({ plano: "free", updated_at: now.toISOString() })
         .eq("id", sub.org_id);
       await admin.from("notifications").insert({
         org_id: sub.org_id,
         type: "plan.upgraded",
-        title: `Pagamento confirmado: plano ${sub.plano}`,
+        title: "Pagamento estornado — voltando para Free",
+        body: "Sua organização voltou ao plano Free. Você pode re-assinar a qualquer momento.",
         link_url: "/billing",
       });
     }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, event });
   }
 
+  // ====== SUBSCRIPTION_DELETED — assinatura cancelada ======
   if (event === "SUBSCRIPTION_DELETED" && body.subscription) {
     await admin
       .from("subscriptions")
-      .update({ status: "canceled", updated_at: new Date().toISOString() })
+      .update({ status: "canceled", updated_at: now.toISOString() })
       .eq("provider_subscription_id", body.subscription.id);
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, event });
   }
 
-  if (event === "PAYMENT_OVERDUE" && body.payment?.subscription) {
+  // ====== SUBSCRIPTION_UPDATED — atualizou próximo vencimento ou valor ======
+  if (event === "SUBSCRIPTION_UPDATED" && body.subscription) {
+    const next = body.subscription.nextDueDate;
     await admin
       .from("subscriptions")
-      .update({ status: "past_due", updated_at: new Date().toISOString() })
-      .eq("provider_subscription_id", body.payment.subscription);
-    return NextResponse.json({ ok: true });
+      .update({
+        current_period_end: next ? new Date(next).toISOString() : undefined,
+        updated_at: now.toISOString(),
+      })
+      .eq("provider_subscription_id", body.subscription.id);
+    return NextResponse.json({ ok: true, event });
   }
 
-  // Eventos não tratados são silenciosamente OK para evitar retries do Asaas.
+  // Eventos não tratados são silenciosamente OK pra evitar retries do Asaas.
   return NextResponse.json({ ok: true, ignored: event });
 }
