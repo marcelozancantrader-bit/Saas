@@ -1,5 +1,5 @@
 /**
- * Sprint 7 — definição dos planos e limites técnicos.
+ * Sprint 7 + UX overhaul — definição dos planos e limites técnicos.
  *
  * Source-of-truth do que cada plano permite. Quaisquer mudanças de limite
  * vão aqui (não espalhe constantes pelo código). Os enforcement points
@@ -7,9 +7,12 @@
  *
  * Preços e copy ficam aqui também porque /billing e cards de upgrade os
  * exibem; é o mesmo set de dados.
+ *
+ * Reestruturação 2026-05-18 (pricing high-ticket BR):
+ *   - free, standard (R$199,90), pro (R$449,90), pro_max (R$699,90), agency (consulta)
  */
 
-export type PlanId = "free" | "pro" | "studio" | "agency";
+export type PlanId = "free" | "standard" | "pro" | "pro_max" | "agency";
 
 export type PlanLimits = {
   /** Projetos com status != 'arquivado'. null = ilimitado. */
@@ -24,6 +27,10 @@ export type PlanLimits = {
   portalClienteEnabled: boolean;
   /** Permite logo + cor primária custom no portal/PDFs. */
   brandingCustom: boolean;
+  /** Suporte prioritário (Pro+). */
+  prioritySupport: boolean;
+  /** API + integrações (Pro Max+). */
+  apiAccess: boolean;
 };
 
 export type PlanInfo = {
@@ -34,6 +41,8 @@ export type PlanInfo = {
   description: string;
   /** Bullet points exibidos no card de upgrade. */
   features: string[];
+  /** Destaque visual (plano recomendado). */
+  highlighted?: boolean;
   limits: PlanLimits;
 };
 
@@ -42,75 +51,109 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     id: "free",
     label: "Free",
     priceCents: 0,
-    description: "Para experimentar.",
+    description: "Para experimentar a plataforma.",
     features: [
       "2 projetos ativos",
-      "5 documentos IA por mês",
+      "3 documentos IA por mês",
       "Marca d'água nos PDFs",
       "Sem portal do cliente",
       "1 usuário",
     ],
     limits: {
       maxActiveProjects: 2,
-      monthlyAiDocs: 5,
+      monthlyAiDocs: 3,
       maxUsers: 1,
       watermarkOnExport: true,
       portalClienteEnabled: false,
       brandingCustom: false,
+      prioritySupport: false,
+      apiAccess: false,
+    },
+  },
+  standard: {
+    id: "standard",
+    label: "Standard",
+    priceCents: 19990,
+    description: "Profissional autônomo com até 1 projeto/mês.",
+    features: [
+      "10 projetos ativos",
+      "30 documentos IA por mês",
+      "Sem marca d'água",
+      "Portal do cliente ativo",
+      "Branding completo (logo + cor)",
+      "1 usuário",
+    ],
+    limits: {
+      maxActiveProjects: 10,
+      monthlyAiDocs: 30,
+      maxUsers: 1,
+      watermarkOnExport: false,
+      portalClienteEnabled: true,
+      brandingCustom: true,
+      prioritySupport: false,
+      apiAccess: false,
     },
   },
   pro: {
     id: "pro",
     label: "Pro",
-    priceCents: 14900,
-    description: "Profissional autônomo.",
+    priceCents: 44990,
+    description: "Profissional com volume médio (3–10 projetos/mês).",
+    highlighted: true,
     features: [
       "Projetos ilimitados",
-      "50 documentos IA por mês",
-      "Sem marca d'água",
+      "100 documentos IA por mês",
       "Portal do cliente ativo",
-      "1 usuário",
+      "Branding completo",
+      "3 usuários (você + parceiros)",
+      "Suporte prioritário",
     ],
     limits: {
       maxActiveProjects: null,
-      monthlyAiDocs: 50,
-      maxUsers: 1,
-      watermarkOnExport: false,
-      portalClienteEnabled: true,
-      brandingCustom: false,
-    },
-  },
-  studio: {
-    id: "studio",
-    label: "Studio",
-    priceCents: 34900,
-    description: "Pequeno escritório com 2-5 profissionais.",
-    features: [
-      "Projetos ilimitados",
-      "200 documentos IA por mês",
-      "5 usuários",
-      "Portal do cliente ativo",
-      "Branding completo (logo + cores)",
-    ],
-    limits: {
-      maxActiveProjects: null,
-      monthlyAiDocs: 200,
-      maxUsers: 5,
+      monthlyAiDocs: 100,
+      maxUsers: 3,
       watermarkOnExport: false,
       portalClienteEnabled: true,
       brandingCustom: true,
+      prioritySupport: true,
+      apiAccess: false,
+    },
+  },
+  pro_max: {
+    id: "pro_max",
+    label: "Pro Max",
+    priceCents: 69990,
+    description: "Escritório com equipe e necessidade de integrações.",
+    features: [
+      "Projetos ilimitados",
+      "300 documentos IA por mês",
+      "10 usuários",
+      "API + integrações",
+      "Branding completo",
+      "Suporte prioritário",
+    ],
+    limits: {
+      maxActiveProjects: null,
+      monthlyAiDocs: 300,
+      maxUsers: 10,
+      watermarkOnExport: false,
+      portalClienteEnabled: true,
+      brandingCustom: true,
+      prioritySupport: true,
+      apiAccess: true,
     },
   },
   agency: {
     id: "agency",
-    label: "Agency",
+    label: "Agência",
     priceCents: null,
-    description: "Para escritórios com 5+ profissionais.",
+    description: "Para escritórios e construtoras com 10+ profissionais.",
     features: [
-      "Ilimitado em tudo",
-      "Branding completo",
-      "Onboarding dedicado",
-      "Suporte prioritário",
+      "Tudo ilimitado",
+      "White-label",
+      "SLA dedicado",
+      "Onboarding personalizado",
+      "Integração custom",
     ],
     limits: {
       maxActiveProjects: null,
@@ -119,9 +162,14 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       watermarkOnExport: false,
       portalClienteEnabled: true,
       brandingCustom: true,
+      prioritySupport: true,
+      apiAccess: true,
     },
   },
 };
+
+/** Ordem canônica dos planos para exibição. */
+export const PLAN_ORDER: PlanId[] = ["free", "standard", "pro", "pro_max", "agency"];
 
 export function getPlanLimits(planId: PlanId): PlanLimits {
   return PLANS[planId].limits;
@@ -132,12 +180,13 @@ export function getPlanInfo(planId: PlanId): PlanInfo {
 }
 
 export function formatBrlFromCents(cents: number | null): string {
-  if (cents === null) return "consulta";
+  if (cents === null) return "Consultar";
+  if (cents === 0) return "Grátis";
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(cents / 100);
 }
 

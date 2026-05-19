@@ -9,7 +9,7 @@ import { isAsaasEnabled, createOrFindCustomer, createSubscription } from "@/lib/
 import { PLANS, type PlanId } from "@/lib/plans/limits";
 
 const schema = z.object({
-  target_plan: z.enum(["free", "pro", "studio", "agency"]),
+  target_plan: z.enum(["free", "standard", "pro", "pro_max", "agency"]),
 });
 
 export type UpgradePlanInput = z.infer<typeof schema>;

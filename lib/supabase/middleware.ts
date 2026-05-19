@@ -2,11 +2,18 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/validators/env";
 
-const APP_PATH_PREFIXES = ["/projetos", "/clientes", "/configuracoes", "/billing", "/admin"];
+const APP_PATH_PREFIXES = [
+  "/dashboard",
+  "/projetos",
+  "/clientes",
+  "/configuracoes",
+  "/billing",
+  "/admin",
+];
 const AUTH_PATHS = ["/login", "/signup"];
 
 function isAppPath(pathname: string): boolean {
-  if (pathname === "/") return true;
+  // "/" agora é a landing pública. Áreas autenticadas têm prefixo explícito.
   return APP_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
@@ -52,7 +59,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthPath(pathname)) {
     const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = "/";
+    homeUrl.pathname = "/dashboard";
     homeUrl.search = "";
     return NextResponse.redirect(homeUrl);
   }

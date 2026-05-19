@@ -28,5 +28,5 @@ export async function loginAction(formData: FormData): Promise<LoginActionResult
     return { error: "E-mail ou senha incorretos." };
   }
 
-  redirect(safeRedirect(parsed.data.next, "/"));
+  redirect(safeRedirect(parsed.data.next, "/dashboard"));
 }

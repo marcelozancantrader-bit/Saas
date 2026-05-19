@@ -3,7 +3,7 @@ import { Separator } from "@/components/ui/separator";
 import { Logo } from "@/components/brand/Logo";
 
 export const NAV_ITEMS = [
-  { href: "/", label: "Dashboard" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/projetos", label: "Projetos" },
   { href: "/clientes", label: "Clientes" },
   { href: "/configuracoes", label: "Configurações" },
@@ -21,7 +21,7 @@ export function SidebarContent({ orgName, onNavigate }: Props) {
     <div className="flex h-full flex-col">
       <div className="flex h-14 items-center border-b border-zinc-200 px-4 dark:border-zinc-800">
         <Link
-          href="/"
+          href="/dashboard"
           onClick={onNavigate}
           className="inline-flex items-center"
           aria-label="Memorial.ai"

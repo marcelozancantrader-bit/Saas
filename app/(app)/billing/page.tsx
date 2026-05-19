@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { getPlanUsage } from "@/server/services/plan-usage";
-import { PLANS, formatBrlFromCents, type PlanId } from "@/lib/plans/limits";
+import { PLANS, PLAN_ORDER, formatBrlFromCents, type PlanId } from "@/lib/plans/limits";
 import { PlanUpgradeButton } from "@/components/features/billing/PlanUpgradeButton";
 
 export const dynamic = "force-dynamic";
@@ -60,8 +60,8 @@ export default async function BillingPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {(["free", "pro", "studio", "agency"] as const).map((id) => {
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {PLAN_ORDER.map((id) => {
           const plan = PLANS[id];
           const isCurrent = id === currentPlan;
           return (
