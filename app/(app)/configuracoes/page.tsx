@@ -7,6 +7,7 @@ import {
   WorkspaceForm,
   type WorkspaceInitial,
 } from "@/components/features/configuracoes/WorkspaceForm";
+import { AccountCard } from "@/components/features/configuracoes/AccountCard";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { createClient } from "@/lib/supabase/server";
 
@@ -27,13 +28,23 @@ export default async function ConfiguracoesPage() {
   const me = await getCurrentOrg();
   const supabase = await createClient();
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select(
-      "name, cnpj, registro_cau, registro_crea, logo_url, cor_primaria, bdi_padrao, dados_pix",
-    )
-    .eq("id", me.orgId)
-    .single<OrgRow>();
+  const [{ data: org }, { data: userData }] = await Promise.all([
+    supabase
+      .from("organizations")
+      .select(
+        "name, cnpj, registro_cau, registro_crea, logo_url, cor_primaria, bdi_padrao, dados_pix",
+      )
+      .eq("id", me.orgId)
+      .single<OrgRow>(),
+    supabase.auth.getUser(),
+  ]);
+
+  const user = userData?.user;
+  const fullName =
+    (user?.user_metadata?.full_name as string | undefined) ??
+    (user?.user_metadata?.name as string | undefined) ??
+    "";
+  const providers = user?.app_metadata?.providers ?? [user?.app_metadata?.provider ?? "email"];
 
   const initial: WorkspaceInitial = {
     name: org?.name ?? "",
@@ -67,21 +78,13 @@ export default async function ConfiguracoesPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Sua conta</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p>
-            <span className="text-zinc-500">E-mail: </span>
-            <strong>{me.email}</strong>
-          </p>
-          <p>
-            <span className="text-zinc-500">Papel: </span>
-            <strong>{me.role}</strong> em <strong>{me.orgName}</strong>
-          </p>
-        </CardContent>
-      </Card>
+      <AccountCard
+        email={me.email}
+        fullName={fullName}
+        role={me.role}
+        orgName={me.orgName}
+        providers={providers as string[]}
+      />
 
       <Card>
         <CardHeader>

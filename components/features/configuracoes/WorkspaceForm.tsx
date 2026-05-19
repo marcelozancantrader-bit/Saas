@@ -18,6 +18,7 @@ import {
   uploadLogoAction,
   removeLogoAction,
 } from "@/server/actions/organizations/upload-logo.action";
+import { maskCpf, maskCnpj } from "@/lib/utils/brazilian-formatters";
 
 export type WorkspaceInitial = {
   name: string;
@@ -56,8 +57,13 @@ function detectTipoPessoa(documento: string): TipoPessoa {
 
 export function WorkspaceForm({ initial, canEdit }: Props) {
   const router = useRouter();
-  const [form, setForm] = useState<WorkspaceInitial>(initial);
-  const [tipoPessoa, setTipoPessoa] = useState<TipoPessoa>(detectTipoPessoa(initial.cnpj));
+  // Aplica máscara inicial — initial.cnpj vem como dígitos puros do DB.
+  const initialTipo = detectTipoPessoa(initial.cnpj);
+  const [form, setForm] = useState<WorkspaceInitial>({
+    ...initial,
+    cnpj: initialTipo === "pf" ? maskCpf(initial.cnpj) : maskCnpj(initial.cnpj),
+  });
+  const [tipoPessoa, setTipoPessoa] = useState<TipoPessoa>(initialTipo);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -65,6 +71,11 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
   const docLabel = tipoPessoa === "pf" ? "CPF" : "CNPJ";
   const docPlaceholder = tipoPessoa === "pf" ? "000.000.000-00" : "00.000.000/0000-00";
   const docMaxLength = tipoPessoa === "pf" ? 14 : 18;
+
+  function onCpfCnpjChange(raw: string) {
+    const masked = tipoPessoa === "pf" ? maskCpf(raw) : maskCnpj(raw);
+    field("cnpj", masked);
+  }
 
   const docHelpText = useMemo(() => {
     const digits = form.cnpj.replace(/\D+/g, "");
@@ -175,10 +186,11 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
           <Input
             id="cnpj"
             value={form.cnpj}
-            onChange={(e) => field("cnpj", e.target.value)}
+            onChange={(e) => onCpfCnpjChange(e.target.value)}
             placeholder={docPlaceholder}
             maxLength={docMaxLength}
             inputMode="numeric"
+            autoComplete="off"
           />
           <p className="text-xs text-zinc-500">{docHelpText}</p>
         </div>
@@ -275,19 +287,33 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
         <div className="space-y-1.5">
           <Label htmlFor="cor">Cor primária</Label>
           <div className="flex items-center gap-2">
+            <label
+              htmlFor="cor-picker"
+              className="flex h-10 w-12 shrink-0 cursor-pointer items-center justify-center rounded-md border border-zinc-300 transition hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-600"
+              style={{ backgroundColor: form.cor_primaria || "#1d4ed8" }}
+              aria-label="Abrir seletor de cor"
+              title="Clique para escolher a cor"
+            >
+              <input
+                id="cor-picker"
+                type="color"
+                value={form.cor_primaria || "#1d4ed8"}
+                onChange={(e) => field("cor_primaria", e.target.value)}
+                className="sr-only"
+              />
+            </label>
             <Input
               id="cor"
               value={form.cor_primaria}
               onChange={(e) => field("cor_primaria", e.target.value)}
-              placeholder="#1a1a1a"
+              placeholder="#1d4ed8"
               maxLength={7}
-            />
-            <span
-              aria-hidden
-              className="h-8 w-10 shrink-0 rounded border border-zinc-300 dark:border-zinc-700"
-              style={{ backgroundColor: form.cor_primaria || "#1a1a1a" }}
+              className="font-mono"
             />
           </div>
+          <p className="text-xs text-zinc-500">
+            Clique no quadrado para abrir o seletor visual. Aparece em PDFs, portal e botões.
+          </p>
         </div>
       </div>
 
