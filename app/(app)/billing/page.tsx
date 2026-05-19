@@ -60,7 +60,7 @@ export default async function BillingPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {PLAN_ORDER.map((id) => {
           const plan = PLANS[id];
           const isCurrent = id === currentPlan;

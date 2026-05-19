@@ -423,7 +423,7 @@ export default async function HomePage() {
               Sem fidelidade. Cancele a qualquer momento dentro do app.
             </p>
           </div>
-          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {PLAN_ORDER.map((id) => {
               const p = PLANS[id];
               const isHighlighted = p.highlighted;
