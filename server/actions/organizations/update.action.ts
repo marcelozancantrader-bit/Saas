@@ -4,18 +4,20 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
+import { isValidCpfOrCnpj } from "@/lib/validators/cpf-cnpj";
 
-const cnpjRegex = /^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/;
 const corHexRegex = /^#?[0-9a-fA-F]{6}$/;
 
 const schema = z.object({
   name: z.string().min(1).max(120),
+  // Campo armazena CPF (11 dígitos) ou CNPJ (14 dígitos). Aceita vazio.
+  // O nome da coluna no banco continua sendo `cnpj` por compatibilidade.
   cnpj: z
     .string()
     .trim()
     .max(20)
-    .refine((v) => v === "" || cnpjRegex.test(v), {
-      message: "CNPJ inválido (formato: 00.000.000/0000-00).",
+    .refine((v) => v === "" || isValidCpfOrCnpj(v), {
+      message: "CPF ou CNPJ inválido.",
     })
     .optional()
     .or(z.literal("")),
@@ -84,11 +86,14 @@ export async function updateOrganizationAction(
         : `#${parsed.data.cor_primaria}`
       : null;
 
+  // Persiste só os dígitos (mais fácil pra integrar com Asaas e re-mascarar na UI).
+  const cnpjDigits = parsed.data.cnpj ? parsed.data.cnpj.replace(/\D+/g, "") : "";
+
   const { error } = await supabase
     .from("organizations")
     .update({
       name: parsed.data.name,
-      cnpj: parsed.data.cnpj || null,
+      cnpj: cnpjDigits || null,
       registro_cau: parsed.data.registro_cau || null,
       registro_crea: parsed.data.registro_crea || null,
       logo_url: parsed.data.logo_url || null,

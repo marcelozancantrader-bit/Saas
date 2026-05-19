@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import {
-  createOrFindCustomer,
-  getFirstSubscriptionPayment,
-  isAsaasEnabled,
-} from "@/lib/billing/asaas";
+import { createOrFindCustomer, isAsaasEnabled } from "@/lib/billing/asaas";
 
 /**
  * Diagnóstico real: tenta criar/buscar um customer test no Asaas sandbox

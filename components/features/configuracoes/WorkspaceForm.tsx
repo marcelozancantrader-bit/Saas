@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -45,15 +45,47 @@ const PIX_LABEL: Record<WorkspaceInitial["pix_tipo"], string> = {
   aleatoria: "Chave aleatória",
 };
 
+type TipoPessoa = "pf" | "pj";
+
+function detectTipoPessoa(documento: string): TipoPessoa {
+  // Default = PJ (mantém compatibilidade com orgs antigas que tinham só CNPJ).
+  // Se já tem documento e ele tem 11 dígitos, assume PF.
+  const digits = documento.replace(/\D+/g, "");
+  return digits.length === 11 ? "pf" : "pj";
+}
+
 export function WorkspaceForm({ initial, canEdit }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<WorkspaceInitial>(initial);
+  const [tipoPessoa, setTipoPessoa] = useState<TipoPessoa>(detectTipoPessoa(initial.cnpj));
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const docLabel = tipoPessoa === "pf" ? "CPF" : "CNPJ";
+  const docPlaceholder = tipoPessoa === "pf" ? "000.000.000-00" : "00.000.000/0000-00";
+  const docMaxLength = tipoPessoa === "pf" ? 14 : 18;
+
+  const docHelpText = useMemo(() => {
+    const digits = form.cnpj.replace(/\D+/g, "");
+    if (digits.length === 0) return "Usado para emissão de cobrança PIX/boleto.";
+    if (tipoPessoa === "pf" && digits.length !== 11) {
+      return `CPF tem 11 dígitos. Você digitou ${digits.length}.`;
+    }
+    if (tipoPessoa === "pj" && digits.length !== 14) {
+      return `CNPJ tem 14 dígitos. Você digitou ${digits.length}.`;
+    }
+    return "✓ Formato OK. A validação algorítmica acontece ao salvar.";
+  }, [form.cnpj, tipoPessoa]);
+
   function field<K extends keyof WorkspaceInitial>(key: K, value: WorkspaceInitial[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function onTipoPessoaChange(novoTipo: TipoPessoa) {
+    setTipoPessoa(novoTipo);
+    // Limpa o campo ao trocar — evita salvar um CPF como CNPJ ou vice-versa.
+    field("cnpj", "");
   }
 
   async function onLogoFile(file: File) {
@@ -126,14 +158,29 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="cnpj">CNPJ</Label>
+          <Label htmlFor="tipo-pessoa">Tipo de pessoa</Label>
+          <Select value={tipoPessoa} onValueChange={(v) => onTipoPessoaChange(v as TipoPessoa)}>
+            <SelectTrigger id="tipo-pessoa">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pf">Pessoa Física (CPF)</SelectItem>
+              <SelectItem value="pj">Pessoa Jurídica (CNPJ)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cnpj">{docLabel}</Label>
           <Input
             id="cnpj"
             value={form.cnpj}
             onChange={(e) => field("cnpj", e.target.value)}
-            placeholder="00.000.000/0000-00"
-            maxLength={20}
+            placeholder={docPlaceholder}
+            maxLength={docMaxLength}
+            inputMode="numeric"
           />
+          <p className="text-xs text-zinc-500">{docHelpText}</p>
         </div>
 
         <div className="space-y-1.5">
