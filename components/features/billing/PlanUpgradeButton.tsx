@@ -40,12 +40,23 @@ export function PlanUpgradeButton({ targetPlan }: Props) {
         return;
       }
       if (r.mode === "asaas") {
-        toast.success("Checkout aberto em nova aba. Conclua o pagamento por lá.");
-        // Abre em nova aba pra não perder o estado do app + voltar fácil
+        // Abre em nova aba pra não perder o estado do app.
+        // Nota: com noopener, alguns browsers retornam null mesmo abrindo —
+        // por isso NÃO usamos fallback baseado em null check.
         const newWindow = window.open(r.checkout_url, "_blank", "noopener,noreferrer");
-        if (!newWindow) {
-          // Pop-up bloqueado — fallback no mesmo tab
-          window.location.href = r.checkout_url;
+        if (newWindow && typeof newWindow.focus === "function") {
+          // Conseguimos abrir com sucesso e temos referência.
+          toast.success("Checkout aberto em nova aba. Conclua o pagamento por lá.");
+        } else {
+          // Sem referência: ou popup foi bloqueado, ou browser usa noopener-null.
+          // Em ambos os casos, oferecemos link manual via toast.
+          toast.info("Checkout pronto. Clique no link da notificação abaixo.", {
+            action: {
+              label: "Abrir checkout",
+              onClick: () => window.open(r.checkout_url, "_blank"),
+            },
+            duration: 15_000,
+          });
         }
         return;
       }
