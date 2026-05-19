@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,15 +53,22 @@ export function TopBar({ userEmail, orgName, role, notifications }: Props) {
             </Avatar>
             <span className="hidden md:inline">{userEmail}</span>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="truncate">{userEmail}</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-60">
+            <DropdownMenuLabel className="space-y-0.5">
+              <p className="truncate text-sm font-medium">{userEmail}</p>
+              <p className="truncate text-xs font-normal text-zinc-500">
+                {orgName} · {ROLE_LABEL[role]}
+              </p>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>Conta (em breve)</DropdownMenuItem>
-            <DropdownMenuItem disabled>Configurações da org (Sprint 1)</DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/dashboard">Dashboard</Link>} />
+            <DropdownMenuItem render={<Link href="/configuracoes">Configurações</Link>} />
+            <DropdownMenuItem render={<Link href="/billing">Plano e cobrança</Link>} />
             <DropdownMenuSeparator />
             <DropdownMenuItem
               disabled={pending}
               onClick={() => startTransition(() => logoutAction())}
+              className="text-red-600 focus:text-red-700 dark:text-red-400"
             >
               {pending ? "Saindo…" : "Sair"}
             </DropdownMenuItem>
