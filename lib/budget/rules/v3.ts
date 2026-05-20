@@ -97,6 +97,14 @@ export type RuleItemV3 = {
   disciplina?: Disciplina;
   /** Quando definido, bypassa lookup SINAPI — usa preço direto + origem='custom'. */
   preco_unitario_custom?: Big;
+  /**
+   * Multiplicador de preço pra refletir padrão construtivo (porcelanato vs cerâmico,
+   * esquadrias premium vs simples). Default 1.0 = sem ajuste. Aplicado APÓS o lookup
+   * SINAPI no preço unitário, preservando o código SINAPI oficial.
+   *
+   * Não usar pra itens custom — esses já vêm com fAcab embutido em preco_unitario_custom.
+   */
+  multiplicador_preco?: number;
 };
 
 // =============================================================================
@@ -322,7 +330,8 @@ const ruleCobertura: Rule = (p) => {
       codigo_sinapi: "96109",
       descricao_local: "Forro em placas de gesso (ambientes residenciais)",
       unidade: "m²",
-      quantidade: big(area * 0.9 * fAcab),
+      quantidade: big(area * 0.9),
+      multiplicador_preco: fAcab,
       rule_id: "cobertura.forro",
     },
   ];
@@ -334,13 +343,13 @@ const ruleEsquadrias: Rule = (p) => {
   const ambientes = p.ambientes;
   const fAcab = fatorPadraoAcabamento(p.padrao_construtivo);
 
-  // Porta de entrada (custom — madeira maciça, não tem SINAPI 1:1 popular)
+  // Porta de entrada (custom — madeira maciça)
   items.push({
     codigo_sinapi: "custom-porta-entrada",
     descricao_local: "Porta de entrada de madeira maciça 90x210cm com batente e fechadura",
     unidade: "un",
     quantidade: big(1),
-    preco_unitario_custom: big(1850 * fAcab),
+    preco_unitario_custom: big(1850 * fAcab), // fAcab embutido no preço
     rule_id: "esquadrias.porta-entrada",
   });
 
@@ -357,7 +366,8 @@ const ruleEsquadrias: Rule = (p) => {
       codigo_sinapi: "90845",
       descricao_local: `Kit porta de madeira semi-oca 80x210 padrão médio (${portasInternas} unidades)`,
       unidade: "un",
-      quantidade: big(portasInternas * fAcab),
+      quantidade: big(portasInternas),
+      multiplicador_preco: fAcab,
       rule_id: "esquadrias.portas-internas",
     });
   }
@@ -369,7 +379,8 @@ const ruleEsquadrias: Rule = (p) => {
       codigo_sinapi: "94573",
       descricao_local: "Janela alumínio correr 4 folhas 150x120 com bandeira",
       unidade: "un",
-      quantidade: big(janelasGrandes * fAcab),
+      quantidade: big(janelasGrandes),
+      multiplicador_preco: fAcab,
       rule_id: "esquadrias.janelas-grandes",
     });
   }
@@ -378,7 +389,8 @@ const ruleEsquadrias: Rule = (p) => {
       codigo_sinapi: "94569",
       descricao_local: "Janela alumínio maxim-ar 60x80",
       unidade: "un",
-      quantidade: big(janelasPequenas * fAcab),
+      quantidade: big(janelasPequenas),
+      multiplicador_preco: fAcab,
       rule_id: "esquadrias.janelas-pequenas",
     });
   }
@@ -404,7 +416,8 @@ const rulePisosRevestimentos: Rule = (p) => {
       codigo_sinapi: "87248",
       descricao_local: "Revestimento cerâmico de piso esmaltado 35x35",
       unidade: "m²",
-      quantidade: big(area * 0.95 * fAcab),
+      quantidade: big(area * 0.95),
+      multiplicador_preco: fAcab,
       rule_id: "pisos.ceramico",
     },
   ];
@@ -417,7 +430,8 @@ const rulePisosRevestimentos: Rule = (p) => {
       codigo_sinapi: "87265",
       descricao_local: `Revestimento cerâmico paredes internas esmaltado 20x20 (${banheiros} banh. + ${cozinhas} cozinha/área)`,
       unidade: "m²",
-      quantidade: big(areaRevPared * fAcab),
+      quantidade: big(areaRevPared),
+      multiplicador_preco: fAcab,
       rule_id: "pisos.revestimento-parede",
     });
   }
@@ -527,28 +541,32 @@ const rulePintura: Rule = (p) => {
       codigo_sinapi: "88485",
       descricao_local: "Fundo selador acrílico 1 demão (paredes internas)",
       unidade: "m²",
-      quantidade: big(areaPinturaInt * fAcab),
+      quantidade: big(areaPinturaInt),
+      multiplicador_preco: fAcab,
       rule_id: "pintura.selador",
     },
     {
       codigo_sinapi: "88497",
       descricao_local: "Emassamento com massa látex em parede, 2 demãos, lixamento manual",
       unidade: "m²",
-      quantidade: big(areaPinturaInt * fAcab),
+      quantidade: big(areaPinturaInt),
+      multiplicador_preco: fAcab,
       rule_id: "pintura.massa",
     },
     {
       codigo_sinapi: "88489",
       descricao_local: "Pintura látex acrílica paredes internas, 2 demãos",
       unidade: "m²",
-      quantidade: big(areaPinturaInt * fAcab),
+      quantidade: big(areaPinturaInt),
+      multiplicador_preco: fAcab,
       rule_id: "pintura.interna",
     },
     {
       codigo_sinapi: "88489",
       descricao_local: "Pintura látex acrílica paredes externas, 2 demãos",
       unidade: "m²",
-      quantidade: big(areaParedesExt * fAcab),
+      quantidade: big(areaParedesExt),
+      multiplicador_preco: fAcab,
       rule_id: "pintura.externa",
     },
   ];
@@ -676,14 +694,16 @@ const ruleLoucasMetais: Rule = (p) => {
       codigo_sinapi: "86931",
       descricao_local: "Vaso sanitário sifonado com caixa acoplada + engate flexível",
       unidade: "un",
-      quantidade: big(banheiros * fAcab),
+      quantidade: big(banheiros),
+      multiplicador_preco: fAcab,
       rule_id: "loucas.vaso",
     });
     items.push({
       codigo_sinapi: "86939",
       descricao_local: "Lavatório de louça branca com coluna, padrão popular",
       unidade: "un",
-      quantidade: big(banheiros * fAcab),
+      quantidade: big(banheiros),
+      multiplicador_preco: fAcab,
       rule_id: "loucas.lavatorio",
     });
   }
@@ -692,8 +712,8 @@ const ruleLoucasMetais: Rule = (p) => {
       codigo_sinapi: "custom-pia-cozinha",
       descricao_local: `Pia de cozinha aço inox 1 cuba + torneira (${cozinhas})`,
       unidade: "un",
-      quantidade: big(cozinhas * fAcab),
-      preco_unitario_custom: big(725),
+      quantidade: big(cozinhas),
+      preco_unitario_custom: big(725 * fAcab),
       rule_id: "loucas.pia",
     });
   }

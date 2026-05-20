@@ -138,6 +138,9 @@ function runScenario(scenario: (typeof CENARIOS)[number]): {
         continue;
       }
       preco = new Big(p);
+      // Aplica multiplicador de preço (espelha generate.action.ts)
+      const mult = (item as { multiplicador_preco?: number }).multiplicador_preco;
+      if (mult !== undefined && mult !== 1) preco = preco.times(mult);
       origem = "sinapi";
     }
     const subtotal = item.quantidade.times(preco);

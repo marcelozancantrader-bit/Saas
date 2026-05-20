@@ -212,6 +212,12 @@ export async function generateBudgetAction(
       const sinapi = priceByCode.get(item.codigo_sinapi)!;
       precoUnitario = new Big(sinapi.preco);
       unidade = sinapi.unidade;
+      // Aplica multiplicador de preço pra refletir padrão construtivo
+      // (porcelanato vs cerâmico, esquadrias premium, etc) preservando o código SINAPI.
+      const mult = (item as { multiplicador_preco?: number }).multiplicador_preco;
+      if (mult !== undefined && mult !== 1) {
+        precoUnitario = precoUnitario.times(mult);
+      }
       origem = "sinapi";
     }
     return {

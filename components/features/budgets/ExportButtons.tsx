@@ -172,8 +172,8 @@ export function ExportButtons({ budget, items, projectName }: Props) {
 
             <Text style={styles.disclaimer}>
               Documento gerado com auxílio de inteligência artificial (extração de planta) e regras
-              heurísticas (Memorial.ai, regras v1) a partir de preços SINAPI. Revise o conteúdo
-              antes de utilizar. A responsabilidade técnica é do profissional emissor.
+              heurísticas (Memorial.ai) a partir de preços SINAPI oficiais. Revise o conteúdo antes
+              de utilizar. A responsabilidade técnica é do profissional emissor.
             </Text>
           </Page>
         </Document>
