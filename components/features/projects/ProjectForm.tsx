@@ -254,7 +254,6 @@ export function ProjectForm({ initial, clients }: Props) {
           initialAreaTerreno={initial?.area_terreno_m2 ?? null}
           disabled={pending}
           projectId={initial?.id}
-          hasCustom={initial?.cidade_codigo === "custom"}
           customLabel={initial?.zoneamento_custom_label ?? null}
         />
       </Section>
