@@ -1,10 +1,53 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-19 — **Big push: landing pública, pricing high-ticket, Asaas sandbox 100% funcional, Google OAuth ativo, polish do signup/login/configuracoes/clientes. Próximo: Resend / Sentry / PostHog (integrações opcionais) ou backlog de produto.**
+**Última pausa:** 2026-05-20 — **Orçamento overhaul: rules v3 com códigos SINAPI corretos (descrições oficiais), troca de código por padrão construtivo (cerâmico/porcelanato, semi-oca/maciça, granito/quartzo/mármore), botão Regerar com parâmetros editáveis, bug crítico do Inngest worker corrigido (descartava ambientes da extração).**
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
-**App live:** https://memorial-ai-mu.vercel.app · **Último commit:** `5700be6`
+**App live:** https://memorial-ai-mu.vercel.app · **Último commit:** `a37add6`
 **Repo:** https://github.com/marcelozancantrader-bit/Saas
+
+---
+
+## 📌 Resumo da sessão 2026-05-20 (em prod, sem pendências)
+
+### Overhaul completo do orçamento SINAPI (v3)
+
+**Diagnóstico inicial:** engenheiro disse R$250-300k pra 130m² popular, sistema dava R$138k (45% abaixo). Investigação revelou múltiplos bugs em cascata. Auditoria completa dos códigos SINAPI mostrou que mais de 11 códigos no seed tinham descrição **completamente diferente** da oficial SINAPI (87878 "alvenaria" era chapisco; 89800 "forro gesso" era tubo PVC esgoto; 91173/91174 "janelas" eram fixação de tubos; etc).
+
+**Mudanças aplicadas (commits desta sessão):**
+
+1. `ebc2473` — fix mensagem confusa do orçamento (extração feita mas não confirmada)
+2. `48d226c` — rules v2 + preços SINAPI atualizados pra composições completas com MO
+3. `8d01144` — fator padrão construtivo médio era igual ao popular (bug calibração)
+4. `798da8f` — **rules v3 com códigos SINAPI corretos** (96523, 103328, 94965, 87248, 88489, 104473, 104480, 96109, 87622, 90845, 94573, 94569, 86931, 86939, 87265 etc.) + reseed migration
+5. `098c28b` — **botão Regerar com dialog editável** (UF, mês ref, BDI, regime) na página de detalhe
+6. `aad8ba3` — fator padrão construtivo afeta PREÇO (não quantidade) + footer PDF dizia "regras v1"
+7. `9173179` — **bug crítico:** Inngest worker descartava ambientes/elementos_especiais (cast TS limitado a 5 campos) → orçamento com 0 pontos elétricos/hidráulicos/louças
+8. `b3715ad` — "custom-xxx" no PDF/Excel/UI → "Composição própria" (helper `lib/budget/format-codigo.ts`)
+9. `a37add6` — **troca de código SINAPI por padrão** (cerâmico→porcelanato, semi-oca→maciça mexicana, granito→quartzo→mármore)
+
+**Resultado validado (smoke test 5 cenários, todos dentro CUB):**
+
+| Padrão  | Bruto/m² | C/BDI 28%/m² | Faixa CUB   |
+| ------- | -------- | ------------ | ----------- |
+| Popular | R$2.257  | R$2.889      | R$1850-2400 |
+| Médio   | R$2.647  | R$3.388      | R$2300-2900 |
+| Alto    | R$3.227  | R$4.131      | R$3000-4200 |
+| Luxo    | R$3.610  | R$4.620      | R$4000-6500 |
+
+**Migrations aplicadas (Supabase Dashboard):**
+
+- `20260720000001_sinapi_seed_v2_precos_completos.sql` — atualiza preços antigos pra composições com MO
+- `20260721000001_sinapi_seed_v3_codigos_corretos.sql` — DELETE preços antigos + INSERT códigos modernos com descrições oficiais
+- `20260721000002_sinapi_seed_v3_premium.sql` — adiciona 87263 (porcelanato) + 100693 (porta maciça mexicana)
+
+**Arquitetura final:**
+
+- `lib/budget/rules/v3.ts` — regras com 15 grupos + `multiplicador_preco` (não infla quantidade) + escolha de código por padrão
+- v1 e v2 mantidas intactas pra reprodutibilidade de orçamentos antigos
+- `budget_items` grava snapshot (composicao_codigo, descricao, preco_unitario) → orçamentos antigos não quebram com mudanças nas regras
+
+---
 
 ---
 
