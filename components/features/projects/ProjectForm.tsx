@@ -56,10 +56,17 @@ export function ProjectForm({ initial, clients }: Props) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [endereco, setEndereco] = useState(initial?.endereco_completo ?? "");
 
+  // Cidade e UF capturados via ViaCEP — populam o ZoneamentoFields automaticamente
+  const [cidadeNomeFromCep, setCidadeNomeFromCep] = useState<string>("");
+  const [ufFromCep, setUfFromCep] = useState<string>("");
+
   function onAddressFound(addr: ViaCepAddress) {
     const full = [addr.logradouro, addr.bairro, addr.cidade, addr.uf].filter(Boolean).join(", ");
     setEndereco(full);
-    toast.success("Endereço preenchido");
+    // Propaga cidade/UF pro zoneamento
+    if (addr.cidade) setCidadeNomeFromCep(addr.cidade);
+    if (addr.uf) setUfFromCep(addr.uf);
+    toast.success("Endereço preenchido — cidade/UF populados no zoneamento");
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -255,6 +262,9 @@ export function ProjectForm({ initial, clients }: Props) {
           disabled={pending}
           projectId={initial?.id}
           customLabel={initial?.zoneamento_custom_label ?? null}
+          /* Vindo do ViaCEP — auto-popula quando user digita o CEP */
+          hintCidadeNome={cidadeNomeFromCep || undefined}
+          hintUf={ufFromCep || undefined}
         />
       </Section>
 

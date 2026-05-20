@@ -288,6 +288,14 @@ export async function generateBudgetAction(
         discDropped > 0
           ? `${discDropped} item(ns) de disciplinas complementares descartados por falta de preço SINAPI.`
           : null,
+        // Warning: extração com confiança baixa da IA
+        (extracao as { confianca?: string }).confianca === "baixa"
+          ? "⚠ Extração da planta marcada pela IA com CONFIANÇA BAIXA — revise os valores antes de usar este orçamento."
+          : null,
+        // Warning: ambientes vazios → itens dependentes (pontos elétricos, louças) zerados
+        (extracao.ambientes?.length ?? 0) === 0
+          ? "⚠ Nenhum ambiente detectado na planta — pontos elétricos/hidráulicos, louças, bancadas e revestimento de parede ficaram zerados. Re-suba a planta arquitetônica."
+          : null,
         cubCheck.msg ? `⚠ ${cubCheck.msg}` : null,
       ]
         .filter(Boolean)

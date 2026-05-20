@@ -54,7 +54,12 @@ export function BriefingCard({ projectId, briefing, portalUrl }: Props) {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">Briefing inicial</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base">Briefing inicial</CardTitle>
+            <Badge variant="outline" className="text-[10px]">
+              Opcional
+            </Badge>
+          </div>
           {briefing ? (
             <Badge
               variant={
@@ -73,13 +78,16 @@ export function BriefingCard({ projectId, briefing, portalUrl }: Props) {
             </Badge>
           ) : null}
         </div>
+        <p className="mt-1 text-[11px] text-zinc-500">
+          Esta etapa não é obrigatória — você pode pular pra geração de documentos sem briefing.
+        </p>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {!briefing || briefing.status === "arquivado" ? (
           <>
             <p className="text-zinc-600 dark:text-zinc-400">
-              Mande o cliente preencher um briefing estruturado no portal antes de começar. Reduz
-              idas-e-vindas e dá contexto pra IA gerar docs mais alinhados.
+              Quando preenchido, reduz idas-e-vindas e dá contexto pra IA gerar docs mais alinhados
+              com a expectativa do cliente.
             </p>
             <Button onClick={request} disabled={pending || !portalUrl} size="sm">
               {pending ? "Enviando…" : "Solicitar briefing"}

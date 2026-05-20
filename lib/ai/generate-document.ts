@@ -64,6 +64,10 @@ export type GenerateDocumentInput = {
         jardim: boolean;
         area_servico_externa: boolean;
       };
+      /** Notas livres da IA sobre a planta (incertezas, detalhes notáveis). */
+      observacoes?: string | null;
+      /** Confiança da IA na extração — útil pra prompts ajustarem hedging. */
+      confianca?: "alta" | "media" | "baixa" | null;
     } | null;
   };
 };
@@ -160,6 +164,21 @@ function renderContextMarkdown(input: GenerateDocumentInput): string {
       .map(([k]) => k.replace(/_/g, " "));
     if (especiais.length > 0) {
       lines.push("", `**Elementos especiais:** ${especiais.join(", ")}`);
+    }
+
+    if (extracao_planta.observacoes) {
+      lines.push("", `**Observações da IA sobre a planta:** ${extracao_planta.observacoes}`);
+    }
+    if (extracao_planta.confianca === "baixa") {
+      lines.push(
+        "",
+        "> ⚠ A IA marcou a extração com **CONFIANÇA BAIXA** — use linguagem hedged (ex: 'aproximadamente', 'estimativa preliminar') e recomende vistoria/medição em campo no documento.",
+      );
+    } else if (extracao_planta.confianca === "media") {
+      lines.push(
+        "",
+        "> A IA marcou confiança MÉDIA — pode confiar mas mencione 'sujeito a confirmação técnica em obra'.",
+      );
     }
   }
 

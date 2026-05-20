@@ -238,7 +238,7 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
     },
     {
       key: "briefing",
-      label: "Briefing",
+      label: "Briefing (opcional)",
       badge:
         briefingStatus === "preenchido" ? "✓" : briefingStatus === "aguardando" ? "…" : undefined,
     },
@@ -340,7 +340,11 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
                   status: project.status,
                   cidade_codigo: project.cidade_codigo,
                   zoneamento: project.zoneamento,
-                  area_terreno_m2: project.area_terreno_m2,
+                  // Fallback: usa área terreno da extração se o projeto ainda não tem
+                  area_terreno_m2:
+                    project.area_terreno_m2 ??
+                    completedExtraction?.extracao_resultado?.area_terreno_m2 ??
+                    null,
                   zoneamento_custom_label: zoneamentoCustomLabel,
                 }}
                 clients={clients ?? []}

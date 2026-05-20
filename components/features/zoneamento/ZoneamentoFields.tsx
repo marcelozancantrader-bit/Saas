@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,12 @@ type Props = {
   disabled?: boolean;
   projectId?: string;
   customLabel?: string | null;
+  /**
+   * Hint vindo de outro form (ex: ViaCEP do projeto) — preenche cidade/UF
+   * automaticamente. User pode editar livremente depois.
+   */
+  hintCidadeNome?: string;
+  hintUf?: string;
 };
 
 const UFS = [
@@ -98,6 +104,8 @@ export function ZoneamentoFields({
   disabled,
   projectId,
   customLabel,
+  hintCidadeNome,
+  hintUf,
 }: Props) {
   const router = useRouter();
 
@@ -117,6 +125,17 @@ export function ZoneamentoFields({
 
   const [uf, setUf] = useState<string>(inicial.uf);
   const [cidadeNome, setCidadeNome] = useState<string>(inicial.nome);
+
+  // Sincroniza hint vindo de outro form (ViaCEP). Só aplica se o user ainda não
+  // escolheu nada — não sobrescreve seleção manual. setState aqui é intencional
+  // (sync de prop externa), por isso disable da regra.
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (hintUf && !uf) setUf(hintUf);
+    if (hintCidadeNome && !cidadeNome.trim()) setCidadeNome(hintCidadeNome);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hintCidadeNome, hintUf]);
   const [zona, setZona] = useState<string>(initialZona ?? "");
   const [zonasIa, setZonasIa] = useState<ZonaIA[]>([]);
   const [iaMeta, setIaMeta] = useState<{

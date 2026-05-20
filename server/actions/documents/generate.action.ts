@@ -93,6 +93,8 @@ export async function generateDocumentAction(
             jardim: boolean;
             area_servico_externa: boolean;
           };
+          observacoes?: string | null;
+          confianca?: "alta" | "media" | "baixa" | null;
         }
       | undefined) ?? null;
 
@@ -149,6 +151,8 @@ export async function generateDocumentAction(
                   jardim: false,
                   area_servico_externa: false,
                 },
+                observacoes: extracao.observacoes ?? null,
+                confianca: extracao.confianca ?? null,
               }
             : null,
       },

@@ -98,7 +98,12 @@ export function ExtractionReview({
         padrao_construtivo: padrao === "" ? null : (padrao as (typeof PADRAO_VALUES)[number]),
       });
       if (result.ok) {
-        toast.success("Extração confirmada. Dados atualizados no projeto.");
+        toast.success(
+          "✅ Extração confirmada! Próximo passo: revise as Validações (NBR + zoneamento).",
+          { duration: 6000 },
+        );
+        // Redireciona pra aba de validações pra o user ver o próximo passo
+        router.push(`/projetos/${projectId}?tab=validacao`);
         router.refresh();
       } else if ("error" in result) {
         toast.error(result.error);
