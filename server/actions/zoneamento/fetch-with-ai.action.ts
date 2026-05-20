@@ -21,6 +21,8 @@ export type ZoneamentoIaResult =
         cidade_nome: string;
         uf: string;
         lei: string;
+        ano_lei: number | null;
+        ultima_revisao_ano: number | null;
         fonte_url: string | null;
         zona_codigo: string;
         zona_label: string;
@@ -51,7 +53,9 @@ REGRAS CRÍTICAS:
 2. NUNCA invente valores. Se não souber, use null e marque o que faltou na observacao.
 3. Foque em zonas RESIDENCIAIS típicas. Se a zona não foi especificada, escolha a mais comum (ZR/ZM/ZO de média densidade).
 4. Para cidades pequenas sem plano diretor próprio, use null e explique na observacao.
-5. Sempre cite a LEI municipal (LC X/ANO, Lei Y/ANO) que rege os parâmetros.
+5. SEMPRE preencha 'ano_lei' (ano de promulgação da lei principal — ex: 1999 pra LC 434/1999).
+6. SEMPRE preencha 'ultima_revisao_ano' se você souber de revisão posterior (ex: PDDUA de POA: ano_lei=1999, ultima_revisao_ano=2010).
+7. Sempre cite a LEI municipal (LC X/ANO, Lei Y/ANO) que rege os parâmetros.
 
 Os parâmetros retornados são ESTIMATIVAS PRÉ-VALIDAÇÃO. O profissional vai confirmar com a prefeitura.`;
 
@@ -67,6 +71,16 @@ const ZONEAMENTO_TOOL = {
         type: "string",
         description:
           "Lei/LC municipal que rege o zoneamento (ex: 'LC 434/1999 (PDDUA)', 'Lei 16.402/2016')",
+      },
+      ano_lei: {
+        type: "number",
+        description:
+          "Ano de promulgação da lei principal (ex: 1999 para LC 434/1999). CRÍTICO pra avaliar se está vigente.",
+      },
+      ultima_revisao_ano: {
+        type: "number",
+        description:
+          "Ano da última revisão significativa da lei, se houver (ex: PDDUA POA: ano_lei=1999, ultima_revisao_ano=2010). OMITIR se nunca foi revisada.",
       },
       fonte_url: {
         type: "string",
@@ -133,6 +147,7 @@ const ZONEAMENTO_TOOL = {
       "cidade_nome",
       "uf",
       "lei",
+      "ano_lei",
       "zona_codigo",
       "zona_label",
       "ca_basico",
@@ -187,6 +202,8 @@ export async function fetchZoneamentoIaAction(
         cidade_nome: String(data.cidade_nome ?? cidade_nome),
         uf: String(data.uf ?? uf),
         lei: String(data.lei ?? "Não informado"),
+        ano_lei: optNum(data.ano_lei),
+        ultima_revisao_ano: optNum(data.ultima_revisao_ano),
         fonte_url: optStr(data.fonte_url),
         zona_codigo: String(data.zona_codigo ?? "zona-1"),
         zona_label: String(data.zona_label ?? "Zona residencial"),

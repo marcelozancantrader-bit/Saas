@@ -61,6 +61,8 @@ type FormState = {
   cidade_nome: string;
   uf: string;
   lei: string;
+  ano_lei: string;
+  ultima_revisao_ano: string;
   fonte_url: string;
   zona_codigo: string;
   zona_label: string;
@@ -81,6 +83,8 @@ const EMPTY: FormState = {
   cidade_nome: "",
   uf: "SP",
   lei: "",
+  ano_lei: "",
+  ultima_revisao_ano: "",
   fonte_url: "",
   zona_codigo: "",
   zona_label: "",
@@ -96,6 +100,23 @@ const EMPTY: FormState = {
   observacao: "",
   area_terreno_m2: "",
 };
+
+/** Calcula idade da lei pra exibir warning visual. */
+function idadeLei(form: FormState): {
+  anos: number | null;
+  isAntiga: boolean;
+  refAno: number | null;
+} {
+  const refAno = form.ultima_revisao_ano
+    ? Number(form.ultima_revisao_ano)
+    : form.ano_lei
+      ? Number(form.ano_lei)
+      : null;
+  if (!refAno) return { anos: null, isAntiga: false, refAno: null };
+  const anoAtual = new Date().getFullYear();
+  const anos = anoAtual - refAno;
+  return { anos, isAntiga: anos > 10, refAno };
+}
 
 export function ZoneamentoCustomDialog({
   projectId,
@@ -140,6 +161,8 @@ export function ZoneamentoCustomDialog({
         cidade_nome: d.cidade_nome,
         uf: d.uf,
         lei: d.lei,
+        ano_lei: d.ano_lei?.toString() ?? "",
+        ultima_revisao_ano: d.ultima_revisao_ano?.toString() ?? "",
         fonte_url: d.fonte_url ?? "",
         zona_codigo: d.zona_codigo,
         zona_label: d.zona_label,
@@ -156,8 +179,13 @@ export function ZoneamentoCustomDialog({
       });
       setConfianca(d.confianca);
       setOrigem("ia");
+      const dataInfo = d.ultima_revisao_ano
+        ? `lei ${d.ano_lei}, revisada em ${d.ultima_revisao_ano}`
+        : d.ano_lei
+          ? `lei de ${d.ano_lei}`
+          : "data não identificada";
       toast.success(
-        `IA retornou parâmetros (confiança ${d.confianca}, custo $${res.usd_cost.toFixed(4)}). Revise antes de salvar.`,
+        `IA retornou parâmetros (${dataInfo}, confiança ${d.confianca}). Revise antes de salvar.`,
       );
     } finally {
       setIaLoading(false);
@@ -184,6 +212,8 @@ export function ZoneamentoCustomDialog({
         cidade_nome: form.cidade_nome.trim(),
         uf: form.uf as string,
         lei: form.lei.trim() || "Não informado",
+        ano_lei: form.ano_lei === "" ? null : Number(form.ano_lei),
+        ultima_revisao_ano: form.ultima_revisao_ano === "" ? null : Number(form.ultima_revisao_ano),
         fonte_url: form.fonte_url.trim() || null,
         zona_codigo: form.zona_codigo.trim().toLowerCase().replace(/\s+/g, "-"),
         zona_label: form.zona_label.trim(),
@@ -330,20 +360,87 @@ export function ZoneamentoCustomDialog({
             </div>
           ) : null}
 
-          {/* Lei + fonte */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="zc_lei">Lei municipal</Label>
-              <Input
-                id="zc_lei"
-                value={form.lei}
-                onChange={(e) => update("lei", e.target.value)}
-                disabled={busy}
-                placeholder="Ex: LC 482/2014 (Plano Diretor)"
-              />
+          {/* Lei + data em destaque */}
+          <div
+            className={`rounded-md border-2 p-3 ${
+              idadeLei(form).isAntiga
+                ? "border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-950"
+                : "border-zinc-200 dark:border-zinc-800"
+            }`}
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <Label className="text-sm font-semibold">📅 Data do plano diretor</Label>
+              {(() => {
+                const { anos, isAntiga, refAno } = idadeLei(form);
+                if (!refAno) return null;
+                return (
+                  <Badge variant={isAntiga ? "destructive" : "default"}>
+                    {anos === 0
+                      ? "Vigente (este ano)"
+                      : `${anos} ${anos === 1 ? "ano" : "anos"} desde ${refAno}`}
+                    {isAntiga ? " ⚠ verificar revisão" : ""}
+                  </Badge>
+                );
+              })()}
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="zc_fonte">URL da lei/plano diretor (opcional)</Label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="zc_lei" className="text-xs">
+                  Lei municipal
+                </Label>
+                <Input
+                  id="zc_lei"
+                  value={form.lei}
+                  onChange={(e) => update("lei", e.target.value)}
+                  disabled={busy}
+                  placeholder="Ex: LC 482/2014 (Plano Diretor)"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="zc_ano_lei" className="text-xs">
+                    Ano da lei *
+                  </Label>
+                  <Input
+                    id="zc_ano_lei"
+                    type="number"
+                    min="1900"
+                    max={new Date().getFullYear()}
+                    step="1"
+                    value={form.ano_lei}
+                    onChange={(e) => update("ano_lei", e.target.value)}
+                    disabled={busy}
+                    placeholder="Ex: 1999"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="zc_revisao" className="text-xs">
+                    Última revisão
+                  </Label>
+                  <Input
+                    id="zc_revisao"
+                    type="number"
+                    min="1900"
+                    max={new Date().getFullYear()}
+                    step="1"
+                    value={form.ultima_revisao_ano}
+                    onChange={(e) => update("ultima_revisao_ano", e.target.value)}
+                    disabled={busy}
+                    placeholder="Vazio se nunca"
+                  />
+                </div>
+              </div>
+            </div>
+            {idadeLei(form).isAntiga ? (
+              <p className="mt-2 text-xs font-medium text-amber-900 dark:text-amber-100">
+                ⚠ <strong>Atenção:</strong> esta lei tem mais de 10 anos sem revisão. Confirme com a
+                prefeitura se está vigente e se há decretos/leis complementares recentes.
+              </p>
+            ) : null}
+            <div className="mt-2 space-y-1.5">
+              <Label htmlFor="zc_fonte" className="text-xs">
+                URL da lei/plano diretor (opcional)
+              </Label>
               <Input
                 id="zc_fonte"
                 value={form.fonte_url}

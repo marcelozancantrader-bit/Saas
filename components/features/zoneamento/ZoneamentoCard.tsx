@@ -8,6 +8,8 @@ export type ZoneamentoCustomMeta = ZoneamentoRule & {
   cidade_nome?: string;
   uf?: string;
   lei?: string;
+  ano_lei?: number | null;
+  ultima_revisao_ano?: number | null;
   fonte_url?: string | null;
   origem?: "manual" | "ia";
   confianca?: "alta" | "media" | "baixa" | null;
@@ -69,6 +71,8 @@ export function ZoneamentoCard({
   let headerOrigem: "curado" | "manual" | "ia" = "curado";
   let confianca: "alta" | "media" | "baixa" | null = null;
   let observacao: string | null = null;
+  let anoLei: number | null = null;
+  let ultimaRevisao: number | null = null;
 
   if (isCustom && customRule) {
     findings = runZoneamentoChecksCustom({
@@ -84,6 +88,8 @@ export function ZoneamentoCard({
     headerOrigem = customRule.origem ?? "manual";
     confianca = customRule.confianca ?? null;
     observacao = customRule.observacao ?? null;
+    anoLei = customRule.ano_lei ?? null;
+    ultimaRevisao = customRule.ultima_revisao_ano ?? null;
   } else {
     const cidade = getCidade(cidade_codigo);
     const zona = getZona(cidade_codigo, zona_codigo);
@@ -99,7 +105,16 @@ export function ZoneamentoCard({
     headerNome = `${cidade.nome}/${cidade.uf} · ${zona.label}`;
     headerLei = cidade.lei;
     headerFonte = cidade.fonte_url ?? null;
+    // Tenta extrair ano da string da lei (ex: "LC 434/1999" → 1999)
+    const m = headerLei.match(/(\d{4})/);
+    if (m) anoLei = Number(m[1]);
   }
+
+  // Cálculo da idade da lei pra warning visual
+  const anoAtual = new Date().getFullYear();
+  const refAno = ultimaRevisao ?? anoLei;
+  const anosIdade = refAno ? anoAtual - refAno : null;
+  const leiAntiga = anosIdade !== null && anosIdade > 10;
 
   const issues = findings.filter((f) => f.severity === "issue").length;
   const warns = findings.filter((f) => f.severity === "warn").length;
@@ -149,6 +164,33 @@ export function ZoneamentoCard({
             </>
           ) : null}
         </p>
+
+        {/* Data do plano diretor em destaque */}
+        {refAno ? (
+          <div
+            className={`mt-2 rounded-md border px-3 py-2 text-xs ${
+              leiAntiga
+                ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+                : "border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+            }`}
+          >
+            <p className="font-medium">
+              📅 Plano diretor de {refAno}
+              {ultimaRevisao && anoLei && ultimaRevisao !== anoLei
+                ? ` (lei original ${anoLei}, revisada em ${ultimaRevisao})`
+                : anoLei && !ultimaRevisao
+                  ? " (sem revisão registrada)"
+                  : ""}{" "}
+              · {anosIdade} {anosIdade === 1 ? "ano" : "anos"} de vigência
+            </p>
+            {leiAntiga ? (
+              <p className="mt-1 font-medium">
+                ⚠ Lei com mais de 10 anos sem revisão registrada — confirme com a prefeitura se há
+                decretos/leis complementares recentes antes de aprovar o projeto.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <p className="text-xs text-zinc-500">
           {headerOrigem === "curado"
             ? "Pré-validação curada — não substitui aprovação na prefeitura. Não cobre exceções (ZEIS, área histórica, lote de esquina)."

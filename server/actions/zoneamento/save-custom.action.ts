@@ -8,6 +8,8 @@ const zoneamentoCustomSchema = z.object({
   cidade_nome: z.string().min(2).max(120),
   uf: z.string().length(2),
   lei: z.string().max(200),
+  ano_lei: z.coerce.number().int().min(1900).max(2100).nullable(),
+  ultima_revisao_ano: z.coerce.number().int().min(1900).max(2100).nullable(),
   fonte_url: z.string().url().nullable(),
   zona_codigo: z.string().min(1).max(40),
   zona_label: z.string().min(1).max(160),
