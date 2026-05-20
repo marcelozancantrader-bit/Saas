@@ -1,40 +1,29 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { generateBudgetAction } from "@/server/actions/budgets/generate.action";
-import { toast } from "sonner";
+import { RegenerateBudgetButton } from "@/components/features/budgets/RegenerateBudgetButton";
 
 type Props = { projectId: string; canGenerate: boolean };
 
+/**
+ * Botão principal para gerar orçamento na página de listagem.
+ * Quando habilitado, abre o mesmo dialog do RegenerateBudgetButton (com BDI/UF/regime
+ * editáveis). Quando desabilitado, mostra botão cinza tooltipless.
+ */
 export function GenerateBudgetButton({ projectId, canGenerate }: Props) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-
-  function handle() {
-    startTransition(async () => {
-      const result = await generateBudgetAction({
-        project_id: projectId,
-        uf: "SP",
-        mes_referencia: "2026-05-01",
-        desonerado: true,
-        bdi_pct: 25,
-      });
-      if (result.ok) {
-        toast.success(
-          `Orçamento gerado — ${result.items_count} itens, R$ ${Number(result.total_com_bdi).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-        );
-        router.push(`/projetos/${projectId}/orcamento/${result.budget_id}`);
-      } else {
-        toast.error(result.error);
-      }
-    });
+  if (!canGenerate) {
+    return (
+      <Button disabled variant="default">
+        Gerar orçamento
+      </Button>
+    );
   }
-
   return (
-    <Button onClick={handle} disabled={!canGenerate || pending}>
-      {pending ? "Gerando…" : "Gerar orçamento"}
-    </Button>
+    <RegenerateBudgetButton
+      projectId={projectId}
+      variant="default"
+      label="Gerar orçamento"
+      defaults={{ uf: "SP", mes_referencia: "2026-05-01", desonerado: true, bdi_pct: 28 }}
+    />
   );
 }

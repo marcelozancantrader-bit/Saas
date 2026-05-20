@@ -9,6 +9,7 @@ import { BudgetItemsTable } from "@/components/features/budgets/BudgetItemsTable
 import { BudgetHeader } from "@/components/features/budgets/BudgetHeader";
 import { CurvaABC } from "@/components/features/budgets/CurvaABC";
 import { ExportButtons } from "@/components/features/budgets/ExportButtons";
+import { RegenerateBudgetButton } from "@/components/features/budgets/RegenerateBudgetButton";
 import { DISCIPLINA_LABEL, type Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 
 export const dynamic = "force-dynamic";
@@ -109,11 +110,22 @@ export default async function BudgetDetailPage({ params }: Props) {
               {budget.status === "finalizado" ? "Finalizado" : "Rascunho"}
             </Badge>
           </div>
-          <ExportButtons
-            budget={budget}
-            items={itemsList}
-            projectName={project?.nome ?? "Projeto"}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <RegenerateBudgetButton
+              projectId={projectId}
+              defaults={{
+                uf: budget.uf,
+                mes_referencia: budget.mes_referencia,
+                desonerado: budget.desonerado,
+                bdi_pct: Number(budget.bdi_pct),
+              }}
+            />
+            <ExportButtons
+              budget={budget}
+              items={itemsList}
+              projectName={project?.nome ?? "Projeto"}
+            />
+          </div>
         </div>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           {budget.uf} · referência {budget.mes_referencia} ·{" "}
