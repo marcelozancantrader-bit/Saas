@@ -113,6 +113,15 @@ export async function generateDocumentAction(
     };
   }
 
+  // Docs comerciais precisam do cliente cadastrado (nome do contratante é peça central)
+  const REQUIRES_CLIENT: ReadonlySet<string> = new Set(["proposta", "contrato"]);
+  if (REQUIRES_CLIENT.has(tipo) && !project.clients?.nome) {
+    return {
+      ok: false,
+      error: `Para gerar ${DOCUMENT_LABELS[tipo]}, vincule um cliente ao projeto primeiro (o nome do cliente é o contratante).`,
+    };
+  }
+
   // Call the AI
   const result = await generateDocument(
     {

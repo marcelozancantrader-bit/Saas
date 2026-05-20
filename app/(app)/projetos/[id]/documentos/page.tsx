@@ -77,7 +77,7 @@ export default async function DocumentosPage({ params, searchParams }: Props) {
 
   const { data: project, error } = await supabase
     .from("projects")
-    .select("id, nome, meta")
+    .select("id, nome, meta, client_id")
     .eq("id", projectId)
     .single();
   if (error || !project) notFound();
@@ -121,6 +121,7 @@ export default async function DocumentosPage({ params, searchParams }: Props) {
           <GenerateDocumentMenu
             projectId={projectId}
             hasConfirmedExtraction={hasConfirmedExtraction}
+            hasClient={!!project.client_id}
           />
         </div>
       </div>

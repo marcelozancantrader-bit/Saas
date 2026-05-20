@@ -15,7 +15,25 @@ import { generateDocumentAction } from "@/server/actions/documents/generate.acti
 import { DOCUMENT_LABELS, type DocumentTipo } from "@/lib/ai/generate-document";
 import { toast } from "sonner";
 
-type Props = { projectId: string; hasConfirmedExtraction: boolean };
+type Props = {
+  projectId: string;
+  hasConfirmedExtraction: boolean;
+  hasClient: boolean;
+};
+
+/** Documentos comerciais que precisam do cliente cadastrado (contratante). */
+const REQUIRES_CLIENT: Record<DocumentTipo, boolean> = {
+  memorial: false,
+  caderno: false,
+  proposta: true, // proposta tem o nome do cliente
+  contrato: true, // contratante é peça central
+  memorial_estrutural: false,
+  memorial_hidrossanitario: false,
+  memorial_eletrico: false,
+  ppci: false,
+  impermeabilizacao: false,
+  cronograma: false,
+};
 
 type DocGroup = {
   label: string;
@@ -69,7 +87,7 @@ const HINTS: Record<DocumentTipo, string> = {
   cronograma: "Etapas de obra + % desembolso",
 };
 
-export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction }: Props) {
+export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction, hasClient }: Props) {
   const router = useRouter();
   const [generating, setGenerating] = useState<DocumentTipo | null>(null);
   const [, startTransition] = useTransition();
@@ -103,17 +121,22 @@ export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction }: Prop
             <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
             {group.tipos.map((tipo) => {
               const needsExtraction = REQUIRES_EXTRACTION[tipo] && !hasConfirmedExtraction;
+              const needsClient = REQUIRES_CLIENT[tipo] && !hasClient;
+              const blocked = needsExtraction || needsClient;
+              const blockReason = needsClient
+                ? "Vincule um cliente ao projeto primeiro"
+                : needsExtraction
+                  ? "Confirme a extração da planta primeiro"
+                  : null;
               return (
                 <DropdownMenuItem
                   key={tipo}
-                  disabled={needsExtraction || generating !== null}
+                  disabled={blocked || generating !== null}
                   onClick={() => onGenerate(tipo)}
                 >
                   <div className="flex flex-col">
                     <span className="font-medium">{DOCUMENT_LABELS[tipo]}</span>
-                    <span className="text-xs text-zinc-500">
-                      {needsExtraction ? "Confirme a extração da planta primeiro" : HINTS[tipo]}
-                    </span>
+                    <span className="text-xs text-zinc-500">{blockReason ?? HINTS[tipo]}</span>
                   </div>
                 </DropdownMenuItem>
               );

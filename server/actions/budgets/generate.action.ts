@@ -49,10 +49,13 @@ export async function generateBudgetAction(
 
   const supabase = await createClient();
 
-  // 1. Read project meta — needs confirmed extraction
+  // 1. Read project meta + canonical fields — needs confirmed extraction.
+  //    Padrão e tipologia vêm das colunas canônicas (única fonte de verdade,
+  //    editável via ProjectForm). Demais campos da extração (área, ambientes,
+  //    elementos) vêm do meta.extracao_planta (foram inseridos pela IA + confirmados).
   const { data: project, error: projErr } = await supabase
     .from("projects")
-    .select("id, meta")
+    .select("id, meta, tipologia, padrao_construtivo")
     .eq("id", project_id)
     .single();
 
@@ -94,11 +97,16 @@ export async function generateBudgetAction(
 
   // 2. Apply rules v2 (cobertura ampliada: estrutura, bancadas, acabamentos lineares,
   //    serviços preliminares, limpeza final, elementos especiais, fator padrão construtivo)
+  // Usa colunas canônicas pra padrão/tipologia (fonte única). Se user editou via
+  // ProjectForm sem passar pela extração, o valor canônico é a verdade.
   const planta: ExtractedPlantaV3 = {
     area_total_m2: extracao.area_total_m2,
     numero_pavimentos: extracao.numero_pavimentos ?? 1,
-    tipologia: extracao.tipologia,
-    padrao_construtivo: extracao.padrao_construtivo ?? null,
+    tipologia: (project.tipologia ?? extracao.tipologia) as ExtractedPlantaV3["tipologia"],
+    padrao_construtivo:
+      (project.padrao_construtivo as ExtractedPlantaV3["padrao_construtivo"]) ??
+      extracao.padrao_construtivo ??
+      null,
     ambientes: extracao.ambientes ?? [],
     elementos_especiais: extracao.elementos_especiais ?? {
       piscina: false,
@@ -109,8 +117,8 @@ export async function generateBudgetAction(
       area_servico_externa: false,
     },
   };
-  const archItems = applyRulesV3(planta);
-  if (archItems.length === 0) {
+  const archItemsRaw = applyRulesV3(planta);
+  if (archItemsRaw.length === 0) {
     return { ok: false, error: "Nenhuma regra retornou itens — verifique os dados da planta." };
   }
 
@@ -129,6 +137,18 @@ export async function generateBudgetAction(
   const structuralConfirmed = extracoesDisc.structural?.confirmed_by_user
     ? (extracoesDisc.structural.data as StructuralData)
     : null;
+
+  // DEDUP: se uma disciplina foi confirmada com extração própria, descarta os itens
+  // estimados do arquitetônico (heurística) pra evitar somar 2x os mesmos pontos.
+  // Ex: ruleEletrica do arquitetônico gera ~60 pontos. Se user também confirmou
+  // disciplina elétrica com 60 pontos medidos, o orçamento somaria 120 pontos.
+  const archItems = archItemsRaw.filter((item) => {
+    if (electricalConfirmed && item.rule_id.startsWith("eletrica.")) return false;
+    if (hydraulicConfirmed && item.rule_id.startsWith("hidraulica.")) return false;
+    if (structuralConfirmed && item.rule_id.startsWith("estrutura.")) return false;
+    return true;
+  });
+  const archDropped = archItemsRaw.length - archItems.length;
 
   const disciplineItems = [
     ...(electricalConfirmed ? rulesElectricalSinapi(electricalConfirmed) : []),
@@ -257,9 +277,14 @@ export async function generateBudgetAction(
       total_com_bdi: toDbNumeric(totalComBdi),
       observacoes: [
         `Gerado automaticamente (rules ${RULES_VERSION_V3}+${DISCIPLINE_RULES_VERSION}).`,
-        electricalConfirmed ? "Inclui itens elétricos." : null,
-        hydraulicConfirmed ? "Inclui itens hidráulicos." : null,
-        structuralConfirmed ? "Inclui itens estruturais." : null,
+        electricalConfirmed
+          ? "Inclui itens elétricos da disciplina (planta arquitetônica não estimou)."
+          : null,
+        hydraulicConfirmed ? "Inclui itens hidráulicos da disciplina." : null,
+        structuralConfirmed ? "Inclui itens estruturais da disciplina." : null,
+        archDropped > 0
+          ? `${archDropped} item(ns) heurísticos do arquitetônico descartados pra evitar duplicação com disciplina confirmada.`
+          : null,
         discDropped > 0
           ? `${discDropped} item(ns) de disciplinas complementares descartados por falta de preço SINAPI.`
           : null,
