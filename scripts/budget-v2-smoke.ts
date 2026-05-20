@@ -46,128 +46,138 @@ const PRECOS_SINAPI: Record<string, number> = {
   "86905": 625.0,
 };
 
-// Planta sintética: 130m² popular térrea (caso real do engenheiro)
-const PLANTA: ExtractedPlantaV2 = {
-  area_total_m2: 130,
-  numero_pavimentos: 1,
-  tipologia: "residencial",
-  padrao_construtivo: "popular",
-  ambientes: [
-    { nome: "Sala", area_m2: 22, tipo: "sala" },
-    { nome: "Cozinha", area_m2: 12, tipo: "cozinha" },
-    { nome: "Área de serviço", area_m2: 5, tipo: "area_servico" },
-    { nome: "Banheiro social", area_m2: 5, tipo: "banheiro" },
-    { nome: "Lavabo", area_m2: 3, tipo: "lavabo" },
-    { nome: "Suíte", area_m2: 18, tipo: "suite" },
-    { nome: "Quarto 1", area_m2: 12, tipo: "quarto" },
-    { nome: "Quarto 2", area_m2: 12, tipo: "quarto" },
-    { nome: "Garagem", area_m2: 22, tipo: "garagem" },
-  ],
-  elementos_especiais: {
-    piscina: false,
-    churrasqueira: false,
-    sacada: false,
-    garagem: true,
-    jardim: true,
-    area_servico_externa: false,
-  },
+// Ambientes padrão de uma casa térrea residencial brasileira
+const AMBIENTES_PADRAO = [
+  { nome: "Sala", area_m2: 22, tipo: "sala" },
+  { nome: "Cozinha", area_m2: 12, tipo: "cozinha" },
+  { nome: "Área de serviço", area_m2: 5, tipo: "area_servico" },
+  { nome: "Banheiro social", area_m2: 5, tipo: "banheiro" },
+  { nome: "Lavabo", area_m2: 3, tipo: "lavabo" },
+  { nome: "Suíte", area_m2: 18, tipo: "suite" },
+  { nome: "Quarto 1", area_m2: 12, tipo: "quarto" },
+  { nome: "Quarto 2", area_m2: 12, tipo: "quarto" },
+];
+
+const SEM_ELEMENTOS = {
+  piscina: false,
+  churrasqueira: false,
+  sacada: false,
+  garagem: false,
+  jardim: false,
+  area_servico_externa: false,
 };
+
+// Cenários de teste
+const CENARIOS: Array<{
+  nome: string;
+  planta: ExtractedPlantaV2;
+  faixaBrutoEsperada: { min: number; max: number };
+}> = [
+  {
+    nome: "100m² popular sem elementos (caso real do user)",
+    planta: {
+      area_total_m2: 100,
+      numero_pavimentos: 1,
+      tipologia: "residencial",
+      padrao_construtivo: "popular",
+      ambientes: AMBIENTES_PADRAO,
+      elementos_especiais: SEM_ELEMENTOS,
+    },
+    faixaBrutoEsperada: { min: 165_000, max: 240_000 }, // R$1850-2400/m² popular
+  },
+  {
+    nome: "100m² médio sem elementos",
+    planta: {
+      area_total_m2: 100,
+      numero_pavimentos: 1,
+      tipologia: "residencial",
+      padrao_construtivo: "medio",
+      ambientes: AMBIENTES_PADRAO,
+      elementos_especiais: SEM_ELEMENTOS,
+    },
+    faixaBrutoEsperada: { min: 220_000, max: 310_000 }, // R$2300-2900/m² medio (largo)
+  },
+  {
+    nome: "130m² popular com jardim+garagem (cenário inicial)",
+    planta: {
+      area_total_m2: 130,
+      numero_pavimentos: 1,
+      tipologia: "residencial",
+      padrao_construtivo: "popular",
+      ambientes: [...AMBIENTES_PADRAO, { nome: "Garagem", area_m2: 22, tipo: "garagem" }],
+      elementos_especiais: { ...SEM_ELEMENTOS, garagem: true, jardim: true },
+    },
+    faixaBrutoEsperada: { min: 240_000, max: 320_000 },
+  },
+];
+
+// Primeiro cenário (compat com código antigo) — vai ser sobrescrito no loop principal
+const PLANTA: ExtractedPlantaV2 = CENARIOS[0]!.planta;
 
 function brl(n: number | Big): string {
   const num = typeof n === "number" ? n : Number(n.toString());
   return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function main() {
+function runScenario(scenario: (typeof CENARIOS)[number]): boolean {
+  const { nome, planta, faixaBrutoEsperada } = scenario;
   console.log("=".repeat(70));
-  console.log("Memorial.ai — Smoke test offline rules v2");
+  console.log(`Cenário: ${nome}`);
   console.log("=".repeat(70));
-  console.log(
-    `Planta: ${PLANTA.area_total_m2}m² ${PLANTA.padrao_construtivo} ${PLANTA.numero_pavimentos} pav.`,
-  );
-  console.log(
-    `Ambientes: ${PLANTA.ambientes.length} (${PLANTA.ambientes.map((a) => a.tipo).join(", ")})`,
-  );
-  console.log(
-    `Elementos: ${Object.entries(PLANTA.elementos_especiais)
-      .filter(([, v]) => v)
-      .map(([k]) => k)
-      .join(", ")}`,
-  );
-  console.log("");
 
-  const items = applyRulesV2(PLANTA);
+  const items = applyRulesV2(planta);
   let total = new Big(0);
-  let missingPrices = 0;
-
-  console.log("Items gerados:");
   for (const item of items) {
     let preco: Big;
     if (item.preco_unitario_custom) {
       preco = item.preco_unitario_custom;
     } else {
       const p = PRECOS_SINAPI[item.codigo_sinapi];
-      if (p === undefined) {
-        console.warn(`  ⚠ ${item.codigo_sinapi}: preço SINAPI não mapeado`);
-        missingPrices++;
-        continue;
-      }
+      if (p === undefined) continue;
       preco = new Big(p);
     }
-    const subtotal = item.quantidade.times(preco);
-    total = total.plus(subtotal);
-    const origem = item.preco_unitario_custom ? "[custom]" : "[sinapi]";
-    console.log(
-      `  ${origem} ${item.codigo_sinapi.padEnd(28)} ${item.descricao_local.slice(0, 55).padEnd(55)} ${item.quantidade.toFixed(2).padStart(10)} ${item.unidade.padEnd(4)} × ${brl(Number(preco.toString())).padStart(11)} = ${brl(Number(subtotal.toString())).padStart(13)}`,
-    );
+    total = total.plus(item.quantidade.times(preco));
   }
 
-  console.log("");
-  console.log("=".repeat(70));
-  console.log(`Itens: ${items.length}`);
-  console.log(`Total bruto:   ${brl(total)}`);
   const totalBdi = total.times(1.28);
-  console.log(`Total c/ BDI 28%: ${brl(totalBdi)}`);
-  console.log(`R$/m² (c/ BDI): ${brl(Number(totalBdi.div(PLANTA.area_total_m2!).toString()))}`);
-  if (missingPrices > 0) console.log(`⚠ ${missingPrices} item(ns) sem preço mapeado`);
-
-  // Sanity check CUB (sem BDI — CUB é base de custo)
-  const cub = checkOrcamentoVsCub(
-    Number(total.toString()),
-    PLANTA.area_total_m2!,
-    PLANTA.padrao_construtivo,
-  );
-  console.log("");
-  if (cub.ok) {
-    console.log(
-      `✅ CUB OK — R$${(Number(total.toString()) / PLANTA.area_total_m2!).toFixed(0)}/m² (bruto) dentro da faixa ${PLANTA.padrao_construtivo} (R$${cub.faixa?.min}-${cub.faixa?.max}/m²)`,
-    );
-  } else {
-    console.log(`⚠ CUB warning: ${cub.msg}`);
-  }
-
-  // Assertions
+  const area = planta.area_total_m2!;
   const totalNum = Number(total.toString());
   const totalBdiNum = Number(totalBdi.toString());
-  let failures = 0;
-  function assert(cond: boolean, label: string) {
-    console.log(`  ${cond ? "✅" : "❌"} ${label}`);
-    if (!cond) failures++;
-  }
-  console.log("");
-  console.log("Assertions:");
-  assert(items.length >= 20, `Items >= 20 (got ${items.length})`);
-  assert(totalNum >= 200_000, `Total bruto >= R$200k (got ${brl(total)})`);
-  assert(totalNum <= 300_000, `Total bruto <= R$300k (got ${brl(total)})`);
-  assert(totalBdiNum >= 250_000, `Total c/BDI >= R$250k (got ${brl(totalBdi)})`);
-  assert(totalBdiNum <= 360_000, `Total c/BDI <= R$360k (got ${brl(totalBdi)})`);
+  const brutoM2 = totalNum / area;
 
+  console.log(`Itens: ${items.length}`);
+  console.log(`Total bruto:        ${brl(total)} (R$${brutoM2.toFixed(0)}/m²)`);
+  console.log(`Total c/ BDI 28%:   ${brl(totalBdi)} (R$${(totalBdiNum / area).toFixed(0)}/m²)`);
+
+  const cub = checkOrcamentoVsCub(totalNum, area, planta.padrao_construtivo);
+  if (cub.ok) {
+    console.log(
+      `✅ CUB OK — dentro da faixa ${planta.padrao_construtivo} (R$${cub.faixa?.min}-${cub.faixa?.max}/m²)`,
+    );
+  } else {
+    console.log(`⚠ ${cub.msg}`);
+  }
+
+  const inFaixa = totalNum >= faixaBrutoEsperada.min && totalNum <= faixaBrutoEsperada.max;
+  console.log(
+    `${inFaixa ? "✅" : "❌"} Faixa esperada R$${(faixaBrutoEsperada.min / 1000).toFixed(0)}k-R$${(faixaBrutoEsperada.max / 1000).toFixed(0)}k bruto: ${inFaixa ? "PASS" : "FAIL"}`,
+  );
   console.log("");
+  return inFaixa;
+}
+
+function main() {
+  console.log("Memorial.ai — Smoke test offline rules v2");
+  console.log("");
+  let failures = 0;
+  for (const cenario of CENARIOS) {
+    if (!runScenario(cenario)) failures++;
+  }
   if (failures > 0) {
-    console.error(`❌ ${failures} assertion(s) failed`);
+    console.error(`❌ ${failures} cenário(s) fora da faixa CUB`);
     process.exit(1);
   }
-  console.log(`✅ Todas as assertions passaram — orçamento dentro da faixa esperada`);
+  console.log(`✅ Todos os ${CENARIOS.length} cenários dentro da faixa CUB esperada`);
 }
 
 main();

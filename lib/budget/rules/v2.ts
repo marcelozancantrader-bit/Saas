@@ -80,17 +80,19 @@ function big(n: number): Big {
 
 /**
  * Fator multiplicador para acabamentos por padrão construtivo.
- * Popular/médio = 1.0 (preços SINAPI já refletem padrão médio).
- * Alto = 1.5, Luxo = 2.2 (porcelanato, granito premium, esquadrias importadas).
+ * Calibrado contra CUB-SP Q1/2026 (popular R$2125/m², médio R$2600/m²,
+ * alto R$3600/m², luxo R$5250/m² — médias das faixas).
+ * Acabamentos representam ~46% do total — fAcab é o principal driver de variação.
  */
 function fatorPadraoAcabamento(p: ExtractedPlantaV2["padrao_construtivo"]): number {
   switch (p) {
     case "luxo":
-      return 2.2;
+      return 2.5;
     case "alto":
-      return 1.5;
-    case "popular":
+      return 1.8;
     case "medio":
+      return 1.4;
+    case "popular":
     case null:
     default:
       return 1.0;
@@ -99,13 +101,16 @@ function fatorPadraoAcabamento(p: ExtractedPlantaV2["padrao_construtivo"]): numb
 
 /**
  * Fator multiplicador para estrutura/obra bruta por padrão construtivo.
- * Mais conservador que o de acabamento — estrutura varia menos.
+ * Estrutura varia menos que acabamento — bloco estrutural é parecido entre padrões,
+ * mas alto/luxo usam concreto mais resistente, formas reaproveitadas, melhor aço.
  */
 function fatorPadraoEstrutura(p: ExtractedPlantaV2["padrao_construtivo"]): number {
   switch (p) {
     case "luxo":
-      return 1.2;
+      return 1.3;
     case "alto":
+      return 1.2;
+    case "medio":
       return 1.1;
     default:
       return 1.0;
