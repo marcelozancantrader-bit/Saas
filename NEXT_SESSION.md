@@ -1,10 +1,53 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-20 — **Orçamento overhaul: rules v3 com códigos SINAPI corretos (descrições oficiais), troca de código por padrão construtivo (cerâmico/porcelanato, semi-oca/maciça, granito/quartzo/mármore), botão Regerar com parâmetros editáveis, bug crítico do Inngest worker corrigido (descartava ambientes da extração).**
+**Última pausa:** 2026-05-20 — **Marathon: overhaul orçamento v3 + zoneamento universal com IA + auditoria de fluxo completa (13/13 itens). 20+ commits em prod.**
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
-**App live:** https://memorial-ai-mu.vercel.app · **Último commit:** `a37add6`
+**App live:** https://memorial-ai-mu.vercel.app · **Último commit:** `554955e`
 **Repo:** https://github.com/marcelozancantrader-bit/Saas
+
+---
+
+## ⚠ MIGRATIONS PENDENTES DE APLICAR (Supabase Dashboard SQL)
+
+1. `20260722000001_org_profissional.sql` — campos profissional_nome/cpf/endereco em organizations (necessário pra ART/RRT pré-preencher)
+
+---
+
+## 📌 Sessão 2026-05-20 — 3 grandes frentes
+
+### 1. Overhaul orçamento (v3 + correções)
+
+- **Rules v3** com códigos SINAPI corretos (descrições oficiais). 11 códigos antigos tinham descrição completamente errada (87878 era chapisco, não alvenaria; 89800 era tubo PVC, não forro; 91173/91174 eram fixação de tubos, não janelas).
+- **Troca de código por padrão construtivo**: alto/luxo usa porcelanato 87263, porta maciça 100693, quartzo/mármore. Popular/médio usa código padrão.
+- **Multiplicador de preço** em vez de inflar quantidade (piso 100m² não vira 133m² em padrão médio).
+- **Botão Regerar** na página do orçamento com dialog editável (UF/BDI/mês/regime).
+- **Bug Inngest crítico** corrigido: worker descartava ambientes/elementos_especiais — causava 0 pontos elétricos/hidráulicos/louças.
+- **"Composição própria"** no PDF em vez de "custom-xxx".
+- **Migrations aplicadas**: 20260720000001 (preços com MO), 20260721000001 (códigos corretos), 20260721000002 (porcelanato + porta maciça).
+
+### 2. Zoneamento universal (qualquer cidade BR)
+
+- **Cobertura**: 5 curadas (POA/Curitiba/SP/RJ/BH) + IA pra qualquer outra
+- **Fluxo unificado**: UF (select) + Cidade (input com datalist de 170 municípios) + Zona (select)
+- **IA lista zonas residenciais** da cidade escolhida via Claude tool_use (1 chamada cobre todas as zonas)
+- **Auto-save** ao escolher zona da IA (sem dialog separado)
+- **Data do plano diretor em destaque** com warning amarelo se >10 anos sem revisão
+- **Sincronização**: CEP do projeto popula cidade/UF do zoneamento automaticamente
+
+### 3. Auditoria de fluxo (13/13 problemas resolvidos)
+
+**Críticos (`4c88819`):**
+
+1. Padrão construtivo: fonte única (`projects.padrao_construtivo` canônico, não meta)
+2. Dedup elétrica/hidráulica/estrutural — orçamento não soma 2x mais
+3. Contrato/Proposta bloqueados se sem cliente vinculado
+
+**Sprint A+B+C (`7c5044d`):** 4. CEP do projeto popula cidade/UF do zoneamento via ViaCEP 6. Após confirmar extração, redirect pra ?tab=validacao + CTA toast 7. Briefing marcado como "Opcional" (aba + badge + texto) 8. Mesma propagação de UF/cidade (parte de #4) 9. Área terreno da extração popula ProjectForm 10. observacoes IA chegam aos prompts de docs (com hedging se confiança=baixa) 11. Confiança=baixa gera warning no orçamento 12. Warning se ambientes=[] (orçamento silenciosamente incompleto)
+
+**Finais (`554955e`):** 5. ART/RRT pré-preenche profissional (nome/CPF/endereço de organizations) 13. ProjectProgress: "Cadastro" só "done" se cliente + endereço definidos
+
+---
 
 ---
 
