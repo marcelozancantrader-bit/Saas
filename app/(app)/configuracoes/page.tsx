@@ -23,6 +23,9 @@ type OrgRow = {
   cor_secundaria: string | null;
   bdi_padrao: number | null;
   dados_pix: { tipo?: string; chave?: string } | null;
+  profissional_nome: string | null;
+  profissional_cpf: string | null;
+  profissional_endereco: string | null;
 };
 
 export default async function ConfiguracoesPage() {
@@ -33,7 +36,7 @@ export default async function ConfiguracoesPage() {
     supabase
       .from("organizations")
       .select(
-        "name, cnpj, registro_cau, registro_crea, logo_url, cor_primaria, cor_secundaria, bdi_padrao, dados_pix",
+        "name, cnpj, registro_cau, registro_crea, logo_url, cor_primaria, cor_secundaria, bdi_padrao, dados_pix, profissional_nome, profissional_cpf, profissional_endereco",
       )
       .eq("id", me.orgId)
       .single<OrgRow>(),
@@ -58,6 +61,9 @@ export default async function ConfiguracoesPage() {
     bdi_padrao: org?.bdi_padrao ?? null,
     pix_tipo: (org?.dados_pix?.tipo as WorkspaceInitial["pix_tipo"]) ?? "",
     pix_chave: org?.dados_pix?.chave ?? "",
+    profissional_nome: org?.profissional_nome ?? "",
+    profissional_cpf: org?.profissional_cpf ?? "",
+    profissional_endereco: org?.profissional_endereco ?? "",
   };
 
   const canEdit = me.role === "owner" || me.role === "admin";

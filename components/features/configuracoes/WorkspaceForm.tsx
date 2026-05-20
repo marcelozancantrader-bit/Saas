@@ -31,6 +31,10 @@ export type WorkspaceInitial = {
   bdi_padrao: number | null;
   pix_tipo: "" | "cpf" | "cnpj" | "email" | "telefone" | "aleatoria";
   pix_chave: string;
+  /** Profissional responsável (ART/RRT) */
+  profissional_nome: string;
+  profissional_cpf: string;
+  profissional_endereco: string;
 };
 
 type Props = {
@@ -149,6 +153,9 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
         bdi_padrao: form.bdi_padrao,
         pix_tipo: form.pix_tipo,
         pix_chave: form.pix_chave || "",
+        profissional_nome: form.profissional_nome || "",
+        profissional_cpf: form.profissional_cpf || "",
+        profissional_endereco: form.profissional_endereco || "",
       });
       if (!r.ok) toast.error(r.error);
       else toast.success("Workspace atualizado.");
@@ -233,6 +240,50 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
             placeholder="000000000-0"
             maxLength={40}
           />
+        </div>
+
+        {/* ===== Profissional responsável (ART/RRT) ===== */}
+        <div className="sm:col-span-2">
+          <div className="mt-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+            <p className="mb-2 text-sm font-semibold">
+              Profissional responsável (ART/RRT)
+              <span className="ml-2 text-[10px] font-normal text-zinc-500">
+                Pré-preenche todos os projetos
+              </span>
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="prof_nome">Nome completo</Label>
+                <Input
+                  id="prof_nome"
+                  value={form.profissional_nome}
+                  onChange={(e) => field("profissional_nome", e.target.value)}
+                  placeholder="Ex: Marcelo Zancan da Silva"
+                  maxLength={160}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="prof_cpf">CPF</Label>
+                <Input
+                  id="prof_cpf"
+                  value={form.profissional_cpf}
+                  onChange={(e) => field("profissional_cpf", e.target.value)}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="prof_endereco">Endereço (residencial ou escritório)</Label>
+                <Input
+                  id="prof_endereco"
+                  value={form.profissional_endereco}
+                  onChange={(e) => field("profissional_endereco", e.target.value)}
+                  placeholder="Rua X, 123 - Bairro - Cidade/UF"
+                  maxLength={300}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-1.5 sm:col-span-2">

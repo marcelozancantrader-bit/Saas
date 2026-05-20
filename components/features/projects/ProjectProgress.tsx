@@ -24,6 +24,9 @@ type Props = {
   documentsCount: number;
   approvedDocuments: number;
   hasArtRrtData: boolean;
+  /** Cadastro incompleto (cliente não vinculado, endereço faltando, etc) */
+  hasClient?: boolean;
+  hasAddress?: boolean;
 };
 
 export function ProjectProgress({
@@ -33,13 +36,20 @@ export function ProjectProgress({
   documentsCount,
   approvedDocuments,
   hasArtRrtData,
+  hasClient,
+  hasAddress,
 }: Props) {
+  const cadastroComplete = !!hasClient && !!hasAddress;
   const steps: Step[] = [
     {
       key: "cadastro",
       label: "Cadastro",
-      hint: "Dados básicos do projeto",
-      status: "done",
+      hint: cadastroComplete
+        ? "Cliente e endereço definidos"
+        : !hasClient
+          ? "Vincule um cliente ao projeto"
+          : "Adicione o endereço da obra",
+      status: cadastroComplete ? "done" : "current",
       anchor: "#dados-projeto",
     },
     {

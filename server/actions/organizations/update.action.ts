@@ -56,6 +56,18 @@ const schema = z.object({
     .or(z.literal("")),
   pix_tipo: z.enum(["", "cpf", "cnpj", "email", "telefone", "aleatoria"]).optional(),
   pix_chave: z.string().trim().max(200).optional().or(z.literal("")),
+  // Profissional responsável (usado em ART/RRT). E-mail vem do auth user.
+  profissional_nome: z.string().trim().max(160).optional().or(z.literal("")),
+  profissional_cpf: z
+    .string()
+    .trim()
+    .max(20)
+    .refine((v) => v === "" || isValidCpfOrCnpj(v), {
+      message: "CPF do profissional inválido.",
+    })
+    .optional()
+    .or(z.literal("")),
+  profissional_endereco: z.string().trim().max(300).optional().or(z.literal("")),
 });
 
 export type UpdateOrganizationInput = z.infer<typeof schema>;
@@ -97,6 +109,10 @@ export async function updateOrganizationAction(
   // Persiste só os dígitos (mais fácil pra integrar com Asaas e re-mascarar na UI).
   const cnpjDigits = parsed.data.cnpj ? parsed.data.cnpj.replace(/\D+/g, "") : "";
 
+  const profissionalCpfDigits = parsed.data.profissional_cpf
+    ? parsed.data.profissional_cpf.replace(/\D+/g, "")
+    : "";
+
   const { error } = await supabase
     .from("organizations")
     .update({
@@ -109,6 +125,9 @@ export async function updateOrganizationAction(
       cor_secundaria: corSecundaria,
       bdi_padrao: parsed.data.bdi_padrao ?? null,
       dados_pix: dadosPix,
+      profissional_nome: parsed.data.profissional_nome || null,
+      profissional_cpf: profissionalCpfDigits || null,
+      profissional_endereco: parsed.data.profissional_endereco || null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", me.orgId);

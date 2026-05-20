@@ -154,13 +154,18 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
   const [{ data: orgFull }, { data: clientFull }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("name, cnpj, registro_cau, registro_crea")
+      .select(
+        "name, cnpj, registro_cau, registro_crea, profissional_nome, profissional_cpf, profissional_endereco",
+      )
       .eq("id", org.orgId)
       .single<{
         name: string;
         cnpj: string | null;
         registro_cau: string | null;
         registro_crea: string | null;
+        profissional_nome: string | null;
+        profissional_cpf: string | null;
+        profissional_endereco: string | null;
       }>(),
     project?.client_id
       ? supabase
@@ -281,6 +286,8 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
         documentsCount={totalDocsCount ?? 0}
         approvedDocuments={approvedDocsCount ?? 0}
         hasArtRrtData={!!orgFull?.registro_cau || !!orgFull?.registro_crea}
+        hasClient={!!project.client_id}
+        hasAddress={!!project.endereco_completo || !!project.endereco_cep}
       />
 
       {/* ====== AÇÕES RÁPIDAS (sempre visíveis) ====== */}
@@ -491,11 +498,11 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
           initial={
             {
               tipo: orgFull?.registro_cau && !orgFull?.registro_crea ? "rrt" : "art",
-              profissional_nome: "",
+              profissional_nome: orgFull?.profissional_nome ?? "",
               profissional_registro: orgFull?.registro_cau ?? orgFull?.registro_crea ?? "",
-              profissional_cpf: "",
+              profissional_cpf: orgFull?.profissional_cpf ?? "",
               profissional_email: org.email,
-              profissional_endereco: "",
+              profissional_endereco: orgFull?.profissional_endereco ?? "",
               org_nome: orgFull?.name ?? org.orgName,
               org_cnpj: orgFull?.cnpj ?? "",
               contratante_nome: clientFull?.nome ?? project.clients?.nome ?? "",
