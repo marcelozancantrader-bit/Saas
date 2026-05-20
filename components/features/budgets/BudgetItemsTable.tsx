@@ -19,6 +19,7 @@ import { deleteBudgetItemAction } from "@/server/actions/budgets/delete-item.act
 import { AddItemDialog } from "./AddItemDialog";
 import type { BudgetItem } from "@/app/(app)/projetos/[id]/orcamento/[budgetId]/page";
 import { DISCIPLINA_LABEL, type Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
+import { formatCodigoExibicao } from "@/lib/budget/format-codigo";
 import { toast } from "sonner";
 
 type Props = {
@@ -141,7 +142,7 @@ export function BudgetItemsTable({ items, budgetId, uf, mesReferencia, desonerad
                   <TableRow>
                     <TableCell className="text-xs text-zinc-500">{item.ordem}</TableCell>
                     <TableCell className="text-xs text-zinc-600 dark:text-zinc-400">
-                      {item.composicao_codigo ?? "—"}
+                      {formatCodigoExibicao(item.composicao_codigo, item.origem)}
                     </TableCell>
                     <TableCell>
                       <p className="text-sm">{item.descricao}</p>

@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { pdf, Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import type { BudgetItem } from "@/app/(app)/projetos/[id]/orcamento/[budgetId]/page";
 import { formatBRL } from "@/lib/utils/money";
+import { formatCodigoExibicao } from "@/lib/budget/format-codigo";
 import { toast } from "sonner";
 
 type Budget = {
@@ -30,8 +31,8 @@ const styles = StyleSheet.create({
   trHead: { flexDirection: "row", backgroundColor: "#f5f5f5", paddingVertical: 6, fontWeight: 700 },
   td: { paddingHorizontal: 4 },
   colOrdem: { width: "5%" },
-  colCodigo: { width: "10%" },
-  colDescricao: { width: "45%" },
+  colCodigo: { width: "14%" },
+  colDescricao: { width: "41%" },
   colUn: { width: "7%" },
   colQty: { width: "9%", textAlign: "right" },
   colPreco: { width: "12%", textAlign: "right" },
@@ -68,7 +69,7 @@ export function ExportButtons({ budget, items, projectName }: Props) {
     try {
       const data = items.map((item) => ({
         Ordem: item.ordem,
-        "Código SINAPI": item.composicao_codigo ?? "",
+        Código: formatCodigoExibicao(item.composicao_codigo, item.origem),
         Descrição: item.descricao,
         Unidade: item.unidade,
         Quantidade: Number(item.quantidade),
@@ -143,7 +144,9 @@ export function ExportButtons({ budget, items, projectName }: Props) {
               {items.map((item) => (
                 <View key={item.id} style={styles.tr}>
                   <Text style={[styles.td, styles.colOrdem]}>{item.ordem}</Text>
-                  <Text style={[styles.td, styles.colCodigo]}>{item.composicao_codigo ?? "—"}</Text>
+                  <Text style={[styles.td, styles.colCodigo]}>
+                    {formatCodigoExibicao(item.composicao_codigo, item.origem)}
+                  </Text>
                   <Text style={[styles.td, styles.colDescricao]}>{item.descricao}</Text>
                   <Text style={[styles.td, styles.colUn]}>{item.unidade}</Text>
                   <Text style={[styles.td, styles.colQty]}>
