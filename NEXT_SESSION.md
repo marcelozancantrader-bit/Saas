@@ -1,6 +1,8 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-20 — **Marathon: overhaul orçamento v3 + zoneamento universal com IA + auditoria de fluxo completa (13/13 itens). 20+ commits em prod.**
+**Última pausa:** 2026-05-20 (tarde) — **Painel Super Admin do SaaS, Fases 1+2: fundação (auth tier separado + layout /admin) + dashboard com MRR/ARR/ARPU/churn/LTV reais + gráficos 12m. 10 rotas /admin/\* em prod.**
+
+**Sessão anterior (manhã):** overhaul orçamento v3 + zoneamento universal com IA + auditoria de fluxo 13/13.
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
 **App live:** https://memorial-ai-mu.vercel.app · **Último commit:** `554955e`
@@ -11,6 +13,54 @@
 ## ⚠ MIGRATIONS PENDENTES DE APLICAR (Supabase Dashboard SQL)
 
 1. `20260722000001_org_profissional.sql` — campos profissional_nome/cpf/endereco em organizations (necessário pra ART/RRT pré-preencher)
+2. `20260723000001_platform_admins.sql` — **fundação do painel /admin (super admin do SaaS)**. Cria tabela `platform_admins`, helper `is_platform_admin()`, estende `audit_log.actor_type` com `'platform_admin'`.
+
+   **Após aplicar a migration 2, rodar SQL pra dar acesso admin ao founder:**
+
+   ```sql
+   INSERT INTO public.platform_admins (user_id, granted_by, notes)
+   SELECT id, id, 'Founder seed'
+   FROM auth.users
+   WHERE email = 'SEU-EMAIL-DE-LOGIN@dominio.com';
+   ```
+
+   Depois disso, login normal no Memorial.ai → acessar `/admin` → painel disponível.
+
+---
+
+## 🛡️ Painel Super Admin do SaaS (Fases 1+2 entregues nesta sessão)
+
+**Arquitetura** — tier `platform_admin` SEPARADO do role org-scoped (owner/admin/member). Founder vê toda a plataforma; orgs continuam isoladas via RLS.
+
+**Roadmap 8 fases:**
+
+| Fase                   | Status | Entrega                                                                                                        |
+| ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------- |
+| 1. Fundação            | ✅     | Migration `platform_admins` + helper `is_platform_admin()` + layout `/admin` + 9 rotas (1 dashboard + 8 stubs) |
+| 2. Dashboard KPIs      | ✅     | MRR/ARR/ARPU/churn/LTV reais + 12 cards KPI + 3 gráficos (MRR 12m + signups 12m + distribuição planos)         |
+| 3. Organizations       | ⏳     | Lista + busca + detail + ações (mudar plano, suspender, créditos)                                              |
+| 4. Users + impersonate | ⏳     | Lista global + JWT 1h pra impersonate + audit                                                                  |
+| 5. Billing/Subs        | ⏳     | Pagamentos + refunds + webhook log                                                                             |
+| 6. Audit global        | ⏳     | Log filtrado + export CSV                                                                                      |
+| 7. Flags + Broadcast   | ⏳     | Override por org + announcements                                                                               |
+| 8. Health/Cost         | ⏳     | Inngest/Anthropic/Supabase + tracker custos IA                                                                 |
+
+**Entregas Fase 1 (commit a seguir):**
+
+- `supabase/migrations/20260723000001_platform_admins.sql` — tabela `platform_admins(user_id PK, granted_by, granted_at, notes)` + helper `is_platform_admin(target uuid default auth.uid())` + estende `audit_log.actor_type` com `'platform_admin'` + index parcial
+- `lib/auth/platform-admin.ts` — `requirePlatformAdmin()` (server, redireciona) e `isPlatformAdmin()` (boolean)
+- `components/features/admin-shell/{AdminShell,AdminSidebar,AdminTopBar,AdminPlaceholder}.tsx` — layout dark dedicado, nav lateral, banner "Modo admin", link "← Voltar ao app"
+- `app/admin/layout.tsx` — gate de defense-in-depth via `requirePlatformAdmin`
+- 8 stub pages: `/admin/{organizations,users,subscriptions,revenue,audit,feature-flags,announcements,health}`
+
+**Entregas Fase 2:**
+
+- `lib/admin/saas-metrics.ts` — funções puras: `calculateMrrCents`, `calculateArrCents`, `calculatePayingCustomers`, `calculateArpuCents`, `calculateMonthlyChurnRate`, `calculateLtvCents`, `calculatePlanDistribution`, `calculateFreeToPaidConversion` + formatadores BRL/%/compact
+- `server/services/admin-metrics.ts` — `loadSaasOverviewMetrics()` faz 7 queries em paralelo via admin client, calcula MRR/ARR/ARPU/churn/LTV + reconstrói histórico mensal 12m
+- `components/features/admin-shell/{MrrChart,PlanDistChart}.tsx` — recharts client components (linha + barras)
+- `app/admin/page.tsx` reescrito: 6 KPI cards core (MRR, ARR, ARPU, churn, LTV, conversão F→P) + 4 cards volume + 3 cards crescimento + gráfico MRR 12m + gráfico signups 12m + gráfico distribuição de planos + grid de acesso pras 8 seções
+
+**Cores planos:** free=cinza, standard=azul, pro=âmbar (highlighted), pro_max=violeta, agency=verde.
 
 ---
 
