@@ -31,7 +31,9 @@ const PRECOS_SINAPI: Record<string, number> = {
   "94569": 390.0,
   "87622": 58.0,
   "87248": 95.0,
+  "87263": 165.0, // Porcelanato 60x60 (premium pra alto/luxo)
   "87265": 118.0,
+  "100693": 1350.0, // Porta maciça mexicana (premium pra alto/luxo)
   "88485": 15.0,
   "88497": 32.0,
   "88489": 42.5,
@@ -103,6 +105,30 @@ const CENARIOS: Array<{
       elementos_especiais: { ...SEM_ELEMENTOS, garagem: true, jardim: true },
     },
     faixaBrutoEsperada: { min: 230_000, max: 335_000 },
+  },
+  {
+    nome: "150m² ALTO sem elementos (verifica troca pra porcelanato/maciça)",
+    planta: {
+      area_total_m2: 150,
+      numero_pavimentos: 1,
+      tipologia: "residencial",
+      padrao_construtivo: "alto",
+      ambientes: AMBIENTES_PADRAO,
+      elementos_especiais: SEM_ELEMENTOS,
+    },
+    faixaBrutoEsperada: { min: 420_000, max: 700_000 },
+  },
+  {
+    nome: "200m² LUXO sem elementos (verifica mármore + multiplicador residual)",
+    planta: {
+      area_total_m2: 200,
+      numero_pavimentos: 1,
+      tipologia: "residencial",
+      padrao_construtivo: "luxo",
+      ambientes: AMBIENTES_PADRAO,
+      elementos_especiais: SEM_ELEMENTOS,
+    },
+    faixaBrutoEsperada: { min: 700_000, max: 1_400_000 },
   },
 ];
 

@@ -158,6 +158,35 @@ function pav(p: ExtractedPlantaV3): number {
   return Math.max(1, p.numero_pavimentos ?? 1);
 }
 
+/** Padrão é alto/luxo? Usado pra escolher código SINAPI premium. */
+function isPadraoAlto(p: ExtractedPlantaV3["padrao_construtivo"]): boolean {
+  return p === "alto" || p === "luxo";
+}
+
+/**
+ * Multiplicador residual de preço pra refletir variação intra-tier.
+ * Quando o código SINAPI já reflete o padrão (ex: porcelanato pra alto),
+ * o multiplicador é menor — só ajusta dentro da família.
+ *
+ *   - Popular = 1.0 (preço SINAPI base)
+ *   - Médio = 1.15 (mesma família, instalação +15%)
+ *   - Alto = 1.0 (código já é premium)
+ *   - Luxo = 1.35 (mesmo código premium, mas materiais top de linha)
+ */
+function multResidualPremium(p: ExtractedPlantaV3["padrao_construtivo"]): number {
+  switch (p) {
+    case "medio":
+      return 1.15;
+    case "luxo":
+      return 1.35;
+    case "popular":
+    case "alto":
+    case null:
+    default:
+      return 1.0;
+  }
+}
+
 // =============================================================================
 // REGRAS
 // =============================================================================
@@ -362,12 +391,16 @@ const ruleEsquadrias: Rule = (p) => {
     "deposito",
   ]);
   if (portasInternas > 0) {
+    // Padrão alto/luxo: porta de madeira maciça (mexicana). Popular/médio: semi-oca.
+    const portaPremium = isPadraoAlto(p.padrao_construtivo);
     items.push({
-      codigo_sinapi: "90845",
-      descricao_local: `Kit porta de madeira semi-oca 80x210 padrão médio (${portasInternas} unidades)`,
+      codigo_sinapi: portaPremium ? "100693" : "90845",
+      descricao_local: portaPremium
+        ? `Kit porta de madeira maciça mexicana 80x210 padrão médio (${portasInternas} unidades)`
+        : `Kit porta de madeira semi-oca 80x210 padrão médio (${portasInternas} unidades)`,
       unidade: "un",
       quantidade: big(portasInternas),
-      multiplicador_preco: fAcab,
+      multiplicador_preco: multResidualPremium(p.padrao_construtivo),
       rule_id: "esquadrias.portas-internas",
     });
   }
@@ -412,14 +445,24 @@ const rulePisosRevestimentos: Rule = (p) => {
       quantidade: big(area),
       rule_id: "pisos.contrapiso",
     },
-    {
-      codigo_sinapi: "87248",
-      descricao_local: "Revestimento cerâmico de piso esmaltado 35x35",
-      unidade: "m²",
-      quantidade: big(area * 0.95),
-      multiplicador_preco: fAcab,
-      rule_id: "pisos.ceramico",
-    },
+    // Padrão alto/luxo: porcelanato 60x60. Popular/médio: cerâmico esmaltado 35x35.
+    isPadraoAlto(p.padrao_construtivo)
+      ? {
+          codigo_sinapi: "87263",
+          descricao_local: "Revestimento cerâmico de piso porcelanato 60x60",
+          unidade: "m²",
+          quantidade: big(area * 0.95),
+          multiplicador_preco: multResidualPremium(p.padrao_construtivo),
+          rule_id: "pisos.porcelanato",
+        }
+      : {
+          codigo_sinapi: "87248",
+          descricao_local: "Revestimento cerâmico de piso esmaltado 35x35",
+          unidade: "m²",
+          quantidade: big(area * 0.95),
+          multiplicador_preco: multResidualPremium(p.padrao_construtivo),
+          rule_id: "pisos.ceramico",
+        },
   ];
 
   const banheiros = contarPorTipo(p.ambientes, ["banheiro", "lavabo"]);
@@ -498,16 +541,48 @@ const ruleBancadas: Rule = (p) => {
   const items: RuleItemV3[] = [];
   const banheiros = contarPorTipo(p.ambientes, ["banheiro", "lavabo"]);
   const cozinhas = contarPorTipo(p.ambientes, ["cozinha"]);
-  const fAcab = fatorPadraoAcabamento(p.padrao_construtivo);
+  const padrao = p.padrao_construtivo;
+
+  // Material da bancada varia por padrão:
+  //   popular/médio = granito (R$680-720/m²)
+  //   alto          = quartzo (R$1.150/m²)
+  //   luxo          = mármore importado (R$1.850/m²)
+  let material: string;
+  let precoCozinha: number;
+  let precoBanheiro: number;
+  switch (padrao) {
+    case "luxo":
+      material = "mármore importado";
+      precoCozinha = 1850;
+      precoBanheiro = 1750;
+      break;
+    case "alto":
+      material = "quartzo";
+      precoCozinha = 1150;
+      precoBanheiro = 1080;
+      break;
+    case "medio":
+      material = "granito premium";
+      precoCozinha = 820;
+      precoBanheiro = 780;
+      break;
+    case "popular":
+    case null:
+    default:
+      material = "granito padrão";
+      precoCozinha = 680;
+      precoBanheiro = 620;
+      break;
+  }
 
   if (cozinhas > 0) {
     const m2 = cozinhas * 2.5 * 0.6;
     items.push({
       codigo_sinapi: "custom-bancada-cozinha",
-      descricao_local: `Bancada de granito cozinha (${cozinhas})`,
+      descricao_local: `Bancada de ${material} cozinha (${cozinhas})`,
       unidade: "m²",
       quantidade: big(m2),
-      preco_unitario_custom: big(720 * fAcab),
+      preco_unitario_custom: big(precoCozinha),
       rule_id: "bancadas.cozinha",
     });
   }
@@ -515,10 +590,10 @@ const ruleBancadas: Rule = (p) => {
     const m2 = banheiros * 1.5 * 0.55;
     items.push({
       codigo_sinapi: "custom-bancada-banheiro",
-      descricao_local: `Bancada de granito banheiro (${banheiros})`,
+      descricao_local: `Bancada de ${material} banheiro (${banheiros})`,
       unidade: "m²",
       quantidade: big(m2),
-      preco_unitario_custom: big(680 * fAcab),
+      preco_unitario_custom: big(precoBanheiro),
       rule_id: "bancadas.banheiro",
     });
   }
@@ -698,14 +773,26 @@ const ruleLoucasMetais: Rule = (p) => {
       multiplicador_preco: fAcab,
       rule_id: "loucas.vaso",
     });
-    items.push({
-      codigo_sinapi: "86939",
-      descricao_local: "Lavatório de louça branca com coluna, padrão popular",
-      unidade: "un",
-      quantidade: big(banheiros),
-      multiplicador_preco: fAcab,
-      rule_id: "loucas.lavatorio",
-    });
+    // Padrão alto/luxo: lavatório suspenso premium (custom). Popular/médio: SINAPI 86939.
+    if (isPadraoAlto(p.padrao_construtivo)) {
+      items.push({
+        codigo_sinapi: "custom-lavatorio-premium",
+        descricao_local: "Lavatório de louça suspenso premium + torneira monocomando",
+        unidade: "un",
+        quantidade: big(banheiros),
+        preco_unitario_custom: big(950 * multResidualPremium(p.padrao_construtivo)),
+        rule_id: "loucas.lavatorio-premium",
+      });
+    } else {
+      items.push({
+        codigo_sinapi: "86939",
+        descricao_local: "Lavatório de louça branca com coluna, padrão popular",
+        unidade: "un",
+        quantidade: big(banheiros),
+        multiplicador_preco: multResidualPremium(p.padrao_construtivo),
+        rule_id: "loucas.lavatorio",
+      });
+    }
   }
   if (cozinhas > 0) {
     items.push({
