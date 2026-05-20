@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CIDADES, type CidadeData } from "@/lib/zoneamento/cidades";
-import { MUNICIPIOS_BR, municipioDisplay } from "@/lib/zoneamento/municipios-br";
+import { MUNICIPIOS_BR } from "@/lib/zoneamento/municipios-br";
 import {
   listZonasCidadeIaAction,
   type ListZonasIaResult,
@@ -32,53 +32,53 @@ type Props = {
   initialAreaTerreno?: number | null;
   disabled?: boolean;
   projectId?: string;
-  /** Quando o projeto tem zoneamento_custom salvo, passa o resumo aqui pra mostrar. */
   customLabel?: string | null;
 };
 
-// Lista combinada: cidades curadas (com badge) + top 170 municípios BR
-type SugestaoCidade = {
-  display: string; // "Curitiba/PR"
-  curada?: CidadeData;
-};
+const UFS = [
+  "AC",
+  "AL",
+  "AM",
+  "AP",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MG",
+  "MS",
+  "MT",
+  "PA",
+  "PB",
+  "PE",
+  "PI",
+  "PR",
+  "RJ",
+  "RN",
+  "RO",
+  "RR",
+  "RS",
+  "SC",
+  "SE",
+  "SP",
+  "TO",
+] as const;
 
-function buildSugestoes(): SugestaoCidade[] {
-  const curadas = new Set<string>();
-  const out: SugestaoCidade[] = [];
-
-  // Curadas primeiro
-  for (const c of Object.values(CIDADES)) {
-    const key = `${c.nome}/${c.uf}`;
-    if (curadas.has(key)) continue;
-    curadas.add(key);
-    out.push({ display: key, curada: c });
-  }
-  // Top municípios brasileiros
-  for (const m of MUNICIPIOS_BR) {
-    const key = `${m.nome}/${m.uf}`;
-    if (curadas.has(key)) continue;
-    curadas.add(key);
-    out.push({ display: key });
-  }
-  return out;
-}
-
-const SUGESTOES = buildSugestoes();
-
-/** Procura curadoria pelo nome+UF digitado. */
-function findCidadeCurada(cidadeDisplay: string): CidadeData | null {
-  return SUGESTOES.find((s) => s.display === cidadeDisplay)?.curada ?? null;
+// Cidades curadas por UF (procura cidade curada dado nome+UF)
+function findCidadeCurada(nome: string, uf: string): CidadeData | null {
+  const trimNome = nome.trim().toLowerCase();
+  if (!trimNome || !uf) return null;
+  return (
+    Object.values(CIDADES).find((c) => c.uf === uf && c.nome.toLowerCase() === trimNome) ?? null
+  );
 }
 
 /** Idade da lei pra warning visual */
 function idadeLei(
   ano: number | null,
   revisao: number | null,
-): {
-  anos: number;
-  isAntiga: boolean;
-  refAno: number;
-} | null {
+): { anos: number; isAntiga: boolean; refAno: number } | null {
   const refAno = revisao ?? ano;
   if (!refAno) return null;
   const anoAtual = new Date().getFullYear();
@@ -86,7 +86,6 @@ function idadeLei(
   return { anos, isAntiga: anos > 10, refAno };
 }
 
-/** Extrai ano da string da lei (ex: "LC 434/1999" → 1999) */
 function extractAnoFromLei(lei: string): number | null {
   const m = lei.match(/(\d{4})/);
   return m ? Number(m[1]) : null;
@@ -102,14 +101,22 @@ export function ZoneamentoFields({
 }: Props) {
   const router = useRouter();
 
-  // Estado: display da cidade selecionada (formato "Nome/UF")
-  const [cidadeDisplay, setCidadeDisplay] = useState<string>(() => {
+  // Hidrata estado inicial a partir de initialCidade (código curado) OU customLabel
+  const inicial = useMemo(() => {
     if (initialCidade && initialCidade !== "custom") {
       const c = CIDADES[initialCidade];
-      if (c) return `${c.nome}/${c.uf}`;
+      if (c) return { uf: c.uf, nome: c.nome };
     }
-    return customLabel?.split("·")[0]?.trim() ?? "";
-  });
+    if (customLabel) {
+      // customLabel format: "Florianópolis/SC · ZR-3"
+      const m = customLabel.match(/^(.+?)\/([A-Z]{2})/);
+      if (m) return { uf: m[2]!, nome: m[1]!.trim() };
+    }
+    return { uf: "", nome: "" };
+  }, [initialCidade, customLabel]);
+
+  const [uf, setUf] = useState<string>(inicial.uf);
+  const [cidadeNome, setCidadeNome] = useState<string>(inicial.nome);
   const [zona, setZona] = useState<string>(initialZona ?? "");
   const [zonasIa, setZonasIa] = useState<ZonaIA[]>([]);
   const [iaMeta, setIaMeta] = useState<{
@@ -122,42 +129,77 @@ export function ZoneamentoFields({
   const [iaLoading, setIaLoading] = useState(false);
   const [saving, startSaving] = useTransition();
 
-  const cidadeCurada = useMemo(() => findCidadeCurada(cidadeDisplay), [cidadeDisplay]);
-  const isCustomMode = !cidadeCurada && cidadeDisplay.trim() !== "";
+  const cidadeCurada = useMemo(
+    () => (uf && cidadeNome ? findCidadeCurada(cidadeNome, uf) : null),
+    [uf, cidadeNome],
+  );
+  const cidadeDefinida = !!uf && !!cidadeNome.trim();
+  const isCustomMode = cidadeDefinida && !cidadeCurada;
   const cidadeCodigoForForm = cidadeCurada ? cidadeCurada.codigo : isCustomMode ? "custom" : "";
 
-  // Pra cidade curada: mostra ano extraído da lei
+  // Sugestões de cidades filtradas pela UF (curadas com ★ + top municípios)
+  const cidadesSugeridasDaUf = useMemo(() => {
+    if (!uf) return [];
+    const out: Array<{ nome: string; curada: boolean }> = [];
+    const seen = new Set<string>();
+
+    // Curadas primeiro
+    for (const c of Object.values(CIDADES)) {
+      if (c.uf !== uf) continue;
+      const key = c.nome.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ nome: c.nome, curada: true });
+    }
+    // Top municípios da UF
+    for (const m of MUNICIPIOS_BR) {
+      if (m.uf !== uf) continue;
+      const key = m.nome.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ nome: m.nome, curada: false });
+    }
+    // Ordena: curadas no topo, depois alfabético
+    out.sort((a, b) => {
+      if (a.curada !== b.curada) return a.curada ? -1 : 1;
+      return a.nome.localeCompare(b.nome, "pt-BR");
+    });
+    return out;
+  }, [uf]);
+
   const curadaIdade = useMemo(() => {
     if (!cidadeCurada) return null;
-    const ano = extractAnoFromLei(cidadeCurada.lei);
-    return idadeLei(ano, null);
+    return idadeLei(extractAnoFromLei(cidadeCurada.lei), null);
   }, [cidadeCurada]);
 
-  // Pra cidade custom: usa metadata da IA
   const customIdade = useMemo(() => {
     if (!iaMeta) return null;
     return idadeLei(iaMeta.ano_lei, iaMeta.ultima_revisao_ano);
   }, [iaMeta]);
 
-  /** Quando user muda a cidade, reseta zona e estado IA. */
-  function onCidadeChange(value: string) {
-    setCidadeDisplay(value);
+  function onUfChange(v: string) {
+    setUf(v);
+    setCidadeNome("");
     setZona("");
     setZonasIa([]);
     setIaMeta(null);
   }
 
-  /** Busca zonas da cidade via IA. */
+  function onCidadeNomeChange(v: string) {
+    setCidadeNome(v);
+    setZona("");
+    setZonasIa([]);
+    setIaMeta(null);
+  }
+
   async function buscarZonasComIa() {
     if (!isCustomMode) return;
-    const [nome, uf] = cidadeDisplay.split("/").map((s) => s.trim());
-    if (!nome || !uf || uf.length !== 2) {
-      toast.error("Digite a cidade no formato 'Nome/UF' (ex: Florianópolis/SC)");
-      return;
-    }
     setIaLoading(true);
     try {
-      const res = await listZonasCidadeIaAction({ cidade_nome: nome, uf: uf.toUpperCase() });
+      const res = await listZonasCidadeIaAction({
+        cidade_nome: cidadeNome.trim(),
+        uf,
+      });
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -184,19 +226,16 @@ export function ZoneamentoFields({
     }
   }
 
-  /** Salva zoneamento custom no projeto (cidade não-curada + zona IA escolhida). */
   function salvarCustom(zonaCodigo: string) {
     if (!projectId || !iaMeta) return;
     const z = zonasIa.find((x) => x.zona_codigo === zonaCodigo);
     if (!z) return;
-    const [nome, uf] = cidadeDisplay.split("/").map((s) => s.trim());
-    if (!nome || !uf) return;
 
     startSaving(async () => {
       const res = await saveZoneamentoCustomAction({
         project_id: projectId,
-        cidade_nome: nome,
-        uf: uf.toUpperCase(),
+        cidade_nome: cidadeNome.trim(),
+        uf,
         lei: iaMeta.lei,
         ano_lei: iaMeta.ano_lei,
         ultima_revisao_ano: iaMeta.ultima_revisao_ano,
@@ -233,7 +272,7 @@ export function ZoneamentoFields({
   }
 
   const zonas = cidadeCurada?.zonas ?? [];
-  const showIA = isCustomMode && zonasIa.length === 0;
+  const showBuscarIA = isCustomMode && zonasIa.length === 0;
   const showSelectIA = isCustomMode && zonasIa.length > 0;
   const zonaEscolhidaIA = useMemo(
     () => (showSelectIA ? zonasIa.find((z) => z.zona_codigo === zona) : null),
@@ -246,25 +285,47 @@ export function ZoneamentoFields({
       <input type="hidden" name="cidade_codigo" value={cidadeCodigoForForm} />
       <input type="hidden" name="zoneamento" value={zona} />
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-[100px_1fr_1fr]">
+        {/* UF */}
+        <div className="space-y-1.5">
+          <Label htmlFor="zon_uf">UF</Label>
+          <Select value={uf} onValueChange={(v) => v && onUfChange(v)} disabled={disabled}>
+            <SelectTrigger id="zon_uf" className="w-full">
+              <SelectValue placeholder="—" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {UFS.map((u) => (
+                  <SelectItem key={u} value={u}>
+                    {u}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Cidade */}
         <div className="space-y-1.5">
           <Label htmlFor="zon_cidade">Cidade da obra</Label>
           <Input
             id="zon_cidade"
             list="zon_cidades_datalist"
-            value={cidadeDisplay}
-            onChange={(e) => onCidadeChange(e.target.value)}
-            disabled={disabled}
-            placeholder="Digite — sugestões aparecem"
+            value={cidadeNome}
+            onChange={(e) => onCidadeNomeChange(e.target.value)}
+            disabled={disabled || !uf}
+            placeholder={uf ? `Cidade em ${uf}` : "Escolha a UF primeiro"}
             autoComplete="off"
           />
-          <datalist id="zon_cidades_datalist">
-            {SUGESTOES.map((s) => (
-              <option key={s.display} value={s.display}>
-                {s.curada ? "★ Curado" : ""}
-              </option>
-            ))}
-          </datalist>
+          {uf ? (
+            <datalist id="zon_cidades_datalist">
+              {cidadesSugeridasDaUf.map((c) => (
+                <option key={c.nome} value={c.nome}>
+                  {c.curada ? "★ Curado" : ""}
+                </option>
+              ))}
+            </datalist>
+          ) : null}
           {cidadeCurada ? (
             <p className="text-[10px] text-emerald-700 dark:text-emerald-400">
               ★ Cidade curada — regras validadas manualmente.
@@ -273,14 +334,15 @@ export function ZoneamentoFields({
             <p className="text-[10px] text-zinc-500">
               Cidade fora da curadoria — clique em &quot;Buscar zonas com IA&quot; abaixo.
             </p>
-          ) : (
+          ) : uf ? (
             <p className="text-[10px] text-zinc-500">
-              {SUGESTOES.length} cidades sugeridas (capitais + grandes municípios). Digite livre se
-              não estiver listada.
+              {cidadesSugeridasDaUf.length} cidades sugeridas em {uf}. Digite livre se a sua não
+              estiver na lista.
             </p>
-          )}
+          ) : null}
         </div>
 
+        {/* Zona */}
         <div className="space-y-1.5">
           <Label htmlFor="zon_zona">Zona do plano diretor</Label>
           {cidadeCurada ? (
@@ -330,13 +392,17 @@ export function ZoneamentoFields({
         </div>
       </div>
 
-      {/* Botão de buscar com IA — só aparece quando cidade fora da curadoria */}
-      {showIA ? (
+      {/* Bloco de buscar com IA — aparece quando cidade fora da curadoria */}
+      {showBuscarIA ? (
         <div className="flex items-center gap-3 rounded-md border border-dashed border-purple-300 bg-purple-50 p-3 dark:border-purple-800 dark:bg-purple-950">
           <SparklesIcon className="h-5 w-5 shrink-0 text-purple-600 dark:text-purple-400" />
           <div className="flex-1 text-xs text-purple-900 dark:text-purple-100">
             Esta cidade não está na curadoria. A IA pode buscar as zonas residenciais do plano
-            diretor de <b>{cidadeDisplay}</b>.
+            diretor de{" "}
+            <b>
+              {cidadeNome}/{uf}
+            </b>
+            .
           </div>
           <Button
             type="button"
@@ -368,7 +434,7 @@ export function ZoneamentoFields({
         </p>
       </div>
 
-      {/* Card de dados da lei — aparece quando cidade está definida */}
+      {/* Card de dados da lei (cidade definida + zona escolhida) */}
       {cidadeCurada || iaMeta ? (
         <div
           className={`rounded-md border p-3 ${
@@ -436,7 +502,6 @@ export function ZoneamentoFields({
             </p>
           ) : null}
 
-          {/* Parâmetros da zona escolhida (resumo visual) */}
           {(() => {
             const zonaCurada = cidadeCurada?.zonas.find((z) => z.zona === zona);
             const params = zonaCurada
