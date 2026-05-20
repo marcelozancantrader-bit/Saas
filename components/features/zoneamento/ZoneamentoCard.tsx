@@ -1,8 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { runZoneamentoChecks } from "@/lib/zoneamento/check";
-import { getCidade, getZona } from "@/lib/zoneamento/cidades";
+import { runZoneamentoChecks, runZoneamentoChecksCustom } from "@/lib/zoneamento/check";
+import { getCidade, getZona, type ZoneamentoRule } from "@/lib/zoneamento/cidades";
 import type { NbrFinding } from "@/lib/nbr-checks";
+
+export type ZoneamentoCustomMeta = ZoneamentoRule & {
+  cidade_nome?: string;
+  uf?: string;
+  lei?: string;
+  fonte_url?: string | null;
+  origem?: "manual" | "ia";
+  confianca?: "alta" | "media" | "baixa" | null;
+  observacao?: string | null;
+};
 
 type Props = {
   cidade_codigo: string | null;
@@ -11,6 +21,8 @@ type Props = {
   area_construida_total_m2: number | null;
   numero_pavimentos: number | null;
   tem_garagem: boolean;
+  /** Quando cidade_codigo === 'custom', usa esses parâmetros vindos de meta.zoneamento_custom. */
+  customRule?: ZoneamentoCustomMeta | null;
 };
 
 const SEVERITY_VARIANT: Record<NbrFinding["severity"], "default" | "secondary" | "destructive"> = {
@@ -32,8 +44,11 @@ export function ZoneamentoCard({
   area_construida_total_m2,
   numero_pavimentos,
   tem_garagem,
+  customRule,
 }: Props) {
-  if (!cidade_codigo || !zona_codigo) {
+  const isCustom = cidade_codigo === "custom" && !!customRule;
+
+  if (!cidade_codigo || (!isCustom && !zona_codigo)) {
     return (
       <Card>
         <CardHeader>
@@ -47,18 +62,44 @@ export function ZoneamentoCard({
     );
   }
 
-  const cidade = getCidade(cidade_codigo);
-  const zona = getZona(cidade_codigo, zona_codigo);
-  if (!cidade || !zona) return null;
+  let findings: NbrFinding[];
+  let headerNome: string;
+  let headerLei: string;
+  let headerFonte: string | null;
+  let headerOrigem: "curado" | "manual" | "ia" = "curado";
+  let confianca: "alta" | "media" | "baixa" | null = null;
+  let observacao: string | null = null;
 
-  const findings = runZoneamentoChecks({
-    cidade_codigo,
-    zona_codigo,
-    area_terreno_m2: area_terreno_m2 ?? 0,
-    area_construida_total_m2,
-    numero_pavimentos,
-    tem_garagem,
-  });
+  if (isCustom && customRule) {
+    findings = runZoneamentoChecksCustom({
+      rule: customRule,
+      area_terreno_m2: area_terreno_m2 ?? 0,
+      area_construida_total_m2,
+      numero_pavimentos,
+      tem_garagem,
+    });
+    headerNome = `${customRule.cidade_nome ?? "Cidade"}/${customRule.uf ?? "??"} · ${customRule.label}`;
+    headerLei = customRule.lei ?? "Não informado";
+    headerFonte = customRule.fonte_url ?? null;
+    headerOrigem = customRule.origem ?? "manual";
+    confianca = customRule.confianca ?? null;
+    observacao = customRule.observacao ?? null;
+  } else {
+    const cidade = getCidade(cidade_codigo);
+    const zona = getZona(cidade_codigo, zona_codigo);
+    if (!cidade || !zona) return null;
+    findings = runZoneamentoChecks({
+      cidade_codigo: cidade_codigo!,
+      zona_codigo: zona_codigo!,
+      area_terreno_m2: area_terreno_m2 ?? 0,
+      area_construida_total_m2,
+      numero_pavimentos,
+      tem_garagem,
+    });
+    headerNome = `${cidade.nome}/${cidade.uf} · ${zona.label}`;
+    headerLei = cidade.lei;
+    headerFonte = cidade.fonte_url ?? null;
+  }
 
   const issues = findings.filter((f) => f.severity === "issue").length;
   const warns = findings.filter((f) => f.severity === "warn").length;
@@ -69,20 +110,35 @@ export function ZoneamentoCard({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">Validação de zoneamento</CardTitle>
           <div className="flex gap-2 text-xs">
+            {headerOrigem !== "curado" ? (
+              <Badge variant="outline">
+                {headerOrigem === "ia" ? "IA — confirmado" : "Manual"}
+              </Badge>
+            ) : null}
+            {confianca ? (
+              <Badge
+                variant={
+                  confianca === "alta"
+                    ? "default"
+                    : confianca === "media"
+                      ? "secondary"
+                      : "destructive"
+                }
+              >
+                Confiança IA: {confianca}
+              </Badge>
+            ) : null}
             {issues > 0 ? <Badge variant="destructive">{issues} acima do permitido</Badge> : null}
             {warns > 0 ? <Badge variant="secondary">{warns} para confirmar</Badge> : null}
           </div>
         </div>
         <p className="text-xs text-zinc-600 dark:text-zinc-400">
-          <strong>
-            {cidade.nome}/{cidade.uf} · {zona.label}
-          </strong>{" "}
-          · {cidade.lei}.
-          {cidade.fonte_url ? (
+          <strong>{headerNome}</strong> · {headerLei}.
+          {headerFonte ? (
             <>
               {" "}
               <a
-                href={cidade.fonte_url}
+                href={headerFonte}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline underline-offset-2"
@@ -94,9 +150,17 @@ export function ZoneamentoCard({
           ) : null}
         </p>
         <p className="text-xs text-zinc-500">
-          Pré-validação curada — não substitui aprovação na prefeitura. Não cobre exceções (ZEIS,
-          área histórica, lote de esquina).
+          {headerOrigem === "curado"
+            ? "Pré-validação curada — não substitui aprovação na prefeitura. Não cobre exceções (ZEIS, área histórica, lote de esquina)."
+            : headerOrigem === "ia"
+              ? "Parâmetros sugeridos por IA e confirmados pelo profissional. SEMPRE validar com a prefeitura antes de aprovar projeto definitivo."
+              : "Parâmetros inseridos manualmente pelo profissional. SEMPRE validar com a prefeitura antes de aprovar projeto definitivo."}
         </p>
+        {observacao ? (
+          <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+            Observação: {observacao}
+          </p>
+        ) : null}
       </CardHeader>
       <CardContent>
         <ul className="space-y-2 text-sm">

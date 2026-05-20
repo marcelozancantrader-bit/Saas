@@ -42,6 +42,8 @@ type ProjectFormValues = {
   cidade_codigo?: string | null;
   zoneamento?: string | null;
   area_terreno_m2?: number | null;
+  /** Quando salvo, mostra label do zoneamento custom no ZoneamentoFields */
+  zoneamento_custom_label?: string | null;
 };
 
 type ClientOption = { id: string; nome: string };
@@ -251,6 +253,9 @@ export function ProjectForm({ initial, clients }: Props) {
           initialZona={initial?.zoneamento ?? null}
           initialAreaTerreno={initial?.area_terreno_m2 ?? null}
           disabled={pending}
+          projectId={initial?.id}
+          hasCustom={initial?.cidade_codigo === "custom"}
+          customLabel={initial?.zoneamento_custom_label ?? null}
         />
       </Section>
 

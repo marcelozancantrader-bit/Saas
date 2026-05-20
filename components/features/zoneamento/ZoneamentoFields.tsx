@@ -12,12 +12,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CIDADE_OPTIONS, CIDADES } from "@/lib/zoneamento/cidades";
+import { ZoneamentoCustomDialog } from "./ZoneamentoCustomDialog";
 
 type Props = {
   initialCidade?: string | null;
   initialZona?: string | null;
   initialAreaTerreno?: number | null;
   disabled?: boolean;
+  /** Quando definido, mostra o botão "Outra cidade" que abre dialog vinculado ao projeto. */
+  projectId?: string;
+  /** Quando true, indica que o projeto já tem zoneamento_custom salvo. */
+  hasCustom?: boolean;
+  customLabel?: string | null;
 };
 
 export function ZoneamentoFields({
@@ -25,11 +31,15 @@ export function ZoneamentoFields({
   initialZona,
   initialAreaTerreno,
   disabled,
+  projectId,
+  hasCustom,
+  customLabel,
 }: Props) {
   const [cidade, setCidade] = useState<string>(initialCidade ?? "");
   const [zona, setZona] = useState<string>(initialZona ?? "");
 
-  const cidadeData = cidade ? CIDADES[cidade] : null;
+  const isCustom = cidade === "custom" || hasCustom;
+  const cidadeData = cidade && cidade !== "custom" ? CIDADES[cidade] : null;
   const zonas = cidadeData?.zonas ?? [];
 
   return (
@@ -122,6 +132,29 @@ export function ZoneamentoFields({
             </>
           ) : null}
         </p>
+      ) : null}
+
+      {isCustom && customLabel ? (
+        <p className="text-xs text-zinc-500">
+          Zoneamento personalizado salvo: <strong>{customLabel}</strong>.
+        </p>
+      ) : null}
+
+      {/* Opção pra cidade fora da curadoria — dialog com IA + form manual */}
+      {projectId ? (
+        <div className="border-t border-dashed border-zinc-200 pt-3 dark:border-zinc-800">
+          <p className="mb-2 text-xs text-zinc-600 dark:text-zinc-400">
+            Cidade não está na lista? Cadastre os parâmetros do plano diretor (manual ou com auxílio
+            de IA):
+          </p>
+          <ZoneamentoCustomDialog
+            projectId={projectId}
+            initialAreaTerreno={initialAreaTerreno}
+            triggerLabel={
+              hasCustom ? "Editar zoneamento personalizado" : "Outra cidade (manual ou IA)"
+            }
+          />
+        </div>
       ) : null}
     </div>
   );

@@ -29,7 +29,10 @@ import type { BriefingRespostas } from "@/lib/validators/briefing.schema";
 import { ArtRrtCard } from "@/components/features/art-rrt/ArtRrtCard";
 import type { ArtRrtData } from "@/lib/art-rrt/fields";
 import { NbrChecksCard } from "@/components/features/nbr-checks/NbrChecksCard";
-import { ZoneamentoCard } from "@/components/features/zoneamento/ZoneamentoCard";
+import {
+  ZoneamentoCard,
+  type ZoneamentoCustomMeta,
+} from "@/components/features/zoneamento/ZoneamentoCard";
 import { ProjectProgress } from "@/components/features/projects/ProjectProgress";
 import { DisciplineExtractionsCard } from "@/components/features/extraction/DisciplineExtractionsCard";
 import { ProjectTabs, type TabKey } from "@/components/features/projects/ProjectTabs";
@@ -201,6 +204,14 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
       | Partial<Record<Disciplina, ExtracaoDisciplinaEntry>>
       | undefined) ?? {};
 
+  const zoneamentoCustom =
+    ((project.meta as Record<string, unknown> | null)?.zoneamento_custom as
+      | ZoneamentoCustomMeta
+      | undefined) ?? null;
+  const zoneamentoCustomLabel = zoneamentoCustom
+    ? `${zoneamentoCustom.cidade_nome ?? "?"}/${zoneamentoCustom.uf ?? "??"} · ${zoneamentoCustom.label}`
+    : null;
+
   const confirmedByUser = !!(
     project.meta?.extracao_planta as { confirmed_by_user?: boolean } | undefined
   )?.confirmed_by_user;
@@ -330,6 +341,7 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
                   cidade_codigo: project.cidade_codigo,
                   zoneamento: project.zoneamento,
                   area_terreno_m2: project.area_terreno_m2,
+                  zoneamento_custom_label: zoneamentoCustomLabel,
                 }}
                 clients={clients ?? []}
               />
@@ -439,6 +451,7 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
               tem_garagem={
                 completedExtraction.extracao_resultado.elementos_especiais?.garagem ?? false
               }
+              customRule={zoneamentoCustom}
             />
           </section>
         ) : (
