@@ -16,9 +16,24 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { fetchZoneamentoIaAction } from "@/server/actions/zoneamento/fetch-with-ai.action";
+import {
+  listZonasCidadeIaAction,
+  type ListZonasIaResult,
+} from "@/server/actions/zoneamento/list-zonas-ia.action";
 import { saveZoneamentoCustomAction } from "@/server/actions/zoneamento/save-custom.action";
+import { MUNICIPIOS_BR, municipioDisplay } from "@/lib/zoneamento/municipios-br";
 import { toast } from "sonner";
 import { SparklesIcon, MapPinIcon } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type ZonaIA = (ListZonasIaResult & { ok: true })["data"]["zonas"][number];
 
 type Props = {
   projectId: string;
@@ -133,15 +148,112 @@ export function ZoneamentoCustomDialog({
   const [confianca, setConfianca] = useState<"alta" | "media" | "baixa" | null>(null);
   const [origem, setOrigem] = useState<"manual" | "ia">("manual");
   const [iaLoading, setIaLoading] = useState(false);
+  const [zonasIa, setZonasIa] = useState<ZonaIA[]>([]);
   const [pending, startTransition] = useTransition();
 
   function update<K extends keyof FormState>(k: K, v: string) {
     setForm((p) => ({ ...p, [k]: v }));
   }
 
-  async function buscarComIa() {
+  /** Tenta auto-detectar UF quando user digita "Cidade/UF" no campo cidade. */
+  function onCidadeChange(value: string) {
+    const m = value.match(/^(.+?)\/([A-Z]{2})$/);
+    if (m) {
+      // Selecionou item do datalist no formato "Nome/UF"
+      setForm((p) => ({ ...p, cidade_nome: m[1]!.trim(), uf: m[2]! }));
+    } else {
+      update("cidade_nome", value);
+    }
+  }
+
+  /**
+   * Passo 1: pede pra IA listar as zonas residenciais da cidade.
+   * Resultado popula o Select de zona. User escolhe uma → preenche o resto.
+   */
+  async function buscarZonasComIa() {
     if (!form.cidade_nome.trim() || !form.uf) {
-      toast.error("Preencha cidade + UF antes de buscar com IA");
+      toast.error("Preencha cidade + UF antes de buscar zonas");
+      return;
+    }
+    setIaLoading(true);
+    try {
+      const res = await listZonasCidadeIaAction({
+        cidade_nome: form.cidade_nome.trim(),
+        uf: form.uf as string,
+      });
+      if (!res.ok) {
+        toast.error(res.error);
+        setZonasIa([]);
+        return;
+      }
+      const d = res.data;
+      setZonasIa(d.zonas);
+      // Preenche metadados da cidade (lei, ano, fonte) — zona vem depois
+      setForm((p) => ({
+        ...p,
+        cidade_nome: d.cidade_nome,
+        uf: d.uf,
+        lei: d.lei,
+        ano_lei: d.ano_lei?.toString() ?? "",
+        ultima_revisao_ano: d.ultima_revisao_ano?.toString() ?? "",
+        fonte_url: d.fonte_url ?? "",
+        // Reseta zona pro user escolher da nova lista
+        zona_codigo: "",
+        zona_label: "",
+        ca_basico: "",
+        ca_maximo: "",
+        to_max_pct: "",
+        permeabilidade_min_pct: "",
+        altura_max_m: "",
+        recuo_frontal_m: "",
+        recuo_lateral_m: "",
+        recuo_fundos_m: "",
+        vagas_por_unidade: "1",
+        observacao: "",
+      }));
+      setConfianca(d.confianca);
+      setOrigem("ia");
+      const dataInfo = d.ultima_revisao_ano
+        ? `lei ${d.ano_lei}, revisada em ${d.ultima_revisao_ano}`
+        : d.ano_lei
+          ? `lei de ${d.ano_lei}`
+          : "data não identificada";
+      toast.success(
+        `IA encontrou ${d.zonas.length} zona(s) residencial(is) (${dataInfo}). Escolha uma no campo abaixo.`,
+      );
+    } finally {
+      setIaLoading(false);
+    }
+  }
+
+  /**
+   * Passo 2: user escolhe uma zona da lista populada pela IA. Preenche o
+   * formulário sem nova chamada de IA (parâmetros já vieram no list).
+   */
+  function escolherZona(codigo: string) {
+    const z = zonasIa.find((x) => x.zona_codigo === codigo);
+    if (!z) return;
+    setForm((p) => ({
+      ...p,
+      zona_codigo: z.zona_codigo,
+      zona_label: z.zona_label,
+      ca_basico: z.ca_basico.toString(),
+      ca_maximo: z.ca_maximo?.toString() ?? "",
+      to_max_pct: z.to_max_pct.toString(),
+      permeabilidade_min_pct: z.permeabilidade_min_pct?.toString() ?? "",
+      altura_max_m: z.altura_max_m?.toString() ?? "",
+      recuo_frontal_m: z.recuo_frontal_m.toString(),
+      recuo_lateral_m: z.recuo_lateral_m?.toString() ?? "",
+      recuo_fundos_m: z.recuo_fundos_m?.toString() ?? "",
+      vagas_por_unidade: z.vagas_por_unidade.toString(),
+      observacao: z.observacao ?? "",
+    }));
+  }
+
+  /** Fallback: busca parâmetros de UMA zona específica pelo nome digitado. */
+  async function buscarParametrosZonaEspecifica() {
+    if (!form.cidade_nome.trim() || !form.uf || !form.zona_label.trim()) {
+      toast.error("Cidade, UF e nome da zona são obrigatórios");
       return;
     }
     setIaLoading(true);
@@ -149,17 +261,15 @@ export function ZoneamentoCustomDialog({
       const res = await fetchZoneamentoIaAction({
         cidade_nome: form.cidade_nome.trim(),
         uf: form.uf as string,
-        zona_nome: form.zona_label.trim() || undefined,
+        zona_nome: form.zona_label.trim(),
       });
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
       const d = res.data;
-      setForm({
-        ...form,
-        cidade_nome: d.cidade_nome,
-        uf: d.uf,
+      setForm((p) => ({
+        ...p,
         lei: d.lei,
         ano_lei: d.ano_lei?.toString() ?? "",
         ultima_revisao_ano: d.ultima_revisao_ano?.toString() ?? "",
@@ -176,17 +286,10 @@ export function ZoneamentoCustomDialog({
         recuo_fundos_m: d.recuo_fundos_m?.toString() ?? "",
         vagas_por_unidade: d.vagas_por_unidade.toString(),
         observacao: d.observacao ?? "",
-      });
+      }));
       setConfianca(d.confianca);
       setOrigem("ia");
-      const dataInfo = d.ultima_revisao_ano
-        ? `lei ${d.ano_lei}, revisada em ${d.ultima_revisao_ano}`
-        : d.ano_lei
-          ? `lei de ${d.ano_lei}`
-          : "data não identificada";
-      toast.success(
-        `IA retornou parâmetros (${dataInfo}, confiança ${d.confianca}). Revise antes de salvar.`,
-      );
+      toast.success("Parâmetros preenchidos.");
     } finally {
       setIaLoading(false);
     }
@@ -267,17 +370,28 @@ export function ZoneamentoCustomDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Identificação da cidade/zona */}
+          {/* Identificação da cidade (com autocomplete) */}
           <div className="grid gap-3 sm:grid-cols-[1fr_80px]">
             <div className="space-y-1.5">
               <Label htmlFor="zc_cidade">Cidade da obra</Label>
               <Input
                 id="zc_cidade"
+                list="zc_cidades_datalist"
                 value={form.cidade_nome}
-                onChange={(e) => update("cidade_nome", e.target.value)}
+                onChange={(e) => onCidadeChange(e.target.value)}
                 disabled={busy}
-                placeholder="Ex: Florianópolis"
+                placeholder="Digite — sugestões aparecem"
+                autoComplete="off"
               />
+              <datalist id="zc_cidades_datalist">
+                {MUNICIPIOS_BR.map((m) => (
+                  <option key={`${m.nome}-${m.uf}`} value={municipioDisplay(m)} />
+                ))}
+              </datalist>
+              <p className="text-[10px] text-zinc-500">
+                Top {MUNICIPIOS_BR.length} municípios sugeridos. Digite livre se a cidade não
+                estiver listada.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="zc_uf">UF</Label>
@@ -297,46 +411,90 @@ export function ZoneamentoCustomDialog({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="zc_zona_label">Nome da zona (do plano diretor)</Label>
-              <Input
-                id="zc_zona_label"
-                value={form.zona_label}
-                onChange={(e) => update("zona_label", e.target.value)}
-                disabled={busy}
-                placeholder="Ex: AMC - Área Mista Central"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="zc_zona_codigo">Código curto da zona</Label>
-              <Input
-                id="zc_zona_codigo"
-                value={form.zona_codigo}
-                onChange={(e) => update("zona_codigo", e.target.value)}
-                disabled={busy}
-                placeholder="Ex: amc, zm-3"
-              />
-            </div>
-          </div>
-
-          {/* Botão IA */}
+          {/* Botão IA — lista zonas */}
           <div className="flex items-center gap-3 rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-900">
             <SparklesIcon className="h-5 w-5 shrink-0 text-purple-600 dark:text-purple-400" />
             <div className="flex-1 text-xs text-zinc-700 dark:text-zinc-300">
-              A IA pode buscar os parâmetros do plano diretor da cidade e pré-preencher o
-              formulário. Você sempre confirma os valores antes de salvar.
+              A IA busca as zonas residenciais do plano diretor da cidade. Depois você escolhe uma
+              zona e os parâmetros são preenchidos.
             </div>
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              onClick={buscarComIa}
+              onClick={buscarZonasComIa}
               disabled={busy || !form.cidade_nome.trim()}
             >
-              {iaLoading ? "Buscando…" : "Buscar com IA"}
+              {iaLoading ? "Buscando…" : "Buscar zonas com IA"}
             </Button>
           </div>
+
+          {/* Seleção de zona — Select se IA retornou zonas, senão input livre */}
+          {zonasIa.length > 0 ? (
+            <div className="space-y-1.5 rounded-md border border-purple-200 bg-purple-50 p-3 dark:border-purple-900 dark:bg-purple-950">
+              <Label htmlFor="zc_zona_select">
+                Escolha a zona ({zonasIa.length} encontrada{zonasIa.length !== 1 ? "s" : ""} pela
+                IA)
+              </Label>
+              <Select
+                value={form.zona_codigo}
+                onValueChange={(v) => v && escolherZona(v)}
+                disabled={busy}
+              >
+                <SelectTrigger id="zc_zona_select" className="w-full">
+                  <SelectValue placeholder="— Selecionar zona —" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {zonasIa.map((z) => (
+                      <SelectItem key={z.zona_codigo} value={z.zona_codigo}>
+                        {z.zona_label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-purple-700 dark:text-purple-300">
+                Ao escolher, os parâmetros (CA, TO, recuos etc) são preenchidos automaticamente.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-[1fr_140px_auto]">
+              <div className="space-y-1.5">
+                <Label htmlFor="zc_zona_label">Nome da zona (do plano diretor)</Label>
+                <Input
+                  id="zc_zona_label"
+                  value={form.zona_label}
+                  onChange={(e) => update("zona_label", e.target.value)}
+                  disabled={busy}
+                  placeholder="Ex: AMC - Área Mista Central"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="zc_zona_codigo">Código curto</Label>
+                <Input
+                  id="zc_zona_codigo"
+                  value={form.zona_codigo}
+                  onChange={(e) => update("zona_codigo", e.target.value)}
+                  disabled={busy}
+                  placeholder="amc, zm-3"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={buscarParametrosZonaEspecifica}
+                  disabled={busy || !form.cidade_nome.trim() || !form.zona_label.trim()}
+                  className="h-10"
+                  title="Buscar parâmetros desta zona específica"
+                >
+                  {iaLoading ? "…" : "Buscar 1"}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {confianca ? (
             <div className="flex items-center gap-2 text-xs">
