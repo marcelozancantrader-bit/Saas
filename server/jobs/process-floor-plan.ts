@@ -121,22 +121,15 @@ export const processFloorPlan = inngest.createFunction(
 
       if (disc === "architectural") {
         // Mantém compatibilidade com a struct legada `meta.extracao_planta`.
-        const data = result.data as {
-          area_total_m2: number | null;
-          tipologia: string;
-          padrao_construtivo: string | null;
-          numero_pavimentos: number | null;
-          confianca: string;
-        };
+        // IMPORTANTE: espalha TODOS os campos da extração da IA (ambientes,
+        // elementos_especiais, observacoes etc) — antes esses campos eram perdidos,
+        // gerando orçamento com 0 pontos elétricos/hidráulicos/louças.
+        const data = result.data as Record<string, unknown>;
         const newMeta = {
           ...currentMeta,
           extracao_planta: {
+            ...data,
             source_file_id: project_file_id,
-            area_total_m2: data.area_total_m2,
-            tipologia: data.tipologia,
-            padrao_construtivo: data.padrao_construtivo,
-            numero_pavimentos: data.numero_pavimentos,
-            confianca: data.confianca,
             extracted_at: new Date().toISOString(),
             confirmed_by_user: false,
           },
