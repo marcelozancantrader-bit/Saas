@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import Big from "big.js";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { applyRulesV1, RULES_VERSION, type ExtractedPlanta } from "@/lib/budget/rules/v1";
+import {
+  applyRulesV2,
+  checkOrcamentoVsCub,
+  RULES_VERSION_V2,
+  type ExtractedPlantaV2,
+} from "@/lib/budget/rules/v2";
 import {
   DISCIPLINE_RULES_VERSION,
   rulesElectricalSinapi,
@@ -24,7 +29,7 @@ const generateSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .default("2026-05-01"),
   desonerado: z.boolean().default(true),
-  bdi_pct: z.coerce.number().min(0).max(100).default(25),
+  bdi_pct: z.coerce.number().min(0).max(100).default(28),
 });
 
 export type GenerateBudgetInput = z.infer<typeof generateSchema>;
@@ -57,9 +62,9 @@ export async function generateBudgetAction(
 
   const meta = (project.meta ?? {}) as Record<string, unknown>;
   const extracao = meta.extracao_planta as
-    | (ExtractedPlanta & {
+    | (ExtractedPlantaV2 & {
         confirmed_by_user?: boolean;
-        ambientes?: ExtractedPlanta["ambientes"];
+        ambientes?: ExtractedPlantaV2["ambientes"];
       })
     | undefined;
 
@@ -87,8 +92,9 @@ export async function generateBudgetAction(
     };
   }
 
-  // 2. Apply rules v1
-  const planta: ExtractedPlanta = {
+  // 2. Apply rules v2 (cobertura ampliada: estrutura, bancadas, acabamentos lineares,
+  //    serviços preliminares, limpeza final, elementos especiais, fator padrão construtivo)
+  const planta: ExtractedPlantaV2 = {
     area_total_m2: extracao.area_total_m2,
     numero_pavimentos: extracao.numero_pavimentos ?? 1,
     tipologia: extracao.tipologia,
@@ -103,7 +109,7 @@ export async function generateBudgetAction(
       area_servico_externa: false,
     },
   };
-  const archItems = applyRulesV1(planta);
+  const archItems = applyRulesV2(planta);
   if (archItems.length === 0) {
     return { ok: false, error: "Nenhuma regra retornou itens — verifique os dados da planta." };
   }
@@ -130,31 +136,47 @@ export async function generateBudgetAction(
     ...(structuralConfirmed ? rulesStructuralSinapi(structuralConfirmed) : []),
   ];
 
-  const ruleItems = [...archItems, ...disciplineItems];
+  // Disciplinas v1 não têm preco_unitario_custom — vão ser inseridas com origem='sinapi'.
+  const ruleItems = [
+    ...archItems,
+    ...disciplineItems.map((d) => ({
+      ...d,
+      preco_unitario_custom: undefined as Big | undefined,
+    })),
+  ];
 
-  // 3. Bulk fetch SINAPI prices for the codes we need
-  const uniqueCodes = [...new Set(ruleItems.map((i) => i.codigo_sinapi))];
-  const { data: sinapiRows, error: sinapiErr } = await supabase
-    .from("sinapi_compositions")
-    .select("codigo, descricao, unidade, preco")
-    .in("codigo", uniqueCodes)
-    .eq("uf", uf)
-    .eq("mes_referencia", mes_referencia)
-    .eq("desonerado", desonerado);
+  // 3. Bulk fetch SINAPI prices for the codes we need (skip custom items)
+  const sinapiCodes = [
+    ...new Set(ruleItems.filter((i) => !i.preco_unitario_custom).map((i) => i.codigo_sinapi)),
+  ];
+  let priceByCode = new Map<
+    string,
+    { codigo: string; descricao: string; unidade: string; preco: string }
+  >();
+  if (sinapiCodes.length > 0) {
+    const { data: sinapiRows, error: sinapiErr } = await supabase
+      .from("sinapi_compositions")
+      .select("codigo, descricao, unidade, preco")
+      .in("codigo", sinapiCodes)
+      .eq("uf", uf)
+      .eq("mes_referencia", mes_referencia)
+      .eq("desonerado", desonerado);
 
-  if (sinapiErr) {
-    return { ok: false, error: `Falha ao consultar SINAPI: ${sinapiErr.message}` };
+    if (sinapiErr) {
+      return { ok: false, error: `Falha ao consultar SINAPI: ${sinapiErr.message}` };
+    }
+
+    type SinapiRow = { codigo: string; descricao: string; unidade: string; preco: string };
+    priceByCode = new Map<string, SinapiRow>(
+      (sinapiRows as SinapiRow[] | null)?.map((r) => [r.codigo, r]) ?? [],
+    );
   }
 
-  type SinapiRow = { codigo: string; descricao: string; unidade: string; preco: string };
-  const priceByCode = new Map<string, SinapiRow>(
-    (sinapiRows as SinapiRow[] | null)?.map((r) => [r.codigo, r]) ?? [],
+  // Faltas no arquitetônico SINAPI (não custom) bloqueiam — sem preço base não tem orçamento.
+  const archSinapiCodes = new Set(
+    archItems.filter((i) => !i.preco_unitario_custom).map((i) => i.codigo_sinapi),
   );
-
-  const missing = uniqueCodes.filter((c) => !priceByCode.has(c));
-  const archCodes = new Set(archItems.map((i) => i.codigo_sinapi));
-  const missingArch = missing.filter((c) => archCodes.has(c));
-  // Faltas no arquitetônico bloqueiam — sem preço base não tem orçamento.
+  const missingArch = [...archSinapiCodes].filter((c) => !priceByCode.has(c));
   if (missingArch.length > 0) {
     return {
       ok: false,
@@ -162,7 +184,9 @@ export async function generateBudgetAction(
     };
   }
   // Faltas em disciplinas complementares → descarta esses itens e segue.
-  const ruleItemsFiltered = ruleItems.filter((i) => priceByCode.has(i.codigo_sinapi));
+  const ruleItemsFiltered = ruleItems.filter(
+    (i) => i.preco_unitario_custom || priceByCode.has(i.codigo_sinapi),
+  );
   const discDropped = ruleItems.length - ruleItemsFiltered.length;
 
   // 4. Compute next versão
@@ -174,24 +198,44 @@ export async function generateBudgetAction(
     .limit(1);
   const nextVersao = ((existingBudgets?.[0]?.versao as number | undefined) ?? 0) + 1;
 
-  // 5. Compute totals
+  // 5. Compute totals — handle SINAPI vs custom origin
   const itemsForInsert = ruleItemsFiltered.map((item, idx) => {
-    const sinapi = priceByCode.get(item.codigo_sinapi)!;
-    const precoUnitario = new Big(sinapi.preco);
+    let precoUnitario: Big;
+    let unidade: string;
+    let origem: "sinapi" | "custom";
+
+    if (item.preco_unitario_custom) {
+      precoUnitario = item.preco_unitario_custom;
+      unidade = item.unidade;
+      origem = "custom";
+    } else {
+      const sinapi = priceByCode.get(item.codigo_sinapi)!;
+      precoUnitario = new Big(sinapi.preco);
+      unidade = sinapi.unidade;
+      origem = "sinapi";
+    }
     return {
       ordem: idx + 1,
       composicao_codigo: item.codigo_sinapi,
       descricao: item.descricao_local,
-      unidade: sinapi.unidade,
+      unidade,
       quantidade: item.quantidade.round(4, Big.roundHalfUp).toFixed(4),
       preco_unitario: precoUnitario.round(4, Big.roundHalfUp).toFixed(4),
-      total_calc: item.quantidade.times(precoUnitario), // só pra somar — o banco gera o stored
-      origem: "sinapi" as const,
+      total_calc: item.quantidade.times(precoUnitario),
+      origem,
       disciplina: item.disciplina ?? "architectural",
     };
   });
   const totalBruto = sumMoney(itemsForInsert.map((i) => i.total_calc));
   const totalComBdi = applyBdi(totalBruto, bdi_pct);
+
+  // 5b. Sanity check vs CUB — warn no observações se fora da faixa esperada.
+  //     CUB é base de custo (sem BDI), então comparamos com total bruto.
+  const cubCheck = checkOrcamentoVsCub(
+    Number(totalBruto.toString()),
+    extracao.area_total_m2 ?? 0,
+    extracao.padrao_construtivo ?? null,
+  );
 
   // 6. Insert budget
   const { data: budget, error: budgetErr } = await supabase
@@ -206,13 +250,14 @@ export async function generateBudgetAction(
       total_bruto: toDbNumeric(totalBruto),
       total_com_bdi: toDbNumeric(totalComBdi),
       observacoes: [
-        `Gerado automaticamente (rules ${RULES_VERSION}+${DISCIPLINE_RULES_VERSION}).`,
+        `Gerado automaticamente (rules ${RULES_VERSION_V2}+${DISCIPLINE_RULES_VERSION}).`,
         electricalConfirmed ? "Inclui itens elétricos." : null,
         hydraulicConfirmed ? "Inclui itens hidráulicos." : null,
         structuralConfirmed ? "Inclui itens estruturais." : null,
         discDropped > 0
           ? `${discDropped} item(ns) de disciplinas complementares descartados por falta de preço SINAPI.`
           : null,
+        cubCheck.msg ? `⚠ ${cubCheck.msg}` : null,
       ]
         .filter(Boolean)
         .join(" "),
