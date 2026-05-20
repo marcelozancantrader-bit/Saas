@@ -5,11 +5,11 @@ import Big from "big.js";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import {
-  applyRulesV2,
-  checkOrcamentoVsCub,
-  RULES_VERSION_V2,
-  type ExtractedPlantaV2,
-} from "@/lib/budget/rules/v2";
+  applyRulesV3,
+  checkOrcamentoVsCubV3,
+  RULES_VERSION_V3,
+  type ExtractedPlantaV3,
+} from "@/lib/budget/rules/v3";
 import {
   DISCIPLINE_RULES_VERSION,
   rulesElectricalSinapi,
@@ -62,9 +62,9 @@ export async function generateBudgetAction(
 
   const meta = (project.meta ?? {}) as Record<string, unknown>;
   const extracao = meta.extracao_planta as
-    | (ExtractedPlantaV2 & {
+    | (ExtractedPlantaV3 & {
         confirmed_by_user?: boolean;
-        ambientes?: ExtractedPlantaV2["ambientes"];
+        ambientes?: ExtractedPlantaV3["ambientes"];
       })
     | undefined;
 
@@ -94,7 +94,7 @@ export async function generateBudgetAction(
 
   // 2. Apply rules v2 (cobertura ampliada: estrutura, bancadas, acabamentos lineares,
   //    serviços preliminares, limpeza final, elementos especiais, fator padrão construtivo)
-  const planta: ExtractedPlantaV2 = {
+  const planta: ExtractedPlantaV3 = {
     area_total_m2: extracao.area_total_m2,
     numero_pavimentos: extracao.numero_pavimentos ?? 1,
     tipologia: extracao.tipologia,
@@ -109,7 +109,7 @@ export async function generateBudgetAction(
       area_servico_externa: false,
     },
   };
-  const archItems = applyRulesV2(planta);
+  const archItems = applyRulesV3(planta);
   if (archItems.length === 0) {
     return { ok: false, error: "Nenhuma regra retornou itens — verifique os dados da planta." };
   }
@@ -231,7 +231,7 @@ export async function generateBudgetAction(
 
   // 5b. Sanity check vs CUB — warn no observações se fora da faixa esperada.
   //     CUB é base de custo (sem BDI), então comparamos com total bruto.
-  const cubCheck = checkOrcamentoVsCub(
+  const cubCheck = checkOrcamentoVsCubV3(
     Number(totalBruto.toString()),
     extracao.area_total_m2 ?? 0,
     extracao.padrao_construtivo ?? null,
@@ -250,7 +250,7 @@ export async function generateBudgetAction(
       total_bruto: toDbNumeric(totalBruto),
       total_com_bdi: toDbNumeric(totalComBdi),
       observacoes: [
-        `Gerado automaticamente (rules ${RULES_VERSION_V2}+${DISCIPLINE_RULES_VERSION}).`,
+        `Gerado automaticamente (rules ${RULES_VERSION_V3}+${DISCIPLINE_RULES_VERSION}).`,
         electricalConfirmed ? "Inclui itens elétricos." : null,
         hydraulicConfirmed ? "Inclui itens hidráulicos." : null,
         structuralConfirmed ? "Inclui itens estruturais." : null,
