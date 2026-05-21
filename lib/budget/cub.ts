@@ -79,7 +79,7 @@ export async function getCubFaixa(uf: string, padrao: CubPadrao, mes?: Date): Pr
 }
 
 export type CubCheckResult = {
-  status: "ok" | "below" | "above";
+  status: "ok" | "below" | "above" | "inconclusive";
   porM2: number;
   ratio: number;
   faixa: CubFaixa;

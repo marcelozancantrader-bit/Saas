@@ -117,6 +117,12 @@ export function ExtractionReview({
     .filter(([, v]) => v)
     .map(([k]) => k.replace(/_/g, " "));
 
+  // Avisos críticos pra mostrar antes da revisão
+  const areaIsMissing = !areaTotal || Number(areaTotal) <= 0;
+  const padraoIsMissing = !padrao;
+  const lowConfidence = extraction.confianca === "baixa";
+  const showCriticalAlert = areaIsMissing || padraoIsMissing;
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -135,6 +141,42 @@ export function ExtractionReview({
           <span className="text-xs text-zinc-500">custo IA: ${usdCost.toFixed(4)}</span>
         ) : null}
       </div>
+
+      {showCriticalAlert && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/30">
+          <p className="font-medium text-amber-900 dark:text-amber-200">
+            ⚠ A IA não conseguiu extrair{" "}
+            {areaIsMissing && padraoIsMissing
+              ? "a área total e o padrão construtivo"
+              : areaIsMissing
+                ? "a área total"
+                : "o padrão construtivo"}{" "}
+            da planta
+          </p>
+          <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+            {areaIsMissing && (
+              <>
+                Sem a <strong>área total</strong>, o orçamento SINAPI fica subdimensionado e o check
+                vs CUB não funciona.{" "}
+              </>
+            )}
+            {padraoIsMissing && (
+              <>
+                Sem o <strong>padrão construtivo</strong>, a precificação de revestimentos e a
+                comparação com o CUB ficam imprecisas.{" "}
+              </>
+            )}
+            Edite os campos abaixo manualmente antes de confirmar.
+          </p>
+        </div>
+      )}
+
+      {lowConfidence && !showCriticalAlert && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+          🤖 IA marcou esta extração como <strong>confiança baixa</strong> — revise com atenção os
+          valores antes de confirmar (sobretudo área total e padrão construtivo).
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">

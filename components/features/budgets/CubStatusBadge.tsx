@@ -18,13 +18,11 @@ function brl(v: number) {
 }
 
 export async function CubStatusBadge({ uf, padrao, areaM2, totalBruto, mes }: Props) {
-  if (!padrao || !areaM2 || areaM2 <= 0 || totalBruto <= 0) {
-    return null;
-  }
+  if (!padrao) return null;
 
   const result = await checkOrcamentoVsCubEstadual({
     total: totalBruto,
-    area: areaM2,
+    area: areaM2 ?? 0,
     padrao,
     uf,
     mes,
@@ -52,6 +50,13 @@ export async function CubStatusBadge({ uf, padrao, areaM2, totalBruto, mes }: Pr
       iconColor: "text-rose-600 dark:text-rose-400",
       title: "Orçamento acima do CUB",
     },
+    inconclusive: {
+      color:
+        "border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-100",
+      icon: AlertTriangle,
+      iconColor: "text-zinc-500",
+      title: "CUB inconclusivo",
+    },
   };
 
   const cfg = config[result.status];
@@ -64,17 +69,19 @@ export async function CubStatusBadge({ uf, padrao, areaM2, totalBruto, mes }: Pr
         <div className="flex-1">
           <p className="text-sm font-semibold">{cfg.title}</p>
           <p className="mt-1 text-xs leading-relaxed">{result.msg}</p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-3">
-            <Stat label="Seu R$/m²" value={brl(result.porM2)} />
-            <Stat
-              label={`Faixa ${result.faixa.uf} (${result.faixa.padrao})`}
-              value={`${brl(result.faixa.faixa_min)} – ${brl(result.faixa.faixa_max)}`}
-            />
-            <Stat
-              label="Diferença do meio"
-              value={`${result.ratio >= 1 ? "+" : ""}${((result.ratio - 1) * 100).toFixed(0)}%`}
-            />
-          </div>
+          {result.status !== "inconclusive" && (
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              <Stat label="Seu R$/m²" value={brl(result.porM2)} />
+              <Stat
+                label={`Faixa ${result.faixa.uf} (${result.faixa.padrao})`}
+                value={`${brl(result.faixa.faixa_min)} – ${brl(result.faixa.faixa_max)}`}
+              />
+              <Stat
+                label="Diferença do meio"
+                value={`${result.ratio >= 1 ? "+" : ""}${((result.ratio - 1) * 100).toFixed(0)}%`}
+              />
+            </div>
+          )}
           {result.faixa.origem === "fallback" && (
             <p className="mt-2 text-[10px] italic opacity-75">
               ⚠ UF {uf.toUpperCase()} ainda não tem CUB cadastrado — usando faixa base SE/SP.
