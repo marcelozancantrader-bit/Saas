@@ -43,7 +43,42 @@ const SECTIONS = [
 
 export default async function AdminOverviewPage() {
   const me = await requirePlatformAdmin();
-  const m = await loadSaasOverviewMetrics();
+
+  let m: Awaited<ReturnType<typeof loadSaasOverviewMetrics>> | null = null;
+  let loadError: { message: string; stack?: string } | null = null;
+  try {
+    m = await loadSaasOverviewMetrics();
+  } catch (err) {
+    loadError = {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    };
+    console.error("[admin] loadSaasOverviewMetrics failed:", err);
+  }
+
+  if (!m) {
+    return (
+      <div className="space-y-6 text-zinc-100">
+        <h1 className="text-2xl font-semibold text-white">Visão geral do SaaS</h1>
+        <div className="rounded-lg border border-rose-900/40 bg-rose-950/20 p-4 text-sm">
+          <p className="font-medium text-rose-300">
+            loadSaasOverviewMetrics falhou. Mensagem real do servidor:
+          </p>
+          <pre className="mt-2 max-h-[200px] overflow-auto rounded bg-zinc-950 p-3 text-xs break-words whitespace-pre-wrap text-rose-200">
+            {loadError?.message ?? "(sem mensagem)"}
+          </pre>
+          {loadError?.stack && (
+            <details className="mt-2 text-[11px]">
+              <summary className="cursor-pointer text-zinc-400">Ver stack</summary>
+              <pre className="mt-2 max-h-[400px] overflow-auto whitespace-pre-wrap text-zinc-500">
+                {loadError.stack}
+              </pre>
+            </details>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const signupsDelta = calculateGrowthDelta(m.newSignupsThisMonth, m.newSignupsPrevMonth);
 
