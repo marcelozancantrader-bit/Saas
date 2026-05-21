@@ -10,7 +10,7 @@ const APP_PATH_PREFIXES = [
   "/billing",
   "/admin",
 ];
-const AUTH_PATHS = ["/login", "/signup"];
+const AUTH_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password"];
 
 function isAppPath(pathname: string): boolean {
   // "/" agora é a landing pública. Áreas autenticadas têm prefixo explícito.

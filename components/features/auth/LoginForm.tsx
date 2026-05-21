@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,7 +54,15 @@ export function LoginForm({ nextUrl }: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Senha</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">Senha</Label>
+          <Link
+            href="/forgot-password"
+            className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            Esqueci a senha
+          </Link>
+        </div>
         <div className="relative">
           <Input
             id="password"

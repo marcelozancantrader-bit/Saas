@@ -2,15 +2,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
-import { PLANS, PLAN_ORDER, formatBrlFromCents } from "@/lib/plans/limits";
 import { Logo } from "@/components/brand/Logo";
+import { RoiCalculator } from "@/components/features/landing/RoiCalculator";
+import { ComparisonTable } from "@/components/features/landing/ComparisonTable";
+import { GuaranteeBadge } from "@/components/features/landing/GuaranteeBadge";
+import { SocialProof } from "@/components/features/landing/SocialProof";
+import { PricingTable } from "@/components/features/landing/PricingTable";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Memorial.ai — Copiloto IA para arquitetos e engenheiros civis no Brasil",
+  title: "Memorial.ai — Memorial técnico em minutos, não semanas",
   description:
-    "Da planta ao contrato em horas, não semanas. Extração de planta por IA, orçamento SINAPI automático, 10 tipos de documento técnico e portal do cliente com aprovação digital. Plano Free sem cartão.",
+    "Copiloto de IA para arquitetos e engenheiros: extração de planta, 10 documentos técnicos por IA, orçamento SINAPI automático e portal do cliente com assinatura digital. Plano Free sem cartão.",
 };
 
 const DORES = [
@@ -89,7 +93,7 @@ const FUNCIONALIDADES = [
   {
     titulo: "Extração IA multi-disciplina",
     descricao:
-      "6 disciplinas suportadas: arquitetônica, elétrica, hidrossanitária, estrutural, gás e climatização.",
+      "6 disciplinas: arquitetônica, elétrica, hidrossanitária, estrutural, gás, climatização.",
   },
   {
     titulo: "10 documentos técnicos",
@@ -99,7 +103,7 @@ const FUNCIONALIDADES = [
   {
     titulo: "Orçamento SINAPI",
     descricao:
-      "Composição automática com preço do mês corrente, BDI configurável, breakdown por disciplina e curva ABC.",
+      "Composição automática, preço do mês corrente, BDI configurável, breakdown por disciplina e curva ABC.",
   },
   {
     titulo: "Análise NBR",
@@ -107,29 +111,28 @@ const FUNCIONALIDADES = [
       "Verificações automáticas contra NBR 12.722 e 15.575: pé-direito, áreas mínimas, ventilação.",
   },
   {
-    titulo: "Zoneamento por cidade",
+    titulo: "Zoneamento universal",
     descricao:
-      "5 capitais curadas (Curitiba, SP, POA, RJ, BH). Valida CA, TO, altura e vagas contra a zona do terreno.",
+      "5 capitais curadas (Curitiba/SP/POA/RJ/BH) + IA pra qualquer cidade BR. Valida CA, TO, altura, vagas.",
   },
   {
     titulo: "ART/RRT pré-preenchida",
-    descricao:
-      "Form pronto pra exportação, com dados do CAU/CREA, do cliente e da obra já populados.",
+    descricao: "Form pronto pra exportação, com dados do CAU/CREA, cliente e obra já populados.",
   },
   {
     titulo: "Portal do cliente",
     descricao:
-      "URL única por cliente. Sem login. Cliente lê documento, assina no canvas, fica prova legal.",
+      "URL única por cliente. Sem login. Cliente lê doc, assina no canvas, fica prova legal.",
   },
   {
     titulo: "Alteração de escopo formal",
     descricao:
-      "Cliente solicita → você precifica (R$ e prazo) → cliente assina aditivo. Soma ao contrato automaticamente.",
+      "Cliente solicita → você precifica → cliente assina aditivo. Soma ao contrato automático.",
   },
   {
     titulo: "Chat da planta (cliente)",
     descricao:
-      "Bot dentro do portal que responde perguntas do cliente sobre o próprio projeto. Roda em Claude Haiku.",
+      "Bot dentro do portal que responde dúvidas do cliente sobre o projeto. Custa centavos por pergunta.",
   },
   {
     titulo: "Branding completo",
@@ -144,7 +147,7 @@ const FUNCIONALIDADES = [
   {
     titulo: "Cobrança via PIX",
     descricao:
-      "Integração Asaas: assinatura, recorrência e webhooks. Sem fees de cartão, sem retorno de boleto.",
+      "Integração Asaas: assinatura recorrente, sem fees de cartão, sem retorno de boleto.",
   },
 ];
 
@@ -155,7 +158,7 @@ const FAQ = [
   },
   {
     q: "Quanto custa pra rodar?",
-    a: "Plano Free é gratuito (2 projetos, 3 docs/mês). Standard a R$ 199,90/mês cobre o autônomo médio. Pro a R$ 449,90 para volume maior. Veja os planos em detalhe abaixo.",
+    a: "Plano Free é gratuito (2 projetos, 3 docs/mês). Standard a R$ 199,90/mês cobre o autônomo médio. Pro a R$ 449,90 para volume maior. Veja os planos em detalhe acima.",
   },
   {
     q: "Funciona com plantas escaneadas / fotos?",
@@ -171,7 +174,15 @@ const FAQ = [
   },
   {
     q: "Tem integração com Revit / AutoCAD?",
-    a: "Hoje aceitamos PDF (qualquer software exporta). API pública e integração nativa com Revit estão no roadmap — sem data fechada ainda. Se for crítico pro seu fluxo, fale com a gente em suporte@memorial.ai.",
+    a: "Hoje aceitamos PDF (qualquer software exporta). API pública e integração nativa com Revit estão no roadmap — sem data fechada ainda. Se for crítico, fale com a gente em suporte@memorial.ai.",
+  },
+  {
+    q: "O documento gerado tem valor jurídico?",
+    a: "O conteúdo técnico fica sob sua responsabilidade profissional (ART/RRT). A assinatura digital do cliente no portal segue MP 2.200-2/2001 (ICP-Brasil) com IP, timestamp e hash, tornando-se prova legal em caso de disputa.",
+  },
+  {
+    q: "Meus clientes precisam criar conta?",
+    a: "Não. Você envia um link único por cliente (URL com token UUID); o cliente acessa, lê, assina e aprova sem nenhum cadastro. Funciona em qualquer celular.",
   },
 ];
 
@@ -205,6 +216,12 @@ export default async function HomePage() {
             >
               Planos
             </a>
+            <Link
+              href="/sobre"
+              className="hidden text-base text-zinc-700 hover:text-zinc-900 sm:block dark:text-zinc-300 dark:hover:text-zinc-50"
+            >
+              Sobre
+            </Link>
             <a
               href="#faq"
               className="hidden text-base text-zinc-700 hover:text-zinc-900 sm:block dark:text-zinc-300 dark:hover:text-zinc-50"
@@ -229,17 +246,15 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-blue-50 via-white to-white dark:from-blue-950/30 dark:via-zinc-950 dark:to-zinc-950" />
         <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 lg:py-24">
           <p className="text-sm tracking-wider text-blue-700 uppercase dark:text-blue-400">
-            Para arquitetos e engenheiros civis no Brasil
+            Para arquitetos e engenheiros civis · BR
           </p>
           <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Da planta ao contrato em <span className="text-blue-600 dark:text-blue-400">horas</span>
-            ,
-            <br className="hidden sm:block" /> não semanas.
+            Memorial técnico em <span className="text-blue-600 dark:text-blue-400">minutos</span>.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 sm:text-xl dark:text-zinc-400">
-            O copiloto de IA que extrai dados da planta, gera{" "}
-            <strong>10 documentos técnicos</strong>, monta o orçamento SINAPI completo e formaliza a
-            aprovação do cliente — tudo em uma sessão de trabalho.
+            Da planta ao contrato em uma sessão de trabalho. IA extrai a planta, gera{" "}
+            <strong>10 documentos técnicos</strong>, monta orçamento SINAPI e o cliente assina pelo
+            portal.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link href="/signup" className={buttonVariants({ size: "lg" })}>
@@ -250,16 +265,20 @@ export default async function HomePage() {
             </a>
           </div>
           <p className="mt-4 text-sm text-zinc-500">
-            Plano Free com 2 projetos e 3 documentos IA/mês. Sem cartão de crédito.
+            2 projetos e 3 docs IA grátis. Sem cartão de crédito. Sem fidelidade.
           </p>
 
+          <div className="mt-12">
+            <SocialProof />
+          </div>
+
           {/* Métricas */}
-          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="mx-auto mt-10 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4">
             {[
               { v: "31h", l: "economizadas por projeto" },
-              { v: "10", l: "tipos de documento por IA" },
+              { v: "10", l: "documentos por IA" },
               { v: "6", l: "disciplinas extraídas" },
-              { v: "LGPD", l: "compliance completo" },
+              { v: "60s", l: "extração da planta" },
             ].map((m) => (
               <div
                 key={m.l}
@@ -285,8 +304,8 @@ export default async function HomePage() {
             </p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Como funciona</h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Do upload do PDF ao contrato assinado pelo cliente. Tudo em uma plataforma única, sem
-              alternar entre Excel, Word, AutoCAD e WhatsApp.
+              Do upload do PDF ao contrato assinado. Tudo em uma plataforma, sem alternar entre
+              Excel, Word, AutoCAD e WhatsApp.
             </p>
           </div>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -308,13 +327,18 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ====== COMPARISON ====== */}
+      <ComparisonTable />
+
       {/* ====== DORES ====== */}
       <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
         <div className="text-center">
           <p className="text-sm tracking-wider text-blue-700 uppercase dark:text-blue-400">
             Onde você perde mais tempo
           </p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">O que a IA resolve</h2>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+            O que a IA resolve no detalhe
+          </h2>
         </div>
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {DORES.map((d) => (
@@ -337,6 +361,11 @@ export default async function HomePage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* ====== ROI INTERACTIVE ====== */}
+      <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
+        <RoiCalculator />
       </section>
 
       {/* ====== FUNCIONALIDADES ====== */}
@@ -372,113 +401,11 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ====== ROI ====== */}
-      <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-        <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-8 sm:p-12 dark:border-blue-900/50 dark:from-blue-950/40 dark:to-zinc-950">
-          <p className="text-sm tracking-wider text-blue-700 uppercase dark:text-blue-400">
-            Estimativa de retorno
-          </p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-            R$ 2.480 economizados por projeto
-          </h2>
-          <p className="mt-4 text-lg leading-relaxed text-zinc-700 dark:text-zinc-300">
-            Considerando o valor-hora típico de R$ 80 do profissional autônomo no Sul/Sudeste, e uma
-            carga média de <strong>31 horas por projeto</strong> em trabalho documental (memorial,
-            orçamento, proposta, contrato, ART/RRT, acompanhamento de aprovação).
-          </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg bg-white p-5 text-center dark:bg-zinc-900">
-              <p className="text-sm text-zinc-500">Standard (R$ 199,90/mês)</p>
-              <p className="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">ROI 1.140%</p>
-              <p className="mt-1 text-sm text-zinc-500">Com 1 projeto/mês</p>
-            </div>
-            <div className="rounded-lg bg-white p-5 text-center dark:bg-zinc-900">
-              <p className="text-sm text-zinc-500">Pro (R$ 449,90/mês)</p>
-              <p className="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">ROI 2.656%</p>
-              <p className="mt-1 text-sm text-zinc-500">Com 5 projetos/mês</p>
-            </div>
-            <div className="rounded-lg bg-white p-5 text-center dark:bg-zinc-900">
-              <p className="text-sm text-zinc-500">Tempo livre</p>
-              <p className="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">4 dias/mês</p>
-              <p className="mt-1 text-sm text-zinc-500">Pra captar novos clientes</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ====== GUARANTEE BADGES ====== */}
+      <GuaranteeBadge />
 
-      {/* ====== PLANOS ====== */}
-      <section
-        id="planos"
-        className="border-y border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40"
-      >
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <div className="text-center">
-            <p className="text-sm tracking-wider text-blue-700 uppercase dark:text-blue-400">
-              Planos
-            </p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              Comece grátis. Faça upgrade quando fizer sentido.
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Sem fidelidade. Cancele a qualquer momento dentro do app.
-            </p>
-          </div>
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {PLAN_ORDER.map((id) => {
-              const p = PLANS[id];
-              const isHighlighted = p.highlighted;
-              return (
-                <div
-                  key={id}
-                  className={[
-                    "relative flex flex-col rounded-xl border bg-white p-6 transition-all dark:bg-zinc-900",
-                    isHighlighted
-                      ? "border-blue-500 ring-2 ring-blue-500 dark:border-blue-500"
-                      : "border-zinc-200 dark:border-zinc-800",
-                  ].join(" ")}
-                >
-                  {isHighlighted ? (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-1 text-sm font-medium text-white">
-                      Recomendado
-                    </span>
-                  ) : null}
-                  <p className="text-lg font-semibold">{p.label}</p>
-                  <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{p.description}</p>
-                  <p className="mt-4 text-3xl font-bold">
-                    {formatBrlFromCents(p.priceCents)}
-                    {p.priceCents !== null && p.priceCents > 0 ? (
-                      <span className="ml-1 text-sm font-normal text-zinc-500">/mês</span>
-                    ) : null}
-                  </p>
-                  <ul className="mt-4 flex-1 space-y-2.5 text-base text-zinc-700 dark:text-zinc-300">
-                    {p.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2">
-                        <span className="mt-0.5 text-blue-600 dark:text-blue-400" aria-hidden>
-                          ✓
-                        </span>
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={id === "agency" ? "mailto:contato@memorial.ai" : "/signup"}
-                    className={buttonVariants({
-                      variant: isHighlighted ? "default" : "outline",
-                      className: "mt-6 w-full",
-                    })}
-                  >
-                    {id === "free"
-                      ? "Começar grátis"
-                      : id === "agency"
-                        ? "Falar com a equipe"
-                        : "Assinar"}
-                  </Link>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      {/* ====== PRICING TABLE COM FEATURE MATRIX ====== */}
+      <PricingTable />
 
       {/* ====== FAQ ====== */}
       <section id="faq" className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
@@ -506,6 +433,16 @@ export default async function HomePage() {
             </details>
           ))}
         </div>
+        <p className="mt-8 text-center text-sm text-zinc-500">
+          Outra dúvida?{" "}
+          <a
+            href="mailto:suporte@memorial.ai"
+            className="text-blue-700 hover:underline dark:text-blue-400"
+          >
+            suporte@memorial.ai
+          </a>{" "}
+          — respondemos em até 1 dia útil.
+        </p>
       </section>
 
       {/* ====== CTA FINAL ====== */}
@@ -544,6 +481,9 @@ export default async function HomePage() {
             <span className="text-sm text-zinc-500">© 2026</span>
           </div>
           <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
+            <Link href="/sobre" className="hover:underline">
+              Sobre
+            </Link>
             <Link href="/privacidade" className="hover:underline">
               Privacidade
             </Link>
