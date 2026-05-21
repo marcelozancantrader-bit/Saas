@@ -202,14 +202,19 @@ export default async function ClienteDetailPage({ params }: Props) {
       </div>
 
       {/* ====== KPIs RÁPIDOS ====== */}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Stat label="Projetos" value={projectsCount.toString()} />
-        <Stat label="Faturamento" value={formatBRL(totalContratos)} hint="soma de valor_contrato" />
+        <Stat label="Faturamento" value={formatBRL(totalContratos)} hint="soma dos contratos" />
         <Stat label="Docs aprovados" value={docsAprovados.toString()} />
         <Stat
-          label="Pendências"
-          value={(docsAguardando + escoposPendentes).toString()}
-          hint={`${docsAguardando} docs + ${escoposPendentes} escopo`}
+          label="Docs aguardando"
+          value={docsAguardando.toString()}
+          hint="enviados mas não respondidos"
+        />
+        <Stat
+          label="Alterações de escopo"
+          value={escoposPendentes.toString()}
+          hint="abertas no portal"
         />
       </div>
 

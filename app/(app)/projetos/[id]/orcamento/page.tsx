@@ -142,57 +142,73 @@ export default async function OrcamentosPage({ params }: Props) {
       </div>
 
       {extractionState === "missing" ? (
-        <Card>
-          <CardContent className="p-4 text-sm">
-            <p className="font-medium text-zinc-900 dark:text-zinc-50">
-              Falta subir a planta arquitetônica
-            </p>
-            <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-              O orçamento usa os dados da extração (área, ambientes, padrão) pra calcular
-              quantitativos SINAPI.
-            </p>
-            <Link
-              href={`/projetos/${projectId}?tab=planta`}
-              className="mt-3 inline-flex items-center text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-50"
-            >
-              Ir para Planta &amp; IA →
-            </Link>
+        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/20">
+          <CardContent className="flex items-start gap-3 p-4 text-sm">
+            <span className="mt-0.5 text-2xl" aria-hidden>
+              📐
+            </span>
+            <div className="flex-1">
+              <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                Passo 1 de 3 — Subir a planta arquitetônica
+              </p>
+              <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                O orçamento usa os dados da extração (área, ambientes, padrão) pra calcular
+                quantitativos SINAPI.
+              </p>
+              <Link
+                href={`/projetos/${projectId}?tab=planta`}
+                className="mt-3 inline-flex items-center text-sm font-medium text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+              >
+                Ir para Planta &amp; IA →
+              </Link>
+            </div>
           </CardContent>
         </Card>
       ) : extractionState === "needs_confirm" ? (
-        <Card>
-          <CardContent className="p-4 text-sm">
-            <p className="font-medium text-zinc-900 dark:text-zinc-50">
-              A extração já foi feita — falta confirmar
-            </p>
-            <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-              Volte ao projeto e clique em <b>&quot;Confirmar e atualizar projeto&quot;</b> no card{" "}
-              <b>&quot;Extração da planta (IA)&quot;</b>. Depois disso o orçamento libera.
-            </p>
-            <Link
-              href={`/projetos/${projectId}?tab=planta`}
-              className="mt-3 inline-flex items-center text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-50"
-            >
-              Confirmar a extração →
-            </Link>
+        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20">
+          <CardContent className="flex items-start gap-3 p-4 text-sm">
+            <span className="mt-0.5 text-2xl" aria-hidden>
+              ⏳
+            </span>
+            <div className="flex-1">
+              <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                Passo 2 de 3 — Confirmar a extração da planta
+              </p>
+              <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                A IA já leu sua planta. Volte e clique em{" "}
+                <b>&quot;Confirmar e atualizar projeto&quot;</b> no card{" "}
+                <b>&quot;Extração da planta (IA)&quot;</b>.
+              </p>
+              <Link
+                href={`/projetos/${projectId}?tab=planta`}
+                className="mt-3 inline-flex items-center text-sm font-medium text-amber-700 underline-offset-2 hover:underline dark:text-amber-400"
+              >
+                Confirmar a extração →
+              </Link>
+            </div>
           </CardContent>
         </Card>
       ) : extractionState === "needs_area" ? (
-        <Card>
-          <CardContent className="p-4 text-sm">
-            <p className="font-medium text-zinc-900 dark:text-zinc-50">
-              Falta a área total no card de extração
-            </p>
-            <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-              Edite o campo &quot;Área total (m²)&quot; e re-confirme — o orçamento precisa do valor
-              pra estimar quantitativos.
-            </p>
-            <Link
-              href={`/projetos/${projectId}?tab=planta`}
-              className="mt-3 inline-flex items-center text-sm font-medium text-zinc-900 underline-offset-2 hover:underline dark:text-zinc-50"
-            >
-              Editar extração →
-            </Link>
+        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20">
+          <CardContent className="flex items-start gap-3 p-4 text-sm">
+            <span className="mt-0.5 text-2xl" aria-hidden>
+              📏
+            </span>
+            <div className="flex-1">
+              <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                Falta a área total no card de extração
+              </p>
+              <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                Edite o campo &quot;Área total (m²)&quot; e re-confirme — o orçamento precisa do
+                valor pra estimar quantitativos.
+              </p>
+              <Link
+                href={`/projetos/${projectId}?tab=planta`}
+                className="mt-3 inline-flex items-center text-sm font-medium text-amber-700 underline-offset-2 hover:underline dark:text-amber-400"
+              >
+                Editar extração →
+              </Link>
+            </div>
           </CardContent>
         </Card>
       ) : null}

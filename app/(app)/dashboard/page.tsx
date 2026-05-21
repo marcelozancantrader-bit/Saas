@@ -94,7 +94,7 @@ export default async function DashboardPage() {
       {/* ============== HEADER ============== */}
       <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-medium tracking-wider text-blue-700 uppercase dark:text-blue-400">
+          <p className="text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400">
             {greeting()}, {firstName}
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -213,7 +213,7 @@ export default async function DashboardPage() {
                       {total30d === 1 ? "projeto criado" : "projetos criados"}
                     </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-right text-[11px]">
+                  <div className="grid grid-cols-2 gap-3 text-right text-xs">
                     <div>
                       <p className="text-zinc-500">Pico/dia</p>
                       <p className="font-semibold text-zinc-800 tabular-nums dark:text-zinc-200">
@@ -303,28 +303,28 @@ export default async function DashboardPage() {
           <ShortcutCard
             href="/projetos/novo"
             label="Novo projeto"
-            sub="Cliente + planta + docs"
+            sub="Crie em segundos"
             icon={Plus}
             tone="blue"
           />
           <ShortcutCard
             href="/clientes/novo"
             label="Novo cliente"
-            sub="PF ou PJ + portal"
+            sub="Pessoa física ou jurídica"
             icon={Plus}
             tone="emerald"
           />
           <ShortcutCard
             href="/projetos"
             label="Ver projetos"
-            sub="Lista completa"
+            sub="Lista completa com filtros"
             icon={Briefcase}
             tone="violet"
           />
           <ShortcutCard
             href="/configuracoes"
-            label="Branding"
-            sub="Logo, cores, ART"
+            label="Personalizar branding"
+            sub="Logo, cores, dados profissionais"
             icon={Sparkles}
             tone="amber"
           />

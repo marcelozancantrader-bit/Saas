@@ -281,7 +281,7 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
       key: "briefing",
       label: "Briefing (opcional)",
       badge:
-        briefingStatus === "preenchido" ? "✓" : briefingStatus === "aguardando" ? "…" : undefined,
+        briefingStatus === "preenchido" ? "✓" : briefingStatus === "aguardando" ? "⏱" : undefined,
     },
     { key: "art-rrt", label: "ART/RRT" },
     { key: "escopo", label: "Alterações", badge: escopoPendentes || undefined },
