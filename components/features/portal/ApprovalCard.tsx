@@ -73,16 +73,15 @@ export function ApprovalCard({ portalToken, projectId, document, tipoLabel }: Pr
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         <p className="text-zinc-700 dark:text-zinc-300">
-          Leia o documento na íntegra antes de aprovar. Para baixar uma cópia em PDF, abra o link
-          enviado por e-mail. Sua decisão é registrada com data, hora, IP e assinatura digital para
-          validade jurídica.
+          Leia o documento antes de aprovar. Sua decisão é registrada com data, hora e identificador
+          único — tem o mesmo valor de uma assinatura no papel.
         </p>
 
         <div className="space-y-2">
           <label className="text-xs font-medium tracking-wider text-zinc-500 uppercase">
             Sua assinatura
           </label>
-          <SignatureCanvas onChange={setSignature} />
+          <SignatureCanvas onChange={setSignature} required />
         </div>
 
         <label className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-300">
@@ -92,10 +91,7 @@ export function ApprovalCard({ portalToken, projectId, document, tipoLabel }: Pr
             checked={accepted}
             onChange={(e) => setAccepted(e.target.checked)}
           />
-          <span>
-            Declaro que li o documento e concordo com seu conteúdo. Esta aprovação tem valor
-            jurídico equivalente à assinatura física conforme MP 2.200-2/2001.
-          </span>
+          <span>Declaro que li e concordo com o documento. (Validade legal — MP 2.200-2/2001)</span>
         </label>
 
         {showRejectBox ? (

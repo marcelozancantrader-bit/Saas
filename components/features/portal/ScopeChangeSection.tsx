@@ -85,8 +85,9 @@ export function ScopeChangeSection({ portalToken, projectId, scopeChanges }: Pro
         <div>
           <h2 className="text-lg font-semibold">Alterações de escopo</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Pediu para acrescentar uma sacada, mudar o piso, refazer o projeto elétrico? Use este
-            canal — fica tudo registrado e o aditivo é calculado automaticamente.
+            Quer acrescentar uma sacada, mudar o piso, refazer o elétrico? Peça aqui. Seu
+            profissional avalia, define um valor extra (chamado <em>aditivo</em>) e você aprova com
+            assinatura — tudo registrado.
           </p>
         </div>
         <Button onClick={() => setShowForm((s) => !s)} variant={showForm ? "outline" : "default"}>

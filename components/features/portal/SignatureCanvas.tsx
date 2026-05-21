@@ -7,6 +7,8 @@ type Props = {
   width?: number;
   height?: number;
   onChange?: (dataUrl: string | null) => void;
+  /** Quando true e ainda sem assinatura, mostra borda âmbar pedindo atenção. */
+  required?: boolean;
 };
 
 /**
@@ -14,7 +16,7 @@ type Props = {
  * Devolve `dataUrl` (image/png base64) via onChange quando a assinatura
  * está completa, ou null quando o pad está limpo.
  */
-export function SignatureCanvas({ width = 480, height = 160, onChange }: Props) {
+export function SignatureCanvas({ width = 480, height = 160, onChange, required }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -86,6 +88,8 @@ export function SignatureCanvas({ width = 480, height = 160, onChange }: Props) 
     onChange?.(null);
   }
 
+  const needsSignature = required && !hasSignature;
+
   return (
     <div className="space-y-2">
       <canvas
@@ -96,12 +100,28 @@ export function SignatureCanvas({ width = 480, height = 160, onChange }: Props) 
         onPointerMove={moveStroke}
         onPointerUp={endStroke}
         onPointerCancel={endStroke}
-        className="w-full max-w-full touch-none rounded border border-zinc-300 bg-white dark:border-zinc-700"
+        className={`w-full max-w-full touch-none rounded-md border-2 bg-white transition-colors ${
+          needsSignature
+            ? "border-amber-400 dark:border-amber-600"
+            : hasSignature
+              ? "border-emerald-400 dark:border-emerald-700"
+              : "border-zinc-300 dark:border-zinc-700"
+        }`}
         style={{ aspectRatio: `${width} / ${height}` }}
-        aria-label="Pad de assinatura"
+        aria-label="Canvas pra desenhar sua assinatura digital"
       />
-      <div className="flex items-center justify-between text-xs text-zinc-500">
-        <span>{hasSignature ? "Assinado" : "Desenhe sua assinatura acima"}</span>
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span
+          className={
+            hasSignature
+              ? "font-medium text-emerald-700 dark:text-emerald-400"
+              : needsSignature
+                ? "font-medium text-amber-700 dark:text-amber-400"
+                : "text-zinc-500"
+          }
+        >
+          {hasSignature ? "✓ Assinado" : "Toque ou desenhe abaixo pra assinar"}
+        </span>
         <Button type="button" variant="outline" size="sm" onClick={clear} disabled={!hasSignature}>
           Limpar
         </Button>

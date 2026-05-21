@@ -104,13 +104,18 @@ export default async function PortalPage({ params }: Props) {
           <BriefingForm portalToken={token} projectId={project.id} />
         </section>
       ) : briefing?.status === "preenchido" ? (
-        <Card className="mt-8">
-          <CardContent className="p-4 text-sm text-zinc-600 dark:text-zinc-400">
-            ✅ Briefing enviado em{" "}
-            {briefing.preenchido_em
-              ? new Date(briefing.preenchido_em).toLocaleString("pt-BR")
-              : "data desconhecida"}
-            . O profissional já tem suas respostas.
+        <Card className="mt-8 border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+          <CardContent className="p-4 text-sm">
+            <p className="font-medium text-emerald-900 dark:text-emerald-100">
+              ✅ Briefing enviado{" "}
+              {briefing.preenchido_em
+                ? `em ${new Date(briefing.preenchido_em).toLocaleString("pt-BR")}`
+                : ""}
+            </p>
+            <p className="mt-1 text-emerald-800 dark:text-emerald-200">
+              {organization.nome} está revisando suas respostas. Volte aqui quando tiver novidades —
+              vamos avisar por e-mail também.
+            </p>
           </CardContent>
         </Card>
       ) : null}
@@ -182,8 +187,14 @@ export default async function PortalPage({ params }: Props) {
 
       <ScopeChangeSection portalToken={token} projectId={project.id} scopeChanges={scope_changes} />
 
-      <footer className="mt-12 text-center text-xs text-zinc-500">
-        Memorial.ai — portal seguro do projeto. Link único e pessoal: não compartilhe.
+      <footer className="mt-12 space-y-2 border-t border-zinc-200 pt-6 text-center text-xs text-zinc-500 dark:border-zinc-800">
+        <p>
+          Dúvidas sobre o projeto? Fale diretamente com{" "}
+          <strong className="text-zinc-700 dark:text-zinc-300">{organization.nome}</strong>.
+        </p>
+        <p className="text-zinc-400">
+          Portal seguro · Link pessoal e único — não compartilhe · Memorial.ai
+        </p>
       </footer>
     </main>
   );
