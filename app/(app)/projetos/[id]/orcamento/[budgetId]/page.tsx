@@ -10,7 +10,9 @@ import { BudgetHeader } from "@/components/features/budgets/BudgetHeader";
 import { CurvaABC } from "@/components/features/budgets/CurvaABC";
 import { ExportButtons } from "@/components/features/budgets/ExportButtons";
 import { RegenerateBudgetButton } from "@/components/features/budgets/RegenerateBudgetButton";
+import { CubStatusBadge } from "@/components/features/budgets/CubStatusBadge";
 import { DISCIPLINA_LABEL, type Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
+import type { CubPadrao } from "@/lib/budget/cub";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +66,11 @@ export default async function BudgetDetailPage({ params }: Props) {
         .eq("budget_id", budgetId)
         .order("ordem", { ascending: true })
         .returns<BudgetItem[]>(),
-      supabase.from("projects").select("nome").eq("id", projectId).single(),
+      supabase
+        .from("projects")
+        .select("nome, padrao_construtivo, meta")
+        .eq("id", projectId)
+        .single(),
     ]);
 
   if (budgetErr || !budget) notFound();
@@ -91,6 +97,20 @@ export default async function BudgetDetailPage({ params }: Props) {
       [Disciplina, { bruto: Big; comBdi: Big; count: number }]
     >
   ).sort((a, b) => b[1].comBdi.cmp(a[1].comBdi));
+
+  // CUB check data
+  const projectAny = project as unknown as {
+    nome: string;
+    padrao_construtivo?: CubPadrao | null;
+    meta?: Record<string, unknown> | null;
+  } | null;
+  const extracao = projectAny?.meta?.extracao_planta as
+    | { area_total_m2?: number | null; padrao_construtivo?: CubPadrao | null }
+    | undefined;
+  const cubPadrao: CubPadrao | null =
+    extracao?.padrao_construtivo ?? projectAny?.padrao_construtivo ?? null;
+  const cubAreaM2 = extracao?.area_total_m2 ?? null;
+  const cubTotalBruto = Number(budget.total_bruto);
 
   return (
     <div className="space-y-6">
@@ -134,6 +154,16 @@ export default async function BudgetDetailPage({ params }: Props) {
       </div>
 
       <BudgetHeader budget={budget} />
+
+      {cubPadrao && cubAreaM2 ? (
+        <CubStatusBadge
+          uf={budget.uf}
+          padrao={cubPadrao}
+          areaM2={cubAreaM2}
+          totalBruto={cubTotalBruto}
+          mes={new Date(budget.mes_referencia)}
+        />
+      ) : null}
 
       {subtotaisOrdenados.length > 1 ? (
         <Card>

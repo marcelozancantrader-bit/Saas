@@ -4,12 +4,7 @@ import { revalidatePath } from "next/cache";
 import Big from "big.js";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import {
-  applyRulesV3,
-  checkOrcamentoVsCubV3,
-  RULES_VERSION_V3,
-  type ExtractedPlantaV3,
-} from "@/lib/budget/rules/v3";
+import { applyRulesV3, RULES_VERSION_V3, type ExtractedPlantaV3 } from "@/lib/budget/rules/v3";
 import {
   DISCIPLINE_RULES_VERSION,
   rulesElectricalSinapi,
@@ -20,6 +15,7 @@ import {
   type StructuralData,
 } from "@/lib/budget/rules/disciplines.v1";
 import { applyBdi, sumMoney, toDbNumeric } from "@/lib/utils/money";
+import { checkOrcamentoVsCubEstadual, type CubPadrao } from "@/lib/budget/cub";
 
 const generateSchema = z.object({
   project_id: z.string().uuid(),
@@ -255,13 +251,19 @@ export async function generateBudgetAction(
   const totalBruto = sumMoney(itemsForInsert.map((i) => i.total_calc));
   const totalComBdi = applyBdi(totalBruto, bdi_pct);
 
-  // 5b. Sanity check vs CUB — warn no observações se fora da faixa esperada.
+  // 5b. Sanity check vs CUB ESTADUAL — busca faixa por UF + padrão + mês em DB.
   //     CUB é base de custo (sem BDI), então comparamos com total bruto.
-  const cubCheck = checkOrcamentoVsCubV3(
-    Number(totalBruto.toString()),
-    extracao.area_total_m2 ?? 0,
-    extracao.padrao_construtivo ?? null,
-  );
+  //     Fallback automático pra faixa hard-coded se UF não cadastrada (lib/budget/cub.ts).
+  const cubCheck =
+    extracao.padrao_construtivo && extracao.area_total_m2
+      ? await checkOrcamentoVsCubEstadual({
+          total: Number(totalBruto.toString()),
+          area: extracao.area_total_m2,
+          padrao: extracao.padrao_construtivo as CubPadrao,
+          uf,
+          mes: new Date(mes_referencia),
+        })
+      : null;
 
   // 6. Insert budget
   const { data: budget, error: budgetErr } = await supabase
@@ -296,7 +298,8 @@ export async function generateBudgetAction(
         (extracao.ambientes?.length ?? 0) === 0
           ? "⚠ Nenhum ambiente detectado na planta — pontos elétricos/hidráulicos, louças, bancadas e revestimento de parede ficaram zerados. Re-suba a planta arquitetônica."
           : null,
-        cubCheck.msg ? `⚠ ${cubCheck.msg}` : null,
+        cubCheck && cubCheck.status !== "ok" ? `⚠ ${cubCheck.msg}` : null,
+        cubCheck && cubCheck.status === "ok" ? `✓ ${cubCheck.msg}` : null,
       ]
         .filter(Boolean)
         .join(" "),

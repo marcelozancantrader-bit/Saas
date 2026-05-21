@@ -14,7 +14,9 @@ import { createClient } from "@/lib/supabase/server";
 import { formatBRL } from "@/lib/utils/money";
 import { GenerateBudgetButton } from "@/components/features/budgets/GenerateBudgetButton";
 import { BudgetDisciplinasCard } from "@/components/features/budgets/BudgetDisciplinasCard";
+import { CubPreviewCard } from "@/components/features/budgets/CubPreviewCard";
 import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
+import type { CubPadrao } from "@/lib/budget/cub";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +41,7 @@ export default async function OrcamentosPage({ params }: Props) {
 
   const { data: project, error } = await supabase
     .from("projects")
-    .select("id, nome, meta")
+    .select("id, nome, meta, endereco_completo, padrao_construtivo")
     .eq("id", projectId)
     .single();
   if (error || !project) notFound();
@@ -54,9 +56,23 @@ export default async function OrcamentosPage({ params }: Props) {
     .returns<BudgetRow[]>();
 
   const extracao = (project.meta as Record<string, unknown> | null)?.extracao_planta as
-    | { confirmed_by_user?: boolean; area_total_m2?: number | null }
+    | {
+        confirmed_by_user?: boolean;
+        area_total_m2?: number | null;
+        padrao_construtivo?: CubPadrao | null;
+      }
     | undefined;
   const canGenerate = !!extracao?.confirmed_by_user && !!extracao.area_total_m2;
+
+  // UF da obra — tenta extrair do endereço completo, fallback SP
+  const projectAny = project as unknown as {
+    endereco_completo?: string | null;
+    padrao_construtivo?: CubPadrao | null;
+  };
+  const ufMatch = projectAny.endereco_completo?.match(/\b([A-Z]{2})\b/);
+  const obraUf = ufMatch?.[1] ?? "SP";
+  const cubPadrao: CubPadrao | null =
+    extracao?.padrao_construtivo ?? projectAny.padrao_construtivo ?? null;
 
   // Diferencia "sem extração" de "extração pendente confirmação" para mensagens específicas.
   const extractionState: "missing" | "needs_confirm" | "needs_area" | "ready" = !extracao
@@ -142,6 +158,8 @@ export default async function OrcamentosPage({ params }: Props) {
           </CardContent>
         </Card>
       ) : null}
+
+      <CubPreviewCard uf={obraUf} padrao={cubPadrao} areaM2={extracao?.area_total_m2 ?? null} />
 
       <BudgetDisciplinasCard extracoes={extracoesDisciplinas} />
 
