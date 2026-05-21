@@ -53,3 +53,6 @@ next-env.d.ts
 .idea/
 
 .vercel
+
+# Claude Code — local overrides (permissions, hooks, etc) específicos por máquina
+.claude/settings.local.json
