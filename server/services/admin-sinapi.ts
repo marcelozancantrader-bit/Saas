@@ -12,12 +12,15 @@ export type SinapiStats = {
 export async function loadSinapiStats(): Promise<SinapiStats> {
   const supabase = createAdminClient();
 
+  // PostgREST limita a 1000 rows default — sem range explícito o stats
+  // mostra UF/codes incompletos quando a base tem >1000 linhas.
   const [{ count: totalRows }, { data: distinct }] = await Promise.all([
     supabase.from("sinapi_compositions").select("codigo", { count: "exact", head: true }),
     supabase
       .from("sinapi_compositions")
       .select("codigo, uf, mes_referencia")
-      .order("mes_referencia", { ascending: false }),
+      .order("mes_referencia", { ascending: false })
+      .range(0, 99999),
   ]);
 
   const rows = ((distinct as { codigo: string; uf: string; mes_referencia: string }[] | null) ??

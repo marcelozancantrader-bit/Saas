@@ -21,11 +21,15 @@ export type SinapiCatalog = {
  */
 export async function loadSinapiCatalog(): Promise<SinapiCatalog> {
   const supabase = createAdminClient();
+  // PostgREST limita a 1000 rows por default. Como a base SINAPI tem
+  // ~2.5k+ rows (27 UFs × ~48 códigos × 2 regimes), precisa range explícito
+  // ou só os primeiros 10 UFs alfabéticos aparecem.
   const { data } = await supabase
     .from("sinapi_compositions")
     .select("uf, mes_referencia")
     .order("uf", { ascending: true })
-    .order("mes_referencia", { ascending: false });
+    .order("mes_referencia", { ascending: false })
+    .range(0, 99999);
 
   if (!data) return { ufs: [], mesesPorUf: {}, latestMesPorUf: {} };
 
