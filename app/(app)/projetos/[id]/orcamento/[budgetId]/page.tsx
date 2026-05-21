@@ -10,6 +10,7 @@ import { BudgetHeader } from "@/components/features/budgets/BudgetHeader";
 import { CurvaABC } from "@/components/features/budgets/CurvaABC";
 import { ExportButtons } from "@/components/features/budgets/ExportButtons";
 import { RegenerateBudgetButton } from "@/components/features/budgets/RegenerateBudgetButton";
+import { loadSinapiCatalog } from "@/lib/budget/sinapi-options";
 import { CubStatusBadge } from "@/components/features/budgets/CubStatusBadge";
 import { DISCIPLINA_LABEL, type Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 import type { CubPadrao } from "@/lib/budget/cub";
@@ -76,6 +77,8 @@ export default async function BudgetDetailPage({ params }: Props) {
   if (budgetErr || !budget) notFound();
   if (budget.project_id !== projectId) notFound();
 
+  const sinapiCatalog = await loadSinapiCatalog();
+
   const itemsList = items ?? [];
 
   const bdi = new Big(budget.bdi_pct);
@@ -139,6 +142,8 @@ export default async function BudgetDetailPage({ params }: Props) {
                 desonerado: budget.desonerado,
                 bdi_pct: Number(budget.bdi_pct),
               }}
+              availableUfs={sinapiCatalog.ufs}
+              mesesPorUf={sinapiCatalog.mesesPorUf}
             />
             <ExportButtons
               budget={budget}

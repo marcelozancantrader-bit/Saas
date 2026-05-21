@@ -15,6 +15,7 @@ import { formatBRL } from "@/lib/utils/money";
 import { GenerateBudgetButton } from "@/components/features/budgets/GenerateBudgetButton";
 import { BudgetDisciplinasCard } from "@/components/features/budgets/BudgetDisciplinasCard";
 import { CubPreviewCard } from "@/components/features/budgets/CubPreviewCard";
+import { loadSinapiCatalog, inferUfFromEndereco } from "@/lib/budget/sinapi-options";
 import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 import type { CubPadrao } from "@/lib/budget/cub";
 
@@ -69,10 +70,16 @@ export default async function OrcamentosPage({ params }: Props) {
     endereco_completo?: string | null;
     padrao_construtivo?: CubPadrao | null;
   };
-  const ufMatch = projectAny.endereco_completo?.match(/\b([A-Z]{2})\b/);
-  const obraUf = ufMatch?.[1] ?? "SP";
+  const obraUf = inferUfFromEndereco(projectAny.endereco_completo);
   const cubPadrao: CubPadrao | null =
     extracao?.padrao_construtivo ?? projectAny.padrao_construtivo ?? null;
+
+  // SINAPI catalog — UFs e meses disponíveis no banco pro dropdown do Regerar
+  // e pra detectar mês mais recente da UF da obra (geração inicial).
+  const sinapiCatalog = await loadSinapiCatalog();
+  const ufHasData = sinapiCatalog.ufs.includes(obraUf);
+  const latestMes =
+    sinapiCatalog.latestMesPorUf[obraUf] ?? sinapiCatalog.latestMesPorUf.SP ?? "2026-05-01";
 
   // Diferencia "sem extração" de "extração pendente confirmação" para mensagens específicas.
   const extractionState: "missing" | "needs_confirm" | "needs_area" | "ready" = !extracao
@@ -99,8 +106,22 @@ export default async function OrcamentosPage({ params }: Props) {
         </Link>
         <div className="mt-1 flex items-end justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight">Orçamentos</h1>
-          <GenerateBudgetButton projectId={projectId} canGenerate={canGenerate} />
+          <GenerateBudgetButton
+            projectId={projectId}
+            canGenerate={canGenerate}
+            uf={obraUf}
+            mesReferencia={latestMes}
+            ufHasData={ufHasData}
+          />
         </div>
+        {canGenerate ? (
+          <p className="mt-1 text-xs text-zinc-500">
+            Será gerado pra {obraUf} · mês {latestMes.slice(0, 7)} · BDI 28% · desonerado.{" "}
+            <span className="text-zinc-400">
+              Pra mudar parâmetros, use &quot;Regerar&quot; após criar.
+            </span>
+          </p>
+        ) : null}
       </div>
 
       {extractionState === "missing" ? (

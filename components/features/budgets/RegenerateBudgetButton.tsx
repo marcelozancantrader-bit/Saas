@@ -35,16 +35,19 @@ type Props = {
     desonerado?: boolean;
     bdi_pct?: number;
   };
+  /** UFs com dados SINAPI cadastrados — vem do server (loadSinapiCatalog). */
+  availableUfs: string[];
+  /** Meses disponíveis por UF, do mais recente pro mais antigo. */
+  mesesPorUf: Record<string, string[]>;
   variant?: "default" | "outline" | "secondary";
   label?: string;
 };
 
-const UF_OPTIONS = ["SP"] as const;
-const MES_REF_OPTIONS = ["2026-05-01"] as const;
-
 export function RegenerateBudgetButton({
   projectId,
   defaults,
+  availableUfs,
+  mesesPorUf,
   variant = "outline",
   label = "Regerar orçamento",
 }: Props) {
@@ -52,12 +55,23 @@ export function RegenerateBudgetButton({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const [uf, setUf] = useState(defaults?.uf ?? "SP");
-  const [mesRef, setMesRef] = useState(defaults?.mes_referencia ?? "2026-05-01");
+  const fallbackUf = availableUfs[0] ?? "SP";
+  const [uf, setUf] = useState(defaults?.uf ?? fallbackUf);
+  const mesesParaUf = mesesPorUf[uf] ?? [];
+  const fallbackMes = mesesParaUf[0] ?? defaults?.mes_referencia ?? "2026-05-01";
+  const [mesRef, setMesRef] = useState(defaults?.mes_referencia ?? fallbackMes);
   const [desonerado, setDesonerado] = useState<"true" | "false">(
     defaults?.desonerado === false ? "false" : "true",
   );
   const [bdi, setBdi] = useState(defaults?.bdi_pct?.toString() ?? "28");
+
+  function changeUf(newUf: string) {
+    setUf(newUf);
+    const meses = mesesPorUf[newUf] ?? [];
+    if (meses.length > 0 && !meses.includes(mesRef)) {
+      setMesRef(meses[0]!);
+    }
+  }
 
   function handle() {
     const bdiNum = Number(bdi);
@@ -110,13 +124,13 @@ export function RegenerateBudgetButton({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="regen_uf">UF</Label>
-              <Select value={uf} onValueChange={(v) => v && setUf(v)} disabled={pending}>
+              <Select value={uf} onValueChange={(v) => v && changeUf(v)} disabled={pending}>
                 <SelectTrigger id="regen_uf">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {UF_OPTIONS.map((v) => (
+                    {availableUfs.map((v) => (
                       <SelectItem key={v} value={v}>
                         {v}
                       </SelectItem>
@@ -128,17 +142,25 @@ export function RegenerateBudgetButton({
 
             <div className="space-y-1.5">
               <Label htmlFor="regen_mes">Mês de referência</Label>
-              <Select value={mesRef} onValueChange={(v) => v && setMesRef(v)} disabled={pending}>
+              <Select
+                value={mesRef}
+                onValueChange={(v) => v && setMesRef(v)}
+                disabled={pending || mesesParaUf.length === 0}
+              >
                 <SelectTrigger id="regen_mes">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {MES_REF_OPTIONS.map((v) => (
-                      <SelectItem key={v} value={v}>
-                        {v.slice(0, 7)}
-                      </SelectItem>
-                    ))}
+                    {mesesParaUf.length === 0 ? (
+                      <SelectItem value={mesRef}>{mesRef.slice(0, 7)}</SelectItem>
+                    ) : (
+                      mesesParaUf.map((v) => (
+                        <SelectItem key={v} value={v}>
+                          {v.slice(0, 7)}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectGroup>
                 </SelectContent>
               </Select>
