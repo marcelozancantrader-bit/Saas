@@ -2,10 +2,8 @@ import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/auth/platform-admin";
 import { loadSaasOverviewMetrics, calculateGrowthDelta } from "@/server/services/admin-metrics";
 import { formatBrl, formatBrlCompact, formatPercent } from "@/lib/admin/saas-metrics";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MrrChart } from "@/components/features/admin-shell/MrrChart";
-import { PlanDistChart } from "@/components/features/admin-shell/PlanDistChart";
+import { AdminCharts } from "@/components/features/admin-shell/AdminCharts";
 import {
   Building2,
   Users,
@@ -187,15 +185,11 @@ export default async function AdminOverviewPage() {
         </div>
       </section>
 
-      {/* DIAGNÓSTICO: gráficos temporariamente removidos pra isolar crash em /admin.
-          Se a página renderizar, o problema estava no recharts SSR. */}
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-4 text-xs text-zinc-500">
-        Gráficos (MRR 12m, signups 12m, distribuição) desabilitados pra diagnóstico. Pontos no
-        histórico de MRR: {m.mrrHistory12m.length} · signups: {m.signupsHistory12m.length} · planos:{" "}
-        {planChartData.length}.
-      </section>
-
-      {/* PlanDistChart também desabilitado temporariamente */}
+      <AdminCharts
+        mrrHistory={m.mrrHistory12m}
+        signupsHistory={m.signupsHistory12m}
+        planChartData={planChartData}
+      />
 
       <section>
         <h2 className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase">

@@ -4,8 +4,7 @@ import { loadSaasOverviewMetrics } from "@/server/services/admin-metrics";
 import { formatBrl, formatBrlCompact, formatPercent } from "@/lib/admin/saas-metrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MrrChart } from "@/components/features/admin-shell/MrrChart";
-import { PlanDistChart } from "@/components/features/admin-shell/PlanDistChart";
+import { AdminCharts } from "@/components/features/admin-shell/AdminCharts";
 import { TrendingUp } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -93,25 +92,7 @@ export default async function RevenuePage() {
         />
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-zinc-800 bg-zinc-900/50">
-          <CardHeader>
-            <CardTitle className="text-sm text-zinc-200">MRR — últimos 12 meses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MrrChart data={m.mrrHistory12m} formatter={(v) => formatBrlCompact(v)} />
-          </CardContent>
-        </Card>
-
-        <Card className="border-zinc-800 bg-zinc-900/50">
-          <CardHeader>
-            <CardTitle className="text-sm text-zinc-200">Distribuição de planos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PlanDistChart data={planChartData} />
-          </CardContent>
-        </Card>
-      </div>
+      <AdminCharts mrrHistory={m.mrrHistory12m} planChartData={planChartData} />
 
       <Card className="border-zinc-800 bg-zinc-900/30">
         <CardHeader>
