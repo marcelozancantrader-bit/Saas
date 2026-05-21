@@ -187,36 +187,15 @@ export default async function AdminOverviewPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-zinc-800 bg-zinc-900/50">
-          <CardHeader>
-            <CardTitle className="text-sm text-zinc-200">MRR — últimos 12 meses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MrrChart data={m.mrrHistory12m} formatter={(v) => formatBrlCompact(v)} />
-          </CardContent>
-        </Card>
-
-        <Card className="border-zinc-800 bg-zinc-900/50">
-          <CardHeader>
-            <CardTitle className="text-sm text-zinc-200">Signups por mês</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MrrChart data={m.signupsHistory12m} formatter={(v) => String(v)} color="#60a5fa" />
-          </CardContent>
-        </Card>
+      {/* DIAGNÓSTICO: gráficos temporariamente removidos pra isolar crash em /admin.
+          Se a página renderizar, o problema estava no recharts SSR. */}
+      <section className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-4 text-xs text-zinc-500">
+        Gráficos (MRR 12m, signups 12m, distribuição) desabilitados pra diagnóstico. Pontos no
+        histórico de MRR: {m.mrrHistory12m.length} · signups: {m.signupsHistory12m.length} · planos:{" "}
+        {planChartData.length}.
       </section>
 
-      <section>
-        <Card className="border-zinc-800 bg-zinc-900/50">
-          <CardHeader>
-            <CardTitle className="text-sm text-zinc-200">Distribuição de planos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PlanDistChart data={planChartData} />
-          </CardContent>
-        </Card>
-      </section>
+      {/* PlanDistChart também desabilitado temporariamente */}
 
       <section>
         <h2 className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
