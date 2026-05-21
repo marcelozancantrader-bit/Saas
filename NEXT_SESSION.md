@@ -1,31 +1,87 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-20 (tarde) — **Painel Super Admin do SaaS, Fases 1+2: fundação (auth tier separado + layout /admin) + dashboard com MRR/ARR/ARPU/churn/LTV reais + gráficos 12m. 10 rotas /admin/\* em prod.**
+**Última pausa:** 2026-05-21 (noite) — **Maratona profunda 2 dias: painel admin completo + 4 ondas globais + redesign dashboard + 4 fixes pós-smoke-test com PDF real + SINAPI nacional. Pipeline end-to-end validado em 21s/$0.034 (Palmitinho/RS: R$ 2.466/m² ✅ dentro do CUB).**
 
-**Sessão anterior (manhã):** overhaul orçamento v3 + zoneamento universal com IA + auditoria de fluxo 13/13.
+**Sessões anteriores:**
+
+- 2026-05-21 manhã: painel super-admin Fases 1-8 (12 rotas /admin/\*)
+- 2026-05-21 tarde: 4 waves globais (landing + Cmd+K + admin search + a11y) + redesign dashboard
+- 2026-05-21 noite: audit fluxo planta→orçamento + CUB estadual + IA plano diretor + recuos medidos + smoke test PDF real + 4 fixes + SINAPI nacional
+
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
-**App live:** https://memorial-ai-mu.vercel.app · **Último commit:** `554955e`
+**App live:** https://memorial-ai-mu.vercel.app · **Último commit:** `0b37c4e`
 **Repo:** https://github.com/marcelozancantrader-bit/Saas
 
 ---
 
-## ⚠ MIGRATIONS PENDENTES DE APLICAR (Supabase Dashboard SQL)
+## ✅ TODAS AS MIGRATIONS APLICADAS EM PROD (Marcelo confirmou)
 
-1. `20260722000001_org_profissional.sql` — campos profissional_nome/cpf/endereco em organizations (necessário pra ART/RRT pré-preencher)
-2. `20260723000001_platform_admins.sql` — **fundação do painel /admin (super admin do SaaS)**. Cria tabela `platform_admins`, helper `is_platform_admin()`, estende `audit_log.actor_type` com `'platform_admin'`.
-3. `20260723000002_feature_flags_announcements.sql` — **tabelas `feature_flags` + `announcements`** com RLS (members leem flags da própria org; só platform admins gerenciam).
+1. ✅ `20260722000001_org_profissional.sql` — profissional_nome/cpf/endereco em organizations
+2. ✅ `20260723000001_platform_admins.sql` — fundação painel /admin + seed founder Marcelo
+3. ✅ `20260723000002_feature_flags_announcements.sql` — feature_flags + announcements
+4. ✅ `20260725000001_cub_estadual.sql` — CUB por UF (27 UFs × 4 padrões = 108 rows)
+5. ✅ `20260725000002_sinapi_all_ufs.sql` — SINAPI nacional (48 códigos × 27 UFs × 2 = 2.592 rows)
 
-   **Após aplicar a migration 2, rodar SQL pra dar acesso admin ao founder:**
+**Sem migrations pendentes.** Próximas migrations entram normalmente no fluxo.
 
-   ```sql
-   INSERT INTO public.platform_admins (user_id, granted_by, notes)
-   SELECT id, id, 'Founder seed'
-   FROM auth.users
-   WHERE email = 'SEU-EMAIL-DE-LOGIN@dominio.com';
-   ```
+---
 
-   Depois disso, login normal no Memorial.ai → acessar `/admin` → painel disponível.
+## 🏗️ Validação do fluxo end-to-end (2026-05-21 noite — última frente)
+
+**Marcelo pediu**: testar fluxo planta→IA→plano diretor→validação→orçamento dentro do CUB. Eu rodei smoke test programático com PDF real (Projeto Arquitetônico.pdf, Palmitinho/RS).
+
+### Pipeline validado em 3 rodadas (custo total $0.10 nas 3)
+
+| Métrica          | Rodada 1 (inicial) | Rodada 2 (prompt v2) | Rodada 3 (SINAPI nacional)     |
+| ---------------- | ------------------ | -------------------- | ------------------------------ |
+| Área             | null ❌            | 125 m² ✓             | 125 m² ✓                       |
+| Itens com SINAPI | 5/11               | 12/30                | **39/39 (100%)** ✅            |
+| Total c/ BDI     | R$ 25k             | R$ 79k               | **R$ 394.613**                 |
+| R$/m²            | R$ 0               | R$ 504               | **R$ 2.466**                   |
+| CUB status       | falso ABAIXO       | ABAIXO real          | ✅ **DENTRO** (RS 2.400-3.000) |
+
+### 4 fixes commitados (`0b37c4e`)
+
+1. **CUB guard pra área zero** (`lib/budget/cub.ts`)
+   - Status `inconclusive` quando area=0 ou total=0 (em vez de "abaixo" falso)
+   - `CubStatusBadge` mostra card cinza com mensagem clara
+2. **Aviso ExtractionReview** (`components/features/extraction/ExtractionReview.tsx`)
+   - Banner amber crítico se area_total ou padrao_construtivo vierem null
+   - Banner amber leve se confianca='baixa' mesmo com campos OK
+3. **Prompt extração v2** (`lib/ai/prompts/extract-floor-plan.v1.ts`)
+   - NOVA regra crítica: `area_total_m2` NUNCA mais null
+   - 4 cenários explícitos: cota total → alta / parciais → media / estimar por escala → baixa
+   - `area_m2` por ambiente segue conservador (null se cota ilegível)
+4. **CUB estadual + SINAPI nacional** (migrations 0725000001/2)
+   - CUB: 27 UFs × 4 padrões com fator regional (SE/S=1.0, CO=0.95, NE=0.85, N=0.80)
+   - SINAPI: 48 códigos × 27 UFs × 2 desonerado (mesmo fator regional)
+   - `lib/budget/cub.ts` lookup dinâmico com fallback automático
+
+### Scripts de smoke test (em `scripts/`)
+
+- `smoke-test-planta.ts` — roda pipeline end-to-end com PDF + cidade/UF (uso debug local)
+- `inspect-sinapi.ts` — lista UFs/meses/composições no banco
+- `list-sinapi-codes.ts` — compara códigos usados pelo sistema vs presentes em SP
+- `test-env.ts` — valida que dotenv carrega `.env.local` (precisa `override: true`)
+
+**Como rodar**: `cd C:\dev\memorial-ai && set -a && . ./.env.local && set +a && npx tsx scripts/smoke-test-planta.ts "/c/Users/.../planta.pdf" "Palmitinho" "RS"`
+
+### Custo do pipeline completo por projeto
+
+**~$0.034** (R$ 0,19) em **21 segundos**:
+
+- Extração planta (Claude Sonnet 4.6 + vision): $0.020
+- Plano diretor IA (Claude Sonnet 4.6 + tool_use): $0.014
+- DB queries SINAPI + CUB: ~0ms (cache local)
+
+### Recuos medidos + IA plano diretor (commit `8c2bccd`)
+
+- `RecuosMedidosCard`: 4 inputs (frontal/lateral dir+esq/fundos) + preview live por campo
+- `saveRecuosAction` persiste em `meta.recuos_medidos` com timestamp
+- `BuscarPlanoDiretorButton`: dialog Cidade+UF, IA Claude retorna ZR-1 estruturada com confiança alta/média/baixa
+- Integrado em `/projetos/[id]` aba "validacao"
+- `runZoneamentoChecks` agora aceita `recuos_medidos` → severity vira ok/warn/issue por recuo individual
 
 ---
 
