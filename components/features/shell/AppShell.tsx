@@ -22,11 +22,13 @@ export function AppShell({
   isPlatformAdmin = false,
 }: Props) {
   return (
-    <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex min-h-screen bg-gradient-to-br from-zinc-50 via-zinc-50 to-blue-50/30 dark:from-zinc-950 dark:via-zinc-950 dark:to-blue-950/10">
       <Sidebar orgName={orgName} />
       <div className="flex flex-1 flex-col">
         <TopBar userEmail={userEmail} orgName={orgName} role={role} notifications={notifications} />
-        <main className="flex-1 px-4 py-5 md:px-8 md:py-8">{children}</main>
+        <main id="main-content" className="flex-1 px-4 py-5 md:px-8 md:py-8">
+          {children}
+        </main>
       </div>
       <CommandPalette isPlatformAdmin={isPlatformAdmin} />
     </div>
