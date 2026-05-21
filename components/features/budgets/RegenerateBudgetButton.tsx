@@ -26,6 +26,33 @@ import { generateBudgetAction } from "@/server/actions/budgets/generate.action";
 import { toast } from "sonner";
 import { RefreshCwIcon } from "lucide-react";
 
+const MES_LABEL = [
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
+];
+
+function formatMes(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})/);
+  if (!m) return iso;
+  const ano = m[1]!;
+  const mes = MES_LABEL[Number(m[2]) - 1] ?? "—";
+  return `${mes}/${ano}`;
+}
+
+function regimeLabel(v: string): string {
+  return v === "true" ? "Desonerado" : "Não-desonerado";
+}
+
 type Props = {
   projectId: string;
   /** Valores pré-preenchidos vindos do orçamento atual */
@@ -148,16 +175,16 @@ export function RegenerateBudgetButton({
                 disabled={pending || mesesParaUf.length === 0}
               >
                 <SelectTrigger id="regen_mes">
-                  <SelectValue />
+                  <span>{formatMes(mesRef)}</span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     {mesesParaUf.length === 0 ? (
-                      <SelectItem value={mesRef}>{mesRef.slice(0, 7)}</SelectItem>
+                      <SelectItem value={mesRef}>{formatMes(mesRef)}</SelectItem>
                     ) : (
                       mesesParaUf.map((v) => (
                         <SelectItem key={v} value={v}>
-                          {v.slice(0, 7)}
+                          {formatMes(v)}
                         </SelectItem>
                       ))
                     )}
@@ -176,7 +203,7 @@ export function RegenerateBudgetButton({
                 disabled={pending}
               >
                 <SelectTrigger id="regen_regime">
-                  <SelectValue />
+                  <span>{regimeLabel(desonerado)}</span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
