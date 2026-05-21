@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { signupAction } from "@/server/actions/auth/signup.action";
 import { GoogleOAuthButton } from "./GoogleOAuthButton";
 import { PasswordStrength } from "./PasswordStrength";
+import { TurnstileWidget } from "./TurnstileWidget";
 import { toast } from "sonner";
 
 export function SignupForm() {
@@ -17,6 +18,7 @@ export function SignupForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED === "true";
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -152,6 +154,8 @@ export function SignupForm() {
       {fieldErrors.lgpd_consent?.[0] ? (
         <p className="text-sm text-red-600">{fieldErrors.lgpd_consent[0]}</p>
       ) : null}
+
+      {turnstileSiteKey ? <TurnstileWidget siteKey={turnstileSiteKey} /> : null}
 
       <Button type="submit" className="w-full" disabled={pending} size="lg">
         {pending ? "Criando workspace…" : "Criar workspace gratuito"}

@@ -34,6 +34,11 @@ const envSchema = z.object({
   SENTRY_DSN: z.string().url().optional(),
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
   NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
+
+  // Cloudflare Turnstile (CAPTCHA no signup). Optional: quando não setado,
+  // widget não renderiza e validação server-side é pulada (dev local).
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
+  TURNSTILE_SECRET_KEY: z.string().optional(),
 });
 
 type Env = z.infer<typeof envSchema>;
@@ -68,6 +73,8 @@ function parseEnv(): Env {
     SENTRY_DSN: process.env.SENTRY_DSN,
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
   });
   if (!parsed.success) {
     const issues = parsed.error.issues
