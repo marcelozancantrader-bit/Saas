@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/features/shell/AppShell";
 import { loadRecentNotifications } from "@/server/services/notifications-load";
+import { isPlatformAdmin } from "@/lib/auth/platform-admin";
 
 type Membership = {
   org_id: string;
@@ -32,7 +33,10 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
     redirect("/login?error=no_org");
   }
 
-  const notifications = await loadRecentNotifications();
+  const [notifications, platformAdmin] = await Promise.all([
+    loadRecentNotifications(),
+    isPlatformAdmin(user.id),
+  ]);
 
   return (
     <AppShell
@@ -40,6 +44,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
       orgName={currentMembership.organizations.name}
       role={currentMembership.role}
       notifications={notifications}
+      isPlatformAdmin={platformAdmin}
     >
       {children}
     </AppShell>
