@@ -34,16 +34,16 @@
 
 **Roadmap 8 fases:**
 
-| Fase                   | Status | Entrega                                                                                                        |
-| ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------- |
-| 1. Fundação            | ✅     | Migration `platform_admins` + helper `is_platform_admin()` + layout `/admin` + 9 rotas (1 dashboard + 8 stubs) |
-| 2. Dashboard KPIs      | ✅     | MRR/ARR/ARPU/churn/LTV reais + 12 cards KPI + 3 gráficos (MRR 12m + signups 12m + distribuição planos)         |
-| 3. Organizations       | ⏳     | Lista + busca + detail + ações (mudar plano, suspender, créditos)                                              |
-| 4. Users + impersonate | ⏳     | Lista global + JWT 1h pra impersonate + audit                                                                  |
-| 5. Billing/Subs        | ⏳     | Pagamentos + refunds + webhook log                                                                             |
-| 6. Audit global        | ⏳     | Log filtrado + export CSV                                                                                      |
-| 7. Flags + Broadcast   | ⏳     | Override por org + announcements                                                                               |
-| 8. Health/Cost         | ⏳     | Inngest/Anthropic/Supabase + tracker custos IA                                                                 |
+| Fase                   | Status | Entrega                                                                                                                          |
+| ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Fundação            | ✅     | Migration `platform_admins` + helper `is_platform_admin()` + layout `/admin` + 9 rotas (1 dashboard + 8 stubs)                   |
+| 2. Dashboard KPIs      | ✅     | MRR/ARR/ARPU/churn/LTV reais + 12 cards KPI + 3 gráficos (MRR 12m + signups 12m + distribuição planos)                           |
+| 3. Organizations       | ✅     | Lista paginada + busca + filtros + detail (5 KPIs + members + projetos + subs + audit) + ações (mudar plano, suspender/reativar) |
+| 4. Users + impersonate | ⏳     | Lista global + JWT 1h pra impersonate + audit                                                                                    |
+| 5. Billing/Subs        | ⏳     | Pagamentos + refunds + webhook log                                                                                               |
+| 6. Audit global        | ⏳     | Log filtrado + export CSV                                                                                                        |
+| 7. Flags + Broadcast   | ⏳     | Override por org + announcements                                                                                                 |
+| 8. Health/Cost         | ⏳     | Inngest/Anthropic/Supabase + tracker custos IA                                                                                   |
 
 **Entregas Fase 1 (commit a seguir):**
 
@@ -61,6 +61,15 @@
 - `app/admin/page.tsx` reescrito: 6 KPI cards core (MRR, ARR, ARPU, churn, LTV, conversão F→P) + 4 cards volume + 3 cards crescimento + gráfico MRR 12m + gráfico signups 12m + gráfico distribuição de planos + grid de acesso pras 8 seções
 
 **Cores planos:** free=cinza, standard=azul, pro=âmbar (highlighted), pro_max=violeta, agency=verde.
+
+**Entregas Fase 3 (commit a seguir):**
+
+- `server/services/admin-orgs.ts` — `loadAdminOrgList()` paginada (25/pg) com agregados (members, projetos, docs, last_activity, owner e-mail via auth.admin.getUserById) + `loadAdminOrgDetail(orgId)` carrega members + 50 projetos recentes + histórico subs + 30 audit entries + KPIs (docs total/mês, clients)
+- `server/actions/admin/change-org-plan.action.ts` — `changeOrgPlanAction` valida via zod, exige motivo, cancela subs ativas anteriores, cria sub `provider='manual'` com meta auditável, registra `org.plan_changed` no audit_log
+- `server/actions/admin/suspend-org.action.ts` — `suspendOrgAction` e `unsuspendOrgAction` armazenam flag em `organizations.meta` (sem nova coluna; bloqueio efetivo de login fica pra fase futura) + audit log
+- `app/admin/organizations/page.tsx` — tabela com 8 colunas + paginação chevron + filtros via searchParams
+- `app/admin/organizations/[id]/page.tsx` — detail page completa com 5 KPI tiles + Members card (com role icon: crown=owner, shield=admin, user=member) + Histórico subs card + Projetos table (20) + Audit log entries (20) + botões "Mudar plano" e "Suspender/Reativar"
+- 3 client components: `OrgListFilters` (search + plano select + checkboxes, atualiza searchParams), `ChangePlanDialog` (select + textarea motivo), `SuspendOrgDialog` (textarea motivo, ou botão direto pra unsuspend)
 
 ---
 
