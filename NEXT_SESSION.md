@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-21 (madrugada — Parte 2) — **Sessão de polish/bug fix pós-deploy: 8 fixes adicionais visíveis (UF detection, stepper, plano diretor card, dialog labels, PostgREST limit, sidebar dup, BaseDadosBadge SINAPI/CUB) + auto-push configurado. Tudo em prod.**
+**Última pausa:** 2026-05-21 (madrugada — Parte 3) — **Auditoria UX completa via 2 agents + 6 batches de fixes em produção: portal cliente humanizado, copy LGPD/status, /projetos/novo, BudgetItemsTable Dialog, dashboard polish, estados orçamento icônicos, briefing/scope, a11y quick actions.**
 
 **Sessões anteriores:**
 
@@ -8,11 +8,12 @@
 - 2026-05-21 tarde: 4 waves globais (landing + Cmd+K + admin search + a11y) + redesign dashboard
 - 2026-05-21 noite: audit fluxo planta→orçamento + CUB estadual + IA plano diretor + recuos medidos + smoke test PDF real + 4 fixes + SINAPI nacional
 - 2026-05-21 madrugada P1: blindagem pré-beta (rate-limit + Sentry + captcha + cancelar plano self-service + UF dinâmico + admin SINAPI/CUB + verificação e-mail + RLS audit)
-- 2026-05-21 madrugada P2: polish pós-deploy (8 fixes visíveis + auto-push) — esta sessão
+- 2026-05-21 madrugada P2: polish pós-deploy (8 fixes visíveis + auto-push)
+- 2026-05-21 madrugada P3: auditoria UX completa (6 commits, ~15 fixes em portal/copy/dashboard/briefing/orçamento/a11y) — esta sessão
 
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
-**App live:** https://memorial-ai-mu.vercel.app · **Último commit pushed:** `de72173` (tudo em prod)
+**App live:** https://memorial-ai-mu.vercel.app · **Último commit pushed:** `091436b` (tudo em prod)
 **Repo:** https://github.com/marcelozancantrader-bit/Saas
 
 ---
