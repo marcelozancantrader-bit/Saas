@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/auth/platform-admin";
 import { loadAdminAuditLog } from "@/server/services/admin-audit";
 import { ScrollText, ChevronLeft, ChevronRight, Download, ShieldCheck } from "lucide-react";
+import { AuditRowExpand } from "@/components/features/admin-shell/AuditRowExpand";
 
 export const dynamic = "force-dynamic";
 
@@ -126,12 +127,13 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
               <th className="px-3 py-2 text-left font-medium">Entidade</th>
               <th className="px-3 py-2 text-left font-medium">Org</th>
               <th className="px-3 py-2 text-left font-medium">IP</th>
+              <th className="px-3 py-2 text-left font-medium">Payload</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-sm text-zinc-500">
+                <td colSpan={7} className="px-3 py-8 text-center text-sm text-zinc-500">
                   Nenhum evento com esses filtros.
                 </td>
               </tr>
@@ -183,6 +185,9 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                   )}
                 </td>
                 <td className="px-3 py-2 text-zinc-500">{r.ip ?? "—"}</td>
+                <td className="px-3 py-2 align-top">
+                  <AuditRowExpand payload={r.payload} userAgent={r.user_agent} />
+                </td>
               </tr>
             ))}
           </tbody>
