@@ -30,6 +30,22 @@ const FALLBACK_FAIXAS: Record<CubPadrao, { min: number; max: number }> = {
 };
 
 /**
+ * Retorna o mês mais recente cadastrado pra uma UF na tabela cub_estadual.
+ * Usado pra mostrar "data base CUB" pro usuário sem precisar carregar a faixa toda.
+ */
+export async function getLatestCubMesForUf(uf: string): Promise<string | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("cub_estadual")
+    .select("mes_referencia")
+    .eq("uf", uf.toUpperCase())
+    .order("mes_referencia", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data?.mes_referencia as string | undefined) ?? null;
+}
+
+/**
  * Busca a faixa CUB pra UF + padrão. Aceita mês opcional;
  * se não passar, usa o mais recente disponível.
  */

@@ -10,7 +10,9 @@ import { BudgetHeader } from "@/components/features/budgets/BudgetHeader";
 import { CurvaABC } from "@/components/features/budgets/CurvaABC";
 import { ExportButtons } from "@/components/features/budgets/ExportButtons";
 import { RegenerateBudgetButton } from "@/components/features/budgets/RegenerateBudgetButton";
+import { BaseDadosBadge } from "@/components/features/budgets/BaseDadosBadge";
 import { loadSinapiCatalog } from "@/lib/budget/sinapi-options";
+import { getLatestCubMesForUf } from "@/lib/budget/cub";
 import { CubStatusBadge } from "@/components/features/budgets/CubStatusBadge";
 import { DISCIPLINA_LABEL, type Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 import type { CubPadrao } from "@/lib/budget/cub";
@@ -77,7 +79,10 @@ export default async function BudgetDetailPage({ params }: Props) {
   if (budgetErr || !budget) notFound();
   if (budget.project_id !== projectId) notFound();
 
-  const sinapiCatalog = await loadSinapiCatalog();
+  const [sinapiCatalog, latestCubMes] = await Promise.all([
+    loadSinapiCatalog(),
+    getLatestCubMesForUf(budget.uf),
+  ]);
 
   const itemsList = items ?? [];
 
@@ -125,13 +130,20 @@ export default async function BudgetDetailPage({ params }: Props) {
           ← Orçamentos · {project?.nome ?? "Projeto"}
         </Link>
         <div className="mt-1 flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-              Orçamento v{budget.versao}
-            </h1>
-            <Badge variant={budget.status === "finalizado" ? "default" : "outline"}>
-              {budget.status === "finalizado" ? "Finalizado" : "Rascunho"}
-            </Badge>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                Orçamento v{budget.versao}
+              </h1>
+              <Badge variant={budget.status === "finalizado" ? "default" : "outline"}>
+                {budget.status === "finalizado" ? "Finalizado" : "Rascunho"}
+              </Badge>
+            </div>
+            <BaseDadosBadge
+              sinapiMes={budget.mes_referencia}
+              cubMes={latestCubMes}
+              uf={budget.uf}
+            />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <RegenerateBudgetButton

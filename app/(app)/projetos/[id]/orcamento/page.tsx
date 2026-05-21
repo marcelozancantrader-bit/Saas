@@ -15,7 +15,9 @@ import { formatBRL } from "@/lib/utils/money";
 import { GenerateBudgetButton } from "@/components/features/budgets/GenerateBudgetButton";
 import { BudgetDisciplinasCard } from "@/components/features/budgets/BudgetDisciplinasCard";
 import { CubPreviewCard } from "@/components/features/budgets/CubPreviewCard";
+import { BaseDadosBadge } from "@/components/features/budgets/BaseDadosBadge";
 import { loadSinapiCatalog, resolveProjectUf } from "@/lib/budget/sinapi-options";
+import { getLatestCubMesForUf } from "@/lib/budget/cub";
 import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 import type { CubPadrao } from "@/lib/budget/cub";
 
@@ -84,10 +86,14 @@ export default async function OrcamentosPage({ params }: Props) {
 
   // SINAPI catalog — UFs e meses disponíveis no banco pro dropdown do Regerar
   // e pra detectar mês mais recente da UF da obra (geração inicial).
-  const sinapiCatalog = await loadSinapiCatalog();
+  const [sinapiCatalog, latestCubMes] = await Promise.all([
+    loadSinapiCatalog(),
+    getLatestCubMesForUf(obraUf),
+  ]);
   const ufHasData = sinapiCatalog.ufs.includes(obraUf);
   const latestMes =
     sinapiCatalog.latestMesPorUf[obraUf] ?? sinapiCatalog.latestMesPorUf.SP ?? "2026-05-01";
+  const latestSinapiMes = sinapiCatalog.latestMesPorUf[obraUf] ?? null;
 
   // Diferencia "sem extração" de "extração pendente confirmação" para mensagens específicas.
   const extractionState: "missing" | "needs_confirm" | "needs_area" | "ready" = !extracao
@@ -122,9 +128,12 @@ export default async function OrcamentosPage({ params }: Props) {
             ufHasData={ufHasData}
           />
         </div>
+        <div className="mt-2">
+          <BaseDadosBadge sinapiMes={latestSinapiMes} cubMes={latestCubMes} uf={obraUf} />
+        </div>
         {canGenerate ? (
-          <p className="mt-1 text-xs text-zinc-500">
-            Será gerado pra {obraUf} · mês {latestMes.slice(0, 7)} · BDI 28% · desonerado.{" "}
+          <p className="mt-2 text-xs text-zinc-500">
+            Será gerado pra {obraUf} · BDI 28% · desonerado.{" "}
             <span className="text-zinc-400">
               Pra mudar parâmetros, use &quot;Regerar&quot; após criar.
             </span>
