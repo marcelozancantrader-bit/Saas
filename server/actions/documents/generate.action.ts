@@ -7,6 +7,7 @@ import { generateDocument, DOCUMENT_LABELS } from "@/lib/ai/generate-document";
 import { documentToTiptap } from "@/lib/tiptap/from-sections";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { canGenerateAiDoc, getPlanUsage } from "@/server/services/plan-usage";
+import { checkRateLimit, rateLimitError } from "@/lib/ratelimit/check";
 import type { PlanId } from "@/lib/plans/limits";
 
 const inputSchema = z.object({
@@ -64,6 +65,16 @@ export async function generateDocumentAction(
 
   // Plan limit: monthly AI docs.
   const me = await getCurrentOrg();
+
+  // Burst protection: cap por hora pra evitar abuso/loop acidental
+  // (limite mensal do plano ainda se aplica em paralelo).
+  const burst = await checkRateLimit({
+    key: `ai-doc:${me.orgId}`,
+    limit: 15,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!burst.ok) return { ok: false, error: rateLimitError(burst.retryAfterSeconds) };
+
   const { data: orgRow } = await supabase
     .from("organizations")
     .select("plano")

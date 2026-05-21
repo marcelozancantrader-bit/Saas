@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { getAnthropic, ANTHROPIC_MODELS, summarizeUsage } from "@/lib/ai/clients/anthropic";
+import { captureException } from "@/lib/observability/sentry";
 
 const inputSchema = z.object({
   cidade_nome: z.string().min(2).max(120),
@@ -236,7 +237,9 @@ export async function listZonasCidadeIaAction(raw: ListZonasIaInput): Promise<Li
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[${PROMPT_VERSION}] error:`, msg);
+    await captureException(err, {
+      tags: { action: "zoneamento.list-zonas-ia", prompt_version: PROMPT_VERSION },
+    });
     return { ok: false, error: `Falha ao consultar IA: ${msg}` };
   }
 }

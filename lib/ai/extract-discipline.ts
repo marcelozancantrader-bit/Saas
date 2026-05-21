@@ -16,6 +16,7 @@ import * as hydraulic from "@/lib/ai/prompts/extract-hydraulic.v1";
 import * as structural from "@/lib/ai/prompts/extract-structural.v1";
 import * as gas from "@/lib/ai/prompts/extract-gas.v1";
 import * as hvac from "@/lib/ai/prompts/extract-hvac.v1";
+import { captureException } from "@/lib/observability/sentry";
 
 const MAX_PDF_BYTES = 32 * 1024 * 1024;
 
@@ -182,6 +183,9 @@ export async function extractDisciplineData(
         disciplina,
       };
     }
+    await captureException(err, {
+      tags: { area: "ai.extract-discipline", disciplina, model },
+    });
     return {
       ok: false,
       error: "Falha inesperada na extração.",

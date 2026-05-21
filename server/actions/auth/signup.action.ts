@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signupSchema } from "@/lib/validators/auth.schema";
 import { env } from "@/lib/validators/env";
+import { checkRateLimit, rateLimitError } from "@/lib/ratelimit/check";
+import { getRequestIp } from "@/lib/ratelimit/ip";
+import { verifyTurnstile } from "@/lib/captcha/turnstile";
 
 export type SignupActionResult = { error: string } | { fieldErrors: Record<string, string[]> };
 
@@ -19,6 +22,18 @@ export async function signupAction(formData: FormData): Promise<SignupActionResu
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
+
+  const ip = await getRequestIp();
+
+  const captcha = await verifyTurnstile(formData.get("cf_turnstile_token")?.toString(), ip);
+  if (!captcha.ok) return { error: captcha.error };
+
+  const rl = await checkRateLimit({
+    key: `signup:${ip}`,
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rl.ok) return { error: rateLimitError(rl.retryAfterSeconds) };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({

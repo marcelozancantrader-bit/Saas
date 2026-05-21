@@ -23,6 +23,7 @@ import {
   RECORD_DOCUMENT_TOOL_NAME,
   type GeneratedDocument,
 } from "@/lib/ai/prompts/_shared-document-schema";
+import { captureException } from "@/lib/observability/sentry";
 
 export type DocumentTipo =
   | "memorial"
@@ -288,6 +289,9 @@ export async function generateDocument(
         model,
       };
     }
+    await captureException(err, {
+      tags: { area: "ai.generate-document", prompt_version: PROMPT_VERSION, model },
+    });
     return {
       ok: false,
       error: "Falha inesperada na geração do documento.",

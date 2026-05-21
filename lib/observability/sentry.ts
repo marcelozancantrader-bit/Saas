@@ -1,4 +1,3 @@
-import "server-only";
 import { env } from "@/lib/validators/env";
 
 /**
@@ -8,6 +7,13 @@ import { env } from "@/lib/validators/env";
  * Sem instalar @sentry/nextjs (que pesa ~150KB no bundle). Para V0 / beta,
  * isso captura erros server-side; client-side errors ficam pelo PostHog +
  * console do browser.
+ *
+ * Isomorphic (não usa `server-only`) porque `lib/ai/generate-document.ts`
+ * exporta DOCUMENT_LABELS consumido por client components — qualquer dep
+ * com `server-only` nesse grafo quebra o build do client. O SENTRY_DSN não
+ * tem prefixo NEXT_PUBLIC_, então no client é sempre undefined → o stub
+ * console.error é o comportamento esperado (errors no client ainda vão pra
+ * console + futuro PostHog).
  *
  * Para ativar Sentry full: instale @sentry/nextjs e remova este wrapper.
  */

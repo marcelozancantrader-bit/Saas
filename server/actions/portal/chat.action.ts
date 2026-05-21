@@ -4,6 +4,8 @@ import { z } from "zod";
 import { getAnthropic, ANTHROPIC_MODELS, summarizeUsage } from "@/lib/ai/clients/anthropic";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertPortalAccess } from "@/server/services/portal-loader";
+import { checkRateLimit, rateLimitError } from "@/lib/ratelimit/check";
+import { captureException } from "@/lib/observability/sentry";
 
 const schema = z.object({
   token: z.string().uuid(),
@@ -33,6 +35,13 @@ export async function portalChatAction(raw: z.infer<typeof schema>): Promise<Cha
 
   const access = await assertPortalAccess(parsed.data.token, parsed.data.project_id);
   if (!access.ok) return { ok: false, error: "Acesso negado." };
+
+  const rl = await checkRateLimit({
+    key: `portal-chat:${parsed.data.token}`,
+    limit: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rl.ok) return { ok: false, error: rateLimitError(rl.retryAfterSeconds) };
 
   // Constroi contexto: projeto + extração + briefing + docs já enviados (resumos)
   const admin = createAdminClient();
@@ -128,6 +137,10 @@ export async function portalChatAction(raw: z.infer<typeof schema>): Promise<Cha
 
     return { ok: true, answer: answerBlock.text };
   } catch (err) {
+    await captureException(err, {
+      tags: { action: "portal.chat" },
+      extra: { project_id: parsed.data.project_id },
+    });
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Falha ao consultar a IA.",

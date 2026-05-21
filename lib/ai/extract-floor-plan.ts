@@ -14,6 +14,7 @@ import {
   floorPlanExtractionSchema,
   type FloorPlanExtraction,
 } from "@/lib/ai/prompts/extract-floor-plan.v1";
+import { captureException } from "@/lib/observability/sentry";
 
 const MAX_PDF_BYTES = 32 * 1024 * 1024; // 32 MB hard cap per Anthropic PDF support
 
@@ -175,6 +176,9 @@ export async function extractFloorPlanData(
         model,
       };
     }
+    await captureException(err, {
+      tags: { area: "ai.extract-floor-plan", prompt_version: PROMPT_VERSION, model },
+    });
     return {
       ok: false,
       error: "Falha inesperada na extração.",
