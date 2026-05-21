@@ -5,6 +5,16 @@ import type { NbrFinding } from "@/lib/nbr-checks";
  * Forma alternativa de ZoneamentoInput usando uma `rule` direta — útil pra
  * zoneamento custom (cidades fora da curadoria, vindo de meta.zoneamento_custom).
  */
+export type RecuosMedidos = {
+  /** Recuos efetivamente medidos em metros (do projeto executivo). */
+  frontal_m?: number | null;
+  lateral_direito_m?: number | null;
+  lateral_esquerdo_m?: number | null;
+  fundos_m?: number | null;
+  /** Quando o user mediu/preencheu. Ajuda a auditar. */
+  updated_at?: string | null;
+};
+
 export type ZoneamentoInputCustom = {
   rule: ZoneamentoRule & {
     cidade_nome?: string;
@@ -17,6 +27,7 @@ export type ZoneamentoInputCustom = {
   area_construida_total_m2: number | null;
   numero_pavimentos: number | null;
   tem_garagem: boolean;
+  recuos_medidos?: RecuosMedidos | null;
 };
 
 /** Aceita zoneamento custom — extrai a rule de meta.zoneamento_custom. */
@@ -116,13 +127,59 @@ function appendFindings(
     });
   }
 
-  findings.push({
-    id: "zoneamento_recuos",
-    severity: "warn",
-    rule: "Recuos mínimos",
-    message: `Frontal ${zona.recuo_frontal_m}m${zona.recuo_lateral_m ? `, lateral ${zona.recuo_lateral_m}m` : ""}${zona.recuo_fundos_m ? `, fundos ${zona.recuo_fundos_m}m` : ""}. Confirme no projeto executivo — não conseguimos medir pela extração.`,
-    reference: ref,
-  });
+  // Recuos — se o user mediu e informou, compara contra a zona; senão fica warn.
+  const med = input.recuos_medidos;
+  const hasMedidas =
+    med &&
+    (med.frontal_m != null ||
+      med.lateral_direito_m != null ||
+      med.lateral_esquerdo_m != null ||
+      med.fundos_m != null);
+
+  if (hasMedidas) {
+    const checks: Array<[string, number | null | undefined, number | null]> = [
+      ["frontal", med?.frontal_m, zona.recuo_frontal_m],
+      ["lateral direito", med?.lateral_direito_m, zona.recuo_lateral_m],
+      ["lateral esquerdo", med?.lateral_esquerdo_m, zona.recuo_lateral_m],
+      ["fundos", med?.fundos_m, zona.recuo_fundos_m],
+    ];
+    const parts: string[] = [];
+    let worst: "ok" | "warn" | "issue" = "ok";
+    for (const [name, medido, exigido] of checks) {
+      if (exigido == null || exigido <= 0) continue; // zona não exige esse recuo
+      if (medido == null) {
+        parts.push(`${name}: exige ${exigido}m, não medido`);
+        if (worst === "ok") worst = "warn";
+        continue;
+      }
+      if (medido >= exigido) {
+        parts.push(`${name}: ${medido}m ≥ ${exigido}m ✓`);
+      } else {
+        parts.push(`${name}: ${medido}m < ${exigido}m ✗`);
+        worst = "issue";
+      }
+    }
+    findings.push({
+      id: "zoneamento_recuos",
+      severity: worst,
+      rule: "Recuos mínimos",
+      message:
+        worst === "ok"
+          ? `✓ Todos os recuos atendem a zona. ${parts.join("; ")}.`
+          : worst === "warn"
+            ? `⚠ Recuos parcialmente medidos. ${parts.join("; ")}.`
+            : `✗ Recuo abaixo do exigido. ${parts.join("; ")}.`,
+      reference: ref,
+    });
+  } else {
+    findings.push({
+      id: "zoneamento_recuos",
+      severity: "warn",
+      rule: "Recuos mínimos",
+      message: `Frontal ${zona.recuo_frontal_m}m${zona.recuo_lateral_m ? `, lateral ${zona.recuo_lateral_m}m` : ""}${zona.recuo_fundos_m ? `, fundos ${zona.recuo_fundos_m}m` : ""}. Informe os recuos medidos do projeto executivo no card "Recuos medidos" pra validar automaticamente.`,
+      reference: ref,
+    });
+  }
 
   if (zona.permeabilidade_min_pct !== null) {
     findings.push({
@@ -171,6 +228,7 @@ export type ZoneamentoInput = {
   area_construida_total_m2: number | null; // soma de todos os ambientes (~ área extraída)
   numero_pavimentos: number | null;
   tem_garagem: boolean;
+  recuos_medidos?: RecuosMedidos | null;
 };
 
 export function runZoneamentoChecks(input: ZoneamentoInput): NbrFinding[] {

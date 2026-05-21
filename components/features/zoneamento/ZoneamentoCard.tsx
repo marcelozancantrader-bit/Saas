@@ -25,6 +25,13 @@ type Props = {
   tem_garagem: boolean;
   /** Quando cidade_codigo === 'custom', usa esses parâmetros vindos de meta.zoneamento_custom. */
   customRule?: ZoneamentoCustomMeta | null;
+  /** Recuos efetivamente medidos pelo profissional (de meta.recuos_medidos). */
+  recuos_medidos?: {
+    frontal_m?: number | null;
+    lateral_direito_m?: number | null;
+    lateral_esquerdo_m?: number | null;
+    fundos_m?: number | null;
+  } | null;
 };
 
 const SEVERITY_VARIANT: Record<NbrFinding["severity"], "default" | "secondary" | "destructive"> = {
@@ -47,6 +54,7 @@ export function ZoneamentoCard({
   numero_pavimentos,
   tem_garagem,
   customRule,
+  recuos_medidos,
 }: Props) {
   const isCustom = cidade_codigo === "custom" && !!customRule;
 
@@ -81,6 +89,7 @@ export function ZoneamentoCard({
       area_construida_total_m2,
       numero_pavimentos,
       tem_garagem,
+      recuos_medidos: recuos_medidos ?? null,
     });
     headerNome = `${customRule.cidade_nome ?? "Cidade"}/${customRule.uf ?? "??"} · ${customRule.label}`;
     headerLei = customRule.lei ?? "Não informado";
@@ -101,6 +110,7 @@ export function ZoneamentoCard({
       area_construida_total_m2,
       numero_pavimentos,
       tem_garagem,
+      recuos_medidos: recuos_medidos ?? null,
     });
     headerNome = `${cidade.nome}/${cidade.uf} · ${zona.label}`;
     headerLei = cidade.lei;

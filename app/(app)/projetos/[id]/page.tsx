@@ -33,6 +33,9 @@ import {
   ZoneamentoCard,
   type ZoneamentoCustomMeta,
 } from "@/components/features/zoneamento/ZoneamentoCard";
+import { RecuosMedidosCard } from "@/components/features/zoneamento/RecuosMedidosCard";
+import { BuscarPlanoDiretorButton } from "@/components/features/zoneamento/BuscarPlanoDiretorButton";
+import { getZona } from "@/lib/zoneamento/cidades";
 import { ProjectProgress } from "@/components/features/projects/ProjectProgress";
 import { DisciplineExtractionsCard } from "@/components/features/extraction/DisciplineExtractionsCard";
 import { ProjectTabs, type TabKey } from "@/components/features/projects/ProjectTabs";
@@ -216,6 +219,39 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
   const zoneamentoCustomLabel = zoneamentoCustom
     ? `${zoneamentoCustom.cidade_nome ?? "?"}/${zoneamentoCustom.uf ?? "??"} · ${zoneamentoCustom.label}`
     : null;
+
+  // Recuos medidos pelo profissional (de meta.recuos_medidos)
+  const recuosMedidos =
+    ((project.meta as Record<string, unknown> | null)?.recuos_medidos as
+      | {
+          frontal_m?: number | null;
+          lateral_direito_m?: number | null;
+          lateral_esquerdo_m?: number | null;
+          fundos_m?: number | null;
+          updated_at?: string | null;
+        }
+      | undefined) ?? null;
+
+  // Regra da zona pra comparar com recuos medidos no card
+  const currentZonaRule =
+    project.cidade_codigo === "custom" && zoneamentoCustom
+      ? {
+          recuo_frontal_m: zoneamentoCustom.recuo_frontal_m,
+          recuo_lateral_m: zoneamentoCustom.recuo_lateral_m,
+          recuo_fundos_m: zoneamentoCustom.recuo_fundos_m,
+        }
+      : project.cidade_codigo && project.zoneamento
+        ? (() => {
+            const z = getZona(project.cidade_codigo, project.zoneamento);
+            return z
+              ? {
+                  recuo_frontal_m: z.recuo_frontal_m,
+                  recuo_lateral_m: z.recuo_lateral_m,
+                  recuo_fundos_m: z.recuo_fundos_m,
+                }
+              : null;
+          })()
+        : null;
 
   const confirmedByUser = !!(
     project.meta?.extracao_planta as { confirmed_by_user?: boolean } | undefined
@@ -463,7 +499,28 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
                 completedExtraction.extracao_resultado.elementos_especiais?.garagem ?? false
               }
               customRule={zoneamentoCustom}
+              recuos_medidos={recuosMedidos}
             />
+            {(!project.cidade_codigo ||
+              (project.cidade_codigo === "custom" && !zoneamentoCustom)) && (
+              <Card>
+                <CardContent className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                      Cidade fora da curadoria? Use a IA pra puxar o plano diretor
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                      Claude lê o plano diretor da cidade informada e devolve CA, TO, altura,
+                      recuos, vagas e permeabilidade. Custo ~$0,005 por consulta.
+                    </p>
+                  </div>
+                  <BuscarPlanoDiretorButton projectId={id} />
+                </CardContent>
+              </Card>
+            )}
+            {currentZonaRule ? (
+              <RecuosMedidosCard projectId={id} zona={currentZonaRule} initial={recuosMedidos} />
+            ) : null}
           </section>
         ) : (
           <Card>
