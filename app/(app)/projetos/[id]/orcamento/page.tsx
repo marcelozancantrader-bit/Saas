@@ -15,7 +15,7 @@ import { formatBRL } from "@/lib/utils/money";
 import { GenerateBudgetButton } from "@/components/features/budgets/GenerateBudgetButton";
 import { BudgetDisciplinasCard } from "@/components/features/budgets/BudgetDisciplinasCard";
 import { CubPreviewCard } from "@/components/features/budgets/CubPreviewCard";
-import { loadSinapiCatalog, inferUfFromEndereco } from "@/lib/budget/sinapi-options";
+import { loadSinapiCatalog, resolveProjectUf } from "@/lib/budget/sinapi-options";
 import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 import type { CubPadrao } from "@/lib/budget/cub";
 
@@ -42,7 +42,9 @@ export default async function OrcamentosPage({ params }: Props) {
 
   const { data: project, error } = await supabase
     .from("projects")
-    .select("id, nome, meta, endereco_completo, padrao_construtivo")
+    .select(
+      "id, nome, meta, endereco_completo, padrao_construtivo, cidade_codigo, clients ( endereco_uf )",
+    )
     .eq("id", projectId)
     .single();
   if (error || !project) notFound();
@@ -65,12 +67,18 @@ export default async function OrcamentosPage({ params }: Props) {
     | undefined;
   const canGenerate = !!extracao?.confirmed_by_user && !!extracao.area_total_m2;
 
-  // UF da obra — tenta extrair do endereço completo, fallback SP
+  // UF da obra — hierarquia: cidade_codigo curado > endereco_completo (regex) > cliente > SP
   const projectAny = project as unknown as {
     endereco_completo?: string | null;
     padrao_construtivo?: CubPadrao | null;
+    cidade_codigo?: string | null;
+    clients?: { endereco_uf?: string | null } | null;
   };
-  const obraUf = inferUfFromEndereco(projectAny.endereco_completo);
+  const obraUf = resolveProjectUf({
+    cidade_codigo: projectAny.cidade_codigo,
+    endereco_completo: projectAny.endereco_completo,
+    client_uf: projectAny.clients?.endereco_uf,
+  });
   const cubPadrao: CubPadrao | null =
     extracao?.padrao_construtivo ?? projectAny.padrao_construtivo ?? null;
 

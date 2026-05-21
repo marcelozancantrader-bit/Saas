@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CIDADES } from "@/lib/zoneamento/cidades";
 
 export type SinapiCatalog = {
   /** UFs com pelo menos um código SINAPI cadastrado, ordenadas alfabeticamente. */
@@ -46,9 +47,86 @@ export async function loadSinapiCatalog(): Promise<SinapiCatalog> {
   return { ufs, mesesPorUf: ordered, latestMesPorUf: latest };
 }
 
-/** Tenta extrair UF do endereço completo (regex \b[A-Z]{2}\b). Fallback "SP". */
-export function inferUfFromEndereco(endereco: string | null | undefined): string {
-  if (!endereco) return "SP";
-  const m = endereco.match(/\b([A-Z]{2})\b/);
-  return m?.[1] ?? "SP";
+const UFS_VALIDAS = new Set([
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+]);
+
+/**
+ * Extrai UF do endereço completo.
+ *
+ * Estratégia: procura UF no FINAL da string (padrão BR: "..., Cidade/UF" ou
+ * "..., Cidade - UF" ou "..., Cidade UF") e valida contra a lista das 27 UFs.
+ *
+ * Evita falsos positivos da regex antiga \b[A-Z]{2}\b que pegava "AV", "DR",
+ * "JR" etc.
+ *
+ * Retorna null se não encontrar — caller decide fallback.
+ */
+export function inferUfFromEndereco(endereco: string | null | undefined): string | null {
+  if (!endereco) return null;
+
+  const tail = endereco.match(/(?:[\s,/\-–·]+)([A-Z]{2})\.?\s*$/i);
+  if (tail?.[1]) {
+    const candidate = tail[1].toUpperCase();
+    if (UFS_VALIDAS.has(candidate)) return candidate;
+  }
+
+  for (const uf of UFS_VALIDAS) {
+    const re = new RegExp(`(?:^|[\\s,/\\-–·])${uf}(?:[\\s,/\\-–·.]|$)`, "i");
+    if (re.test(endereco)) {
+      const match = endereco.match(re);
+      if (match && match[0].includes(uf)) return uf;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolve a UF da obra em hierarquia de fontes confiáveis:
+ *   1. cidade_codigo (curado em lib/zoneamento/cidades.ts) — sempre certo se setado
+ *   2. endereco_completo (regex robusta) — pode falhar se usuário não pôs UF
+ *   3. endereco_uf do cliente vinculado — última fonte
+ *   4. fallback "SP"
+ */
+export function resolveProjectUf(input: {
+  cidade_codigo?: string | null;
+  endereco_completo?: string | null;
+  client_uf?: string | null;
+}): string {
+  if (input.cidade_codigo && CIDADES[input.cidade_codigo]?.uf) {
+    return CIDADES[input.cidade_codigo]!.uf;
+  }
+  const fromEndereco = inferUfFromEndereco(input.endereco_completo);
+  if (fromEndereco) return fromEndereco;
+  if (input.client_uf && UFS_VALIDAS.has(input.client_uf.toUpperCase())) {
+    return input.client_uf.toUpperCase();
+  }
+  return "SP";
 }
