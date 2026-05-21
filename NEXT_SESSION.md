@@ -29,7 +29,57 @@
 
 ---
 
-## 🛡️ Painel Super Admin do SaaS (Fases 1+2 entregues nesta sessão)
+## 🌊 Waves de melhorias globais (2026-05-21 tarde — pós painel admin)
+
+Auditoria profunda landing + app + admin + research SaaS high-ticket 2026, depois 4 ondas de implementação:
+
+### Wave 1 — Landing redesign (commit `0f4e5e7`)
+
+Componentes novos em `components/features/landing/`:
+
+- **SocialProof**: 4 badges credibilidade (beta, 10 docs IA, 60s, LGPD)
+- **ComparisonTable**: tabela "antes (planilha + Word) vs depois (Memorial.ai)" com 6 linhas
+- **RoiCalculator**: client com 2 sliders (projetos/mês + valor-hora) → economia, plano sugerido, ROI%, payback
+- **GuaranteeBadge**: 4 cards risk reversal (sem fidelidade, 14d, LGPD, suporte humano)
+- **PricingTable**: 5 cards + feature matrix expandível (toggle)
+
+`app/page.tsx` reescrito:
+
+- Headline reduzido pra < 8 palavras ("Memorial técnico em minutos.")
+- Hero com social proof inline
+- Nova ordem: Hero → Como Funciona → Comparison → Dores → ROI Calc → Funcionalidades → Guarantee → Pricing → FAQ → CTA → Footer
+- Link "Sobre" no header e footer; 2 perguntas extra no FAQ
+
+Páginas novas:
+
+- `app/sobre/page.tsx` — história, princípios, tech stack, contato
+- `app/(auth)/forgot-password/page.tsx` + `app/(auth)/reset-password/page.tsx`
+- `forgotPasswordAction` (sempre ok, evita enumeração de contas)
+- `resetPasswordAction` (updateUser via sessão temporária do magic link)
+- "Esqueci a senha" link no LoginForm
+- middleware: forgot/reset adicionados aos AUTH_PATHS
+
+### Wave 2 — App UX (commit `69a3288`)
+
+- **Cmd+K command palette** (`components/features/shell/CommandPalette.tsx`): global em todo app autenticado; categorias Navegação/Criar/Admin (condicional)/Sistema; keyboard nav + filtro fuzzy; admin items só se isPlatformAdmin
+- AppShell agora recebe `isPlatformAdmin` prop; layout protegido busca em paralelo com notifications
+- **Tabelas mobile-first**: ProjectsTable + ClientsTable com tabela em ≥md e stack de cards em mobile
+
+### Wave 3 — Admin polish (commit `64795b2`)
+
+- **AdminTopBar search global**: input no header busca orgs (nome/CNPJ) + users (e-mail) em paralelo via `/api/admin/search?q=`; debounce 250ms; dropdown agrupado por tipo
+- **Audit drill-down** (`/admin/audit`): `AuditRowExpand` client component com botão "Detalhes" expandindo payload JSON + user-agent inline
+- Backend: `server/services/admin-search.ts` + route handler gated
+
+### Wave 4 — Cross-cutting (commit a seguir)
+
+- **HealthRefreshButton**: botão "Atualizar agora" no /admin/health com spin animation
+- **Skip-to-content link** no `app/layout.tsx` (a11y): sr-only que aparece ao tab no início da página
+- Error boundary `app/admin/error.tsx` (já existia desde fix recharts) mostra error.message inline
+
+---
+
+## 🛡️ Painel Super Admin do SaaS (Fases 1-8 — 2026-05-21 manhã)
 
 **Arquitetura** — tier `platform_admin` SEPARADO do role org-scoped (owner/admin/member). Founder vê toda a plataforma; orgs continuam isoladas via RLS.
 

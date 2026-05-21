@@ -2,6 +2,7 @@ import { requirePlatformAdmin } from "@/lib/auth/platform-admin";
 import { loadAdminHealth, formatBytes, formatUsd } from "@/server/services/admin-health";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { HealthRefreshButton } from "@/components/features/admin-shell/HealthRefreshButton";
 import {
   Activity,
   CheckCircle2,
@@ -28,14 +29,17 @@ export default async function HealthPage() {
 
   return (
     <div className="space-y-6 text-zinc-100">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-white">
-          <Activity className="h-6 w-6 text-amber-400" />
-          Health da plataforma
-        </h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Status das integrações, uso de Storage e custos de IA acumulados.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold text-white">
+            <Activity className="h-6 w-6 text-amber-400" />
+            Health da plataforma
+          </h1>
+          <p className="mt-1 text-sm text-zinc-400">
+            Status das integrações, uso de Storage e custos de IA acumulados.
+          </p>
+        </div>
+        <HealthRefreshButton />
       </div>
 
       <section className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
