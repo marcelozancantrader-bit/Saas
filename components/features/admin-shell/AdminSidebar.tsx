@@ -13,6 +13,8 @@ import {
   Megaphone,
   Activity,
   ShieldCheck,
+  Database,
+  Ruler,
 } from "lucide-react";
 
 type NavItem = {
@@ -28,6 +30,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/users", label: "Usuários", icon: Users },
   { href: "/admin/subscriptions", label: "Assinaturas", icon: CreditCard },
   { href: "/admin/revenue", label: "Receita", icon: TrendingUp },
+  { href: "/admin/sinapi", label: "SINAPI", icon: Database },
+  { href: "/admin/cub", label: "CUB estadual", icon: Ruler },
   { href: "/admin/audit", label: "Auditoria", icon: ScrollText },
   { href: "/admin/feature-flags", label: "Feature flags", icon: Flag },
   { href: "/admin/announcements", label: "Anúncios", icon: Megaphone },
