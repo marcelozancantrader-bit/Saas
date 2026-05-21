@@ -525,14 +525,22 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
           </section>
         ) : (
           <Card>
-            <CardContent className="p-6 text-sm text-zinc-600 dark:text-zinc-400">
-              <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                Validações ainda não disponíveis
-              </p>
-              <p className="mt-1">
-                Suba a planta arquitetônica na aba <b>Planta & IA</b> e confirme a extração — aí as
-                verificações de NBR e zoneamento aparecem aqui.
-              </p>
+            <CardContent className="space-y-3 p-6 text-sm text-zinc-600 dark:text-zinc-400">
+              <div>
+                <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                  Validações aparecem depois da extração da planta
+                </p>
+                <p className="mt-1">
+                  Suba a planta arquitetônica em PDF na aba <b>Planta &amp; IA</b> e confirme a
+                  extração — aí as verificações de NBR e zoneamento aparecem aqui.
+                </p>
+              </div>
+              <a
+                href={`/projetos/${id}?tab=planta`}
+                className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 underline-offset-2 hover:underline dark:text-blue-400"
+              >
+                Ir para Planta &amp; IA →
+              </a>
             </CardContent>
           </Card>
         )

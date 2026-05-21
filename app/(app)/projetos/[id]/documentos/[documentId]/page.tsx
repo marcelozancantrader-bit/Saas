@@ -100,8 +100,14 @@ export default async function DocumentEditorPage({ params }: Props) {
             </h1>
             <Badge variant={doc.status === "rascunho" ? "outline" : "default"} className="mt-2">
               {doc.status === "rascunho"
-                ? "Rascunho — RASCUNHO aparece como marca d'água no PDF"
-                : doc.status}
+                ? "Rascunho (PDF sai com marca d'água)"
+                : doc.status === "aguardando_aprovacao"
+                  ? "Aguardando aprovação do cliente"
+                  : doc.status === "aprovado"
+                    ? "Aprovado"
+                    : doc.status === "recusado"
+                      ? "Recusado pelo cliente"
+                      : doc.status}
             </Badge>
           </div>
 

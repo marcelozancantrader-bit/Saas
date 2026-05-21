@@ -100,11 +100,10 @@ export default async function ConfiguracoesPage() {
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           <div>
-            <p className="font-medium">Exportar meus dados</p>
+            <p className="font-medium">Baixar cópia dos meus dados</p>
             <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-              Baixa um arquivo JSON contendo todos os seus dados pessoais e os das organizações em
-              que você é membro: clientes, projetos, documentos, orçamentos, audit log. Conforme
-              art. 18, II da LGPD.
+              Arquivo JSON com tudo que está em sua conta: clientes, projetos, documentos,
+              orçamentos e histórico. Você tem direito de portabilidade pela LGPD (art. 18).
             </p>
             <a
               href="/api/lgpd/export"
@@ -119,10 +118,10 @@ export default async function ConfiguracoesPage() {
           <div>
             <p className="font-medium text-red-600 dark:text-red-400">Excluir minha conta</p>
             <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-              Remove sua conta de autenticação E, para cada organização em que você é{" "}
-              <strong>owner</strong>, exclui TODOS os dados da organização (clientes, projetos,
-              documentos, orçamentos, audit log, assinaturas) em cascata. Esta ação não pode ser
-              desfeita. Conforme art. 18, VI da LGPD.
+              Remove sua conta e o acesso a este workspace. Se você é o único owner da organização,{" "}
+              <strong>todos os dados são apagados</strong> (clientes, projetos, documentos,
+              orçamentos) — não há como recuperar. Pela LGPD, você pode pedir esse apagamento a
+              qualquer momento.
             </p>
             <div className="mt-3">
               <DeleteAccountDialog />
