@@ -13,6 +13,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatBRL } from "@/lib/utils/money";
 import { updateBudgetItemAction } from "@/server/actions/budgets/update-item.action";
 import { deleteBudgetItemAction } from "@/server/actions/budgets/delete-item.action";
@@ -34,6 +42,7 @@ export function BudgetItemsTable({ items, budgetId, uf, mesReferencia, desonerad
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState<Record<string, { qty: string; preco: string }>>({});
+  const [toRemove, setToRemove] = useState<BudgetItem | null>(null);
 
   function setField(id: string, key: "qty" | "preco", value: string) {
     setEditing((prev) => ({
@@ -67,12 +76,14 @@ export function BudgetItemsTable({ items, budgetId, uf, mesReferencia, desonerad
     });
   }
 
-  function removeItem(item: BudgetItem) {
-    if (!confirm(`Remover "${item.descricao}"?`)) return;
+  function confirmRemove() {
+    if (!toRemove) return;
+    const item = toRemove;
     startTransition(async () => {
       const r = await deleteBudgetItemAction(item.id);
       if (r.ok) {
         toast.success("Item removido");
+        setToRemove(null);
         router.refresh();
       } else {
         toast.error(r.error);
@@ -189,7 +200,7 @@ export function BudgetItemsTable({ items, budgetId, uf, mesReferencia, desonerad
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => removeItem(item)}
+                          onClick={() => setToRemove(item)}
                           disabled={pending}
                         >
                           Remover
@@ -212,6 +223,35 @@ export function BudgetItemsTable({ items, budgetId, uf, mesReferencia, desonerad
           desonerado={desonerado}
         />
       </div>
+
+      <Dialog open={!!toRemove} onOpenChange={(v) => !pending && !v && setToRemove(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remover item do orçamento?</DialogTitle>
+            <DialogDescription>
+              Esta ação não pode ser desfeita. Os totais do orçamento serão recalculados.
+            </DialogDescription>
+          </DialogHeader>
+          {toRemove ? (
+            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <p className="font-medium">{toRemove.descricao}</p>
+              <p className="mt-1 text-xs text-zinc-500">
+                {formatCodigoExibicao(toRemove.composicao_codigo, toRemove.origem)} ·{" "}
+                {Number(toRemove.quantidade).toFixed(2)} {toRemove.unidade} ·{" "}
+                {formatBRL(toRemove.total)}
+              </p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setToRemove(null)} disabled={pending}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmRemove} disabled={pending}>
+              {pending ? "Removendo…" : "Remover"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
