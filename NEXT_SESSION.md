@@ -14,6 +14,7 @@
 
 1. `20260722000001_org_profissional.sql` — campos profissional_nome/cpf/endereco em organizations (necessário pra ART/RRT pré-preencher)
 2. `20260723000001_platform_admins.sql` — **fundação do painel /admin (super admin do SaaS)**. Cria tabela `platform_admins`, helper `is_platform_admin()`, estende `audit_log.actor_type` com `'platform_admin'`.
+3. `20260723000002_feature_flags_announcements.sql` — **tabelas `feature_flags` + `announcements`** com RLS (members leem flags da própria org; só platform admins gerenciam).
 
    **Após aplicar a migration 2, rodar SQL pra dar acesso admin ao founder:**
 
@@ -39,11 +40,11 @@
 | 1. Fundação            | ✅     | Migration `platform_admins` + helper `is_platform_admin()` + layout `/admin` + 9 rotas (1 dashboard + 8 stubs)                   |
 | 2. Dashboard KPIs      | ✅     | MRR/ARR/ARPU/churn/LTV reais + 12 cards KPI + 3 gráficos (MRR 12m + signups 12m + distribuição planos)                           |
 | 3. Organizations       | ✅     | Lista paginada + busca + filtros + detail (5 KPIs + members + projetos + subs + audit) + ações (mudar plano, suspender/reativar) |
-| 4. Users + impersonate | ⏳     | Lista global + JWT 1h pra impersonate + audit                                                                                    |
-| 5. Billing/Subs        | ⏳     | Pagamentos + refunds + webhook log                                                                                               |
-| 6. Audit global        | ⏳     | Log filtrado + export CSV                                                                                                        |
-| 7. Flags + Broadcast   | ⏳     | Override por org + announcements                                                                                                 |
-| 8. Health/Cost         | ⏳     | Inngest/Anthropic/Supabase + tracker custos IA                                                                                   |
+| 4. Users + impersonate | ✅     | Lista global (search + filtro só-admins) + detail + impersonate via magic link com audit                                         |
+| 5. Billing/Subs        | ✅     | Lista global de subs + filtros (status/plano/provider) + KPIs (active/MRR/past_due/etc) + cancel manual                          |
+| 6. Audit global        | ✅     | Lista filtrada (q/action/actor_type/dates) + paginação + export CSV (até 5000) via /admin/audit/export                           |
+| 7. Flags + Broadcast   | ✅     | Migration `feature_flags` + `announcements` + UI CRUD pra ambos + RLS (members leem flags da própria org)                        |
+| 8. Health/Cost         | ✅     | Status integrações + custo IA 30d/total (via `documents.custo_tokens.cost_usd`) + storage usage + erros 24h                      |
 
 **Entregas Fase 1 (commit a seguir):**
 
