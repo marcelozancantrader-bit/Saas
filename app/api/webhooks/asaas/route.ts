@@ -153,11 +153,38 @@ export async function POST(req: NextRequest) {
   }
 
   // ====== SUBSCRIPTION_DELETED — assinatura cancelada ======
+  // Pode ter sido (a) cancelamento agendado pelo user via /billing — nesse caso
+  // já marcamos cancel_at_period_end=true e mantemos acesso até fim do período
+  // (cron expired-cancellations finaliza); ou (b) cancelamento externo (painel
+  // Asaas, refund, etc.) — nesse caso fazemos downgrade imediato pra free.
   if (event === "SUBSCRIPTION_DELETED" && body.subscription) {
+    const { data: sub } = await admin
+      .from("subscriptions")
+      .select("id, org_id, cancel_at_period_end, current_period_end")
+      .eq("provider_subscription_id", body.subscription.id)
+      .maybeSingle();
+    if (!sub) return NextResponse.json({ ok: true, ignored: "no_local_sub" });
+
+    const userScheduled = sub.cancel_at_period_end === true;
+    const periodStillValid =
+      !!sub.current_period_end && new Date(sub.current_period_end as string) > now;
+
+    if (userScheduled && periodStillValid) {
+      return NextResponse.json({
+        ok: true,
+        kept_until: sub.current_period_end,
+        note: "cancelamento_agendado_pelo_user",
+      });
+    }
+
     await admin
       .from("subscriptions")
       .update({ status: "canceled", updated_at: now.toISOString() })
-      .eq("provider_subscription_id", body.subscription.id);
+      .eq("id", sub.id);
+    await admin
+      .from("organizations")
+      .update({ plano: "free", updated_at: now.toISOString() })
+      .eq("id", sub.org_id);
     return NextResponse.json({ ok: true, event });
   }
 

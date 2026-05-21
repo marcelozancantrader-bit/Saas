@@ -159,3 +159,24 @@ export async function getFirstSubscriptionPayment(
 export function customerAreaUrl(customerId: string): string {
   return `${asaasInvoiceBaseUrl()}/c/${customerId}`;
 }
+
+/**
+ * Cancela uma subscription no Asaas. Após esta chamada, nenhuma cobrança nova
+ * é criada — mas o cliente continua tendo acesso até o fim do período já pago
+ * (o caller deve marcar `cancel_at_period_end=true` no DB local pra refletir isso).
+ *
+ * Idempotente: se a sub já foi cancelada/removida no Asaas, retorna ok mesmo assim.
+ */
+export async function cancelSubscription(
+  subscriptionId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const r = await call<{ deleted?: boolean; id?: string }>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    { method: "DELETE" },
+  );
+  if (!r.ok) {
+    if (r.status === 404) return { ok: true };
+    return { ok: false, error: r.error };
+  }
+  return { ok: true };
+}

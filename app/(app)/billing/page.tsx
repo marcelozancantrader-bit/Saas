@@ -5,6 +5,7 @@ import { getCurrentOrg } from "@/server/services/current-org";
 import { getPlanUsage } from "@/server/services/plan-usage";
 import { PLANS, PLAN_ORDER, formatBrlFromCents, type PlanId } from "@/lib/plans/limits";
 import { PlanUpgradeButton } from "@/components/features/billing/PlanUpgradeButton";
+import { CancelPlanButton } from "@/components/features/billing/CancelPlanButton";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,10 @@ export default async function BillingPage() {
     .order("created_at", { ascending: false })
     .limit(10);
 
+  const activeSub = subscriptions?.find((s) => s.status === "active") ?? null;
+  const canCancel = currentPlan !== "free" && activeSub && !activeSub.cancel_at_period_end;
+  const cancelScheduled = activeSub?.cancel_at_period_end === true;
+
   return (
     <div className="space-y-6">
       <div>
@@ -42,21 +47,40 @@ export default async function BillingPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Plano atual</CardTitle>
         </CardHeader>
-        <CardContent className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-3xl font-semibold">{PLANS[currentPlan].label}</p>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              {PLANS[currentPlan].description}
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-3xl font-semibold">{PLANS[currentPlan].label}</p>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                {PLANS[currentPlan].description}
+              </p>
+            </div>
+            <p className="text-right text-sm">
+              <span className="text-2xl font-semibold">
+                {formatBrlFromCents(PLANS[currentPlan].priceCents)}
+              </span>
+              {PLANS[currentPlan].priceCents !== null && PLANS[currentPlan].priceCents! > 0 ? (
+                <span className="ml-1 text-zinc-500">/mês</span>
+              ) : null}
             </p>
           </div>
-          <p className="text-right text-sm">
-            <span className="text-2xl font-semibold">
-              {formatBrlFromCents(PLANS[currentPlan].priceCents)}
-            </span>
-            {PLANS[currentPlan].priceCents !== null && PLANS[currentPlan].priceCents! > 0 ? (
-              <span className="ml-1 text-zinc-500">/mês</span>
-            ) : null}
-          </p>
+
+          {cancelScheduled && activeSub?.current_period_end ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+              Cancelamento agendado. Acesso {PLANS[currentPlan].label} até{" "}
+              {new Date(activeSub.current_period_end as string).toLocaleDateString("pt-BR")}.
+              Depois, o workspace volta pro Free.
+            </div>
+          ) : null}
+
+          {canCancel ? (
+            <div className="flex justify-end">
+              <CancelPlanButton
+                endsAt={(activeSub.current_period_end as string | null) ?? null}
+                planLabel={PLANS[currentPlan].label}
+              />
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
