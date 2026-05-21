@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/brand/Logo";
-import { LayoutDashboard, Briefcase, Users, Settings, CreditCard, Sparkles } from "lucide-react";
+import {
+  LayoutDashboard,
+  Briefcase,
+  Users,
+  Settings,
+  CreditCard,
+  Sparkles,
+  Plus,
+  UserPlus,
+} from "lucide-react";
 
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -33,9 +42,6 @@ export function SidebarContent({ orgName, onNavigate }: Props) {
           aria-label="Memorial.ai"
         >
           <Logo size={24} />
-          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Memorial<span className="text-blue-600 dark:text-blue-400">.ai</span>
-          </span>
         </Link>
       </div>
 
@@ -49,6 +55,26 @@ export function SidebarContent({ orgName, onNavigate }: Props) {
             {orgName}
           </p>
         </div>
+      </div>
+
+      {/* Atalhos rápidos — ações mais frequentes */}
+      <div className="space-y-1.5 px-3 pt-3">
+        <Link
+          href="/projetos/novo"
+          onClick={onNavigate}
+          className="flex items-center justify-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
+        >
+          <Plus className="h-4 w-4" />
+          Novo projeto
+        </Link>
+        <Link
+          href="/clientes/novo"
+          onClick={onNavigate}
+          className="flex items-center justify-center gap-1.5 rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          Novo cliente
+        </Link>
       </div>
 
       {/* Nav */}
