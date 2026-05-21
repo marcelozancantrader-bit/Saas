@@ -1,17 +1,125 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-21 (noite) — **Maratona profunda 2 dias: painel admin completo + 4 ondas globais + redesign dashboard + 4 fixes pós-smoke-test com PDF real + SINAPI nacional. Pipeline end-to-end validado em 21s/$0.034 (Palmitinho/RS: R$ 2.466/m² ✅ dentro do CUB).**
+**Última pausa:** 2026-05-21 (madrugada) — **Sessão "blindagem pré-beta": auditoria completa do produto + 8 commits resolvendo 4 P0 + 4 P1 + bônus de auditoria RLS. App pronto pra abrir beta — falta apenas configuração externa (Asaas prod, domínio, envs).**
 
 **Sessões anteriores:**
 
 - 2026-05-21 manhã: painel super-admin Fases 1-8 (12 rotas /admin/\*)
 - 2026-05-21 tarde: 4 waves globais (landing + Cmd+K + admin search + a11y) + redesign dashboard
 - 2026-05-21 noite: audit fluxo planta→orçamento + CUB estadual + IA plano diretor + recuos medidos + smoke test PDF real + 4 fixes + SINAPI nacional
+- 2026-05-21 madrugada: blindagem pré-beta (rate-limit + Sentry + captcha + cancelar plano self-service + UF dinâmico + admin SINAPI/CUB + verificação e-mail + RLS audit) — esta sessão
 
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
-**App live:** https://memorial-ai-mu.vercel.app · **Último commit:** `0b37c4e`
+**App live:** https://memorial-ai-mu.vercel.app · **Último commit pushed:** `cb5265f` · **Locais não-pushados:** 8 commits (`764e733`..`03db06d`)
 **Repo:** https://github.com/marcelozancantrader-bit/Saas
+
+---
+
+## 🛡️ Sessão blindagem pré-beta (2026-05-21 madrugada) — 8 commits prontos
+
+Auditoria profunda do projeto produziu lista priorizada de gaps. P0 críticos
+
+- P1 alto risco implementados. App pronto pra beta — falta config externa.
+
+### 8 commits locais (push pendente)
+
+```
+03db06d chore(rls): script de auditoria RLS pra rodar antes do beta
+c81c3f8 feat(auth): detecta e-mail não confirmado + botão reenviar
+e9c97a7 feat(admin): UI pra atualização manual SINAPI + CUB
+5670e68 fix(budget): destrava UF dinâmico + geração inicial sem dialog
+1834caf feat(auth): captcha Turnstile no signup (gated)
+cbe6da5 feat(app): banner global de announcements no AppShell
+39e5e1a feat(billing): cancelar plano self-service em /billing
+764e733 feat(robustez): rate limit + Sentry capture em endpoints críticos
+```
+
+### Tasks completas (8 + 1 auditoria)
+
+**P0 done**: #4 rate limit, #5 cancelar plano, #17 UF dinâmico, #18 admin SINAPI/CUB
+**P1 done**: #6 Sentry, #7 captcha, #9 UI stubs, #10 verificação e-mail
+**P2 bônus**: #16 auditoria RLS
+
+### Detalhamento dos 8 commits
+
+1. **`764e733` rate limit + Sentry** — sliding window via Postgres em signup
+   (5/h IP), forgot-password (5/h IP), generate-document (15/h org),
+   portal/chat (30/h token). `captureException` em 6 catch blocks IA
+   (libs/ai + portal/chat + 2 zoneamento). `lib/observability/sentry.ts`
+   virou isomorphic.
+
+2. **`39e5e1a` cancelar plano** — `/billing` agora tem botão "Cancelar".
+   Action chama DELETE Asaas + marca `cancel_at_period_end=true`. Webhook
+   `SUBSCRIPTION_DELETED` respeita esse flag (mantém acesso até period_end).
+   Cron Inngest novo `expired-cancellations` (9:30 BRT diário) finaliza
+   downgrade pra free.
+
+3. **`cbe6da5` announcement banner** — `loadActiveAnnouncements()` filtra
+   por audience (all/paid/plan:X/org:X), banner no `AppShell` acima do
+   `main`, dismiss persiste em localStorage. Remove aviso "UI ainda não
+   exibe" em /admin.
+
+4. **`1834caf` captcha** — Cloudflare Turnstile, gated. `TurnstileWidget`
+   com modo "interaction-only" (invisível pra humanos). `signup.action`
+   valida token. Sem `TURNSTILE_SECRET_KEY` setada, dev local bypassa.
+
+5. **`5670e68` UF dinâmico** — `RegenerateBudgetButton` tinha UF=["SP"]
+   e mês=["2026-05-01"] hard-coded. Agora `loadSinapiCatalog()` lê banco.
+   `GenerateBudgetButton` refatorado pra ir DIRETO (sem dialog) usando
+   UF do `endereco_completo` do projeto + mês mais recente da UF.
+   Mostra preview "Será gerado pra RS · mês 2026-05 · BDI 28%".
+
+6. **`e9c97a7` admin SINAPI/CUB** — Decisão: opção A (admin manual mensal).
+   `/admin/sinapi` com upload XLSX/CSV + preview de 10 linhas + summary
+   antes de aplicar. Parser robusto: keys case-insensitive, datas
+   Excel/ISO/BR, booleanos flex. `/admin/cub` matriz 27 UFs × 4 padrões
+   editável inline. Audit log em cada operação.
+
+7. **`c81c3f8` verificação e-mail** — login.action detecta `email_not_confirmed`
+   e retorna `needs_confirmation`. LoginForm mostra banner âmbar + botão
+   "Reenviar e-mail". Nova `resend-confirmation.action` com rate-limit.
+
+8. **`03db06d` RLS audit** — Migration `_audit_rls_status` view + script
+   `npx tsx scripts/audit-rls.ts` que classifica 🟢/🟡/🔴 cada tabela.
+   Análise estática já confirmou: todas 20 tabelas têm RLS habilitada.
+
+### ⚠️ Pendências externas pra abrir beta
+
+**Imediato (~30 min):**
+
+1. `git push origin main` (8 commits, Vercel auto-deploya)
+2. Aplicar 2 migrations no Supabase Dashboard SQL Editor:
+   - `20260726000001_rate_limit_events.sql`
+   - `20260726000002_audit_rls_view.sql`
+3. Rodar `npx tsx scripts/audit-rls.ts` pra confirmar RLS ok
+
+**Antes do beta (~1 semana, parte é espera):**
+
+- **Asaas produção** — iniciar homologação (3-5 dias úteis), trocar
+  `ASAAS_ENVIRONMENT=production` + nova `ASAAS_API_KEY`
+- **Domínio próprio** — registrar + DNS + atualizar `NEXT_PUBLIC_APP_URL`
+  no Vercel + Site URL/Redirect URLs no Supabase Auth
+- **Resend** — após domínio (DKIM exige domínio verificado). Setar
+  `RESEND_API_KEY` + `RESEND_FROM_EMAIL`
+- **Turnstile** — cloudflare.com → Turnstile → criar site → setar
+  `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` no Vercel
+- **Sentry** — sentry.io → projeto Next.js → setar `SENTRY_DSN`
+
+### Tasks pendentes (não-bloqueantes)
+
+- **#8 P1** — Smoke test E2E mínimo (Playwright, ~3-4h) — adia pra pós-beta
+- **#11 P2** — PostHog (analytics ativação)
+- **#12 P2** — Convidar membros + trocar e-mail
+- **#13 P2** — Trial 7d/14d pré-pago
+- **#14 P2** — CI GitHub Actions
+- **#15 P2** — Publicar OAuth Google (sair modo teste)
+- **#19 P2** — App mobile via Capacitor (App Store + Google Play) —
+  decisão técnica: WebView aponta pra URL prod (Next 16 não exporta
+  estático). Plano detalhado na task: setup ~1-2 semanas, $99/ano
+  Apple + $25 Google, push notifications integra com tabela
+  `notifications` existente, manter cobrança via Asaas/web pra escapar
+  comissão das stores.
 
 ---
 
