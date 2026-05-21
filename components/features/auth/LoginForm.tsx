@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { loginAction } from "@/server/actions/auth/login.action";
+import { resendConfirmationAction } from "@/server/actions/auth/resend-confirmation.action";
 import { GoogleOAuthButton } from "./GoogleOAuthButton";
 import { toast } from "sonner";
 
@@ -14,28 +15,62 @@ type Props = { nextUrl?: string };
 
 export function LoginForm({ nextUrl }: Props) {
   const [pending, startTransition] = useTransition();
+  const [resending, startResending] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState<string | null>(null);
   const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED === "true";
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     setFieldErrors({});
+    setNeedsConfirmation(null);
     startTransition(async () => {
       const result = await loginAction(formData);
       if (!result) return;
       if ("fieldErrors" in result) {
         setFieldErrors(result.fieldErrors);
+      } else if ("needs_confirmation" in result) {
+        setNeedsConfirmation(result.email);
       } else {
         toast.error(result.error);
       }
     });
   }
 
+  function handleResend() {
+    if (!needsConfirmation) return;
+    startResending(async () => {
+      await resendConfirmationAction({ email: needsConfirmation });
+      toast.success("E-mail de confirmação reenviado. Verifique caixa de entrada e spam.");
+    });
+  }
+
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       {nextUrl ? <input type="hidden" name="next" value={nextUrl} /> : null}
+
+      {needsConfirmation ? (
+        <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/40">
+          <p className="font-medium text-amber-900 dark:text-amber-100">
+            Falta confirmar seu e-mail
+          </p>
+          <p className="text-amber-800 dark:text-amber-200">
+            Enviamos um link de confirmação pra <b>{needsConfirmation}</b>. Abra o e-mail (ou a
+            pasta de spam) e clique no botão pra ativar o workspace.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleResend}
+            disabled={resending}
+          >
+            {resending ? "Reenviando…" : "Reenviar e-mail de confirmação"}
+          </Button>
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="email">E-mail</Label>

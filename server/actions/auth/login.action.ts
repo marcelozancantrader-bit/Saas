@@ -5,7 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { loginSchema } from "@/lib/validators/auth.schema";
 import { safeRedirect } from "@/lib/utils/safe-redirect";
 
-export type LoginActionResult = { error: string } | { fieldErrors: Record<string, string[]> };
+export type LoginActionResult =
+  | { error: string }
+  | { fieldErrors: Record<string, string[]> }
+  | { needs_confirmation: true; email: string };
 
 export async function loginAction(formData: FormData): Promise<LoginActionResult | void> {
   const parsed = loginSchema.safeParse({
@@ -25,6 +28,11 @@ export async function loginAction(formData: FormData): Promise<LoginActionResult
   });
 
   if (error) {
+    const code = (error as { code?: string }).code;
+    const msg = error.message.toLowerCase();
+    if (code === "email_not_confirmed" || msg.includes("email not confirmed")) {
+      return { needs_confirmation: true, email: parsed.data.email };
+    }
     return { error: "E-mail ou senha incorretos." };
   }
 
