@@ -22,6 +22,9 @@ export default async function NovoProjetoPage({ searchParams }: Props) {
   // Se veio ?client_id=, valida que o cliente existe na lista do org (sem RLS bypass).
   const preselectedClientId =
     sp.client_id && clients?.some((c) => c.id === sp.client_id) ? sp.client_id : null;
+  const preselectedClientName = preselectedClientId
+    ? (clients?.find((c) => c.id === preselectedClientId)?.nome ?? null)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -33,7 +36,21 @@ export default async function NovoProjetoPage({ searchParams }: Props) {
           ← Projetos
         </Link>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">Novo projeto</h1>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          Cliente é opcional — você pode vincular depois na aba <b>Visão geral</b> do projeto.
+        </p>
       </div>
+
+      {preselectedClientName ? (
+        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/20">
+          <CardContent className="flex items-center gap-2 p-3 text-sm">
+            <span className="text-blue-600 dark:text-blue-400">✓</span>
+            <span className="text-blue-900 dark:text-blue-100">
+              Cliente pré-selecionado: <strong>{preselectedClientName}</strong>
+            </span>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
