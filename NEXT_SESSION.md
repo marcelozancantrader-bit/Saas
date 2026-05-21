@@ -1,18 +1,117 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-21 (madrugada) — **Sessão "blindagem pré-beta": auditoria completa do produto + 8 commits resolvendo 4 P0 + 4 P1 + bônus de auditoria RLS. App pronto pra abrir beta — falta apenas configuração externa (Asaas prod, domínio, envs).**
+**Última pausa:** 2026-05-21 (madrugada — Parte 2) — **Sessão de polish/bug fix pós-deploy: 8 fixes adicionais visíveis (UF detection, stepper, plano diretor card, dialog labels, PostgREST limit, sidebar dup, BaseDadosBadge SINAPI/CUB) + auto-push configurado. Tudo em prod.**
 
 **Sessões anteriores:**
 
 - 2026-05-21 manhã: painel super-admin Fases 1-8 (12 rotas /admin/\*)
 - 2026-05-21 tarde: 4 waves globais (landing + Cmd+K + admin search + a11y) + redesign dashboard
 - 2026-05-21 noite: audit fluxo planta→orçamento + CUB estadual + IA plano diretor + recuos medidos + smoke test PDF real + 4 fixes + SINAPI nacional
-- 2026-05-21 madrugada: blindagem pré-beta (rate-limit + Sentry + captcha + cancelar plano self-service + UF dinâmico + admin SINAPI/CUB + verificação e-mail + RLS audit) — esta sessão
+- 2026-05-21 madrugada P1: blindagem pré-beta (rate-limit + Sentry + captcha + cancelar plano self-service + UF dinâmico + admin SINAPI/CUB + verificação e-mail + RLS audit)
+- 2026-05-21 madrugada P2: polish pós-deploy (8 fixes visíveis + auto-push) — esta sessão
 
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
-**App live:** https://memorial-ai-mu.vercel.app · **Último commit pushed:** `cb5265f` · **Locais não-pushados:** 8 commits (`764e733`..`03db06d`)
+**App live:** https://memorial-ai-mu.vercel.app · **Último commit pushed:** `de72173` (tudo em prod)
 **Repo:** https://github.com/marcelozancantrader-bit/Saas
+
+---
+
+## 🎨 Sessão polish pós-deploy (2026-05-21 madrugada P2)
+
+Marcelo testou o app em prod após o primeiro push e reportou bugs visíveis.
+Sessão dedicada a polish + UX. Auto-push configurado no final.
+
+### 10 commits novos pushed
+
+```
+de72173 chore: gitignore .claude/settings.local.json
+4f3ef96 fix(shell): remove 'Memorial.ai' duplicado + atalhos sidebar
+e5f0a6c feat(budget): BaseDadosBadge — data SINAPI + CUB visível
+473eded chore(scripts): check-cub-status pra inspecionar tabela CUB
+dc64945 fix(budget): PostgREST limit 1000 escondia 17 UFs do catálogo SINAPI
+87e5f7c fix(budget): labels do dialog Regerar (mês + regime)
+c120d9a feat(zoneamento): card rico de metadados do plano diretor
+80f267b fix(progress): stepper do projeto vira links navegáveis
+6465b35 fix(budget): UF detectada por hierarquia robusta
+```
+
+### Bugs corrigidos
+
+1. **`6465b35` UF detection** — regex `\b[A-Z]{2}\b` pegava "AV"/"DR" como
+   UF. Nova função `resolveProjectUf` com hierarquia: cidade_codigo curado
+   → endereco_completo (regex no FINAL + validada contra 27 UFs) →
+   clients.endereco_uf → fallback SP.
+
+2. **`80f267b` stepper clickable** — os 7 passos apontavam pra anchors
+   `#nome` que não existiam. Viraram `<Link>` apontando pra tab certa:
+   Cadastro→?tab=visao, Planta→?tab=planta, Validação→?tab=validacao,
+   etc. Documentos+Aprovação vão pra /documentos. ART/RRT→?tab=art-rrt.
+
+3. **`c120d9a` plano diretor info rico** — após IA buscar, antes mostrava
+   só "IA · LC X" + 2 badges. Novo `PlanoDiretorMetaCard`: origem, timestamp
+   ("há 2 min"), custo USD da consulta, lei vigente em destaque, idade
+   com warning >10a, fonte oficial como BOTÃO visual + URL completa,
+   observação da IA sobre a zona, disclaimer + link Google pra prefeitura,
+   botão "Refazer busca".
+
+4. **`87e5f7c` dialog labels** — Regime mostrava "true"/"false" e Mês
+   "2026-05-01" cru. Fix: usa `<span>{label}</span>` no SelectTrigger
+   (Base UI Select.Value mostra value raw). Agora "Desonerado"/
+   "Não-desonerado" e "mai/2026".
+
+5. **`dc64945` PostgREST limit 1000** — bug crítico. Banco tinha 2592
+   rows SINAPI (27 UFs × 96), mas `loadSinapiCatalog` retornava só 1000
+   alfabéticos (AC..MA). PR/RS/SP/TO ficavam fora → erro falso "Não há
+   dados SINAPI cadastrados pra X". Fix: `.range(0, 99999)` em
+   `loadSinapiCatalog` e `loadSinapiStats`.
+
+6. **`e5f0a6c` BaseDadosBadge** — usuário arquiteto não via a data dos
+   dados SINAPI/CUB usados. Componente novo aparece em 2 lugares:
+   topo de /orcamento (antes de gerar) e header do orçamento criado.
+   Mostra "Base de cálculo: SINAPI mai/2026 · CUB-RS mai/2026". Cor
+   âmbar + warning se >60d.
+
+7. **`4f3ef96` sidebar dup + atalhos** — `<Logo>` já tem wordmark mas
+   havia `<span>Memorial.ai</span>` extra → "Memorial.ai Memorial.ai".
+   Removido. Bonus: botões CTA "+ Novo projeto" (azul, destacado) e
+   "+ Novo cliente" (outline) entre Workspace e nav. Reduz cliques
+   pro fluxo crítico de 3 pra 1.
+
+8. **`473eded` check-cub-status** — script novo `scripts/check-cub-status.ts`
+   pra inspecionar tabela CUB em prod via DB URL direta.
+
+### Scripts novos em `scripts/`
+
+| Script                    | Comando       | Pra que serve                                     |
+| ------------------------- | ------------- | ------------------------------------------------- |
+| `seed-sinapi-nacional.ts` | `npx tsx ...` | Valida/re-aplica seed SINAPI 27 UFs (idempotente) |
+| `check-cub-status.ts`     | `npx tsx ...` | Mostra matriz CUB completa do banco               |
+| `audit-rls.ts`            | `npx tsx ...` | Auditoria RLS de todas as tabelas                 |
+
+Todos usam `SUPABASE_DB_URL` do `.env.local` via driver `postgres`
+(instalado nesta sessão, +1 dep, 50KB).
+
+### Auto-push configurado
+
+Permission rule em `.claude/settings.local.json` (gitignored):
+
+```json
+{ "permissions": { "allow": ["Bash(git push origin main)"] } }
+```
+
+Agora commits → push imediato → Vercel deploya. Continua bloqueando
+force-push, push pra outras branches, comandos bash não-triviais.
+
+### Estado dos dados em prod (confirmado via scripts)
+
+- **SINAPI**: 27 UFs × 96 composições = 2.592 rows em mai/2026
+- **CUB**: 27 UFs × 4 padrões = 108 rows em mai/2026
+- **Fator regional aplicado**: SE/S=1.00, CO=0.95, NE=0.85, N=0.80
+  (aproximação até /admin/sinapi e /admin/cub serem usados com
+  dados oficiais por UF)
+
+---
 
 ---
 
