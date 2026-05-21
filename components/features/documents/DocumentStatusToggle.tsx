@@ -16,7 +16,8 @@ export function DocumentStatusToggle({ documentId, status }: Props) {
   const [pending, startTransition] = useTransition();
 
   const nextStatus: WritableStatus = status === "rascunho" ? "aprovado" : "rascunho";
-  const label = status === "rascunho" ? "Marcar como finalizado" : "Voltar para rascunho";
+  const label = status === "rascunho" ? "Finalizar" : "Voltar a rascunho";
+  const labelLong = status === "rascunho" ? "Marcar como finalizado" : "Voltar para rascunho";
 
   function onToggle() {
     startTransition(async () => {
@@ -34,8 +35,15 @@ export function DocumentStatusToggle({ documentId, status }: Props) {
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={onToggle} disabled={pending}>
-      {pending ? "…" : label}
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={onToggle}
+      disabled={pending}
+      title={labelLong}
+      aria-label={labelLong}
+    >
+      {pending ? "Salvando…" : label}
     </Button>
   );
 }

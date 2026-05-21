@@ -60,6 +60,10 @@ export function LoginForm({ nextUrl }: Props) {
             Enviamos um link de confirmação pra <b>{needsConfirmation}</b>. Abra o e-mail (ou a
             pasta de spam) e clique no botão pra ativar o workspace.
           </p>
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            Não recebeu? O link pode levar até 5 minutos pra chegar. Use o botão abaixo se precisar
+            de outro.
+          </p>
           <Button
             type="button"
             variant="outline"

@@ -131,18 +131,23 @@ export function BriefingForm({ portalToken, projectId }: Props) {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-4">
-          {(["quartos", "banheiros", "suites", "vagas_garagem"] as const).map((k) => (
-            <div key={k} className="space-y-1.5">
-              <Label htmlFor={k} className="capitalize">
-                {k.replace("_", " ")}
-              </Label>
+          {(
+            [
+              { key: "quartos", label: "Quartos" },
+              { key: "banheiros", label: "Banheiros" },
+              { key: "suites", label: "Suítes" },
+              { key: "vagas_garagem", label: "Vagas de garagem" },
+            ] as const
+          ).map(({ key, label }) => (
+            <div key={key} className="space-y-1.5">
+              <Label htmlFor={key}>{label}</Label>
               <Input
-                id={k}
+                id={key}
                 type="number"
                 min={0}
                 max={20}
-                value={form[k]}
-                onChange={(e) => set(k, Math.max(0, Number(e.target.value) || 0))}
+                value={form[key]}
+                onChange={(e) => set(key, Math.max(0, Number(e.target.value) || 0))}
               />
             </div>
           ))}

@@ -36,14 +36,12 @@ export function ChatDaPlanta({ portalToken, projectId }: Props) {
         question,
       });
       if (!r.ok) {
-        toast.error(r.error);
-        setTurns((t) => [
-          ...t,
-          {
-            role: "assistant",
-            text: `Não consegui responder agora: ${r.error}. Tente perguntar de outra forma ou peça ao seu arquiteto pelo portal.`,
-          },
-        ]);
+        const isRateLimit = r.error.toLowerCase().includes("muitas tentativas");
+        const friendlyMsg = isRateLimit
+          ? "Você fez muitas perguntas em pouco tempo. Aguarde um pouco e tente de novo, ou peça diretamente ao seu arquiteto."
+          : `Não consegui responder agora. Pode reformular a pergunta ou perguntar ao seu arquiteto pelo portal. (Detalhe técnico: ${r.error})`;
+        toast.error(isRateLimit ? "Limite de perguntas atingido" : "Não consegui responder");
+        setTurns((t) => [...t, { role: "assistant", text: friendlyMsg }]);
       } else {
         setTurns((t) => [...t, { role: "assistant", text: r.answer }]);
       }

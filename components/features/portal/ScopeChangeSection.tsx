@@ -197,9 +197,25 @@ function ScopeChangeItem({
             <CardTitle className="text-sm font-medium">
               {sc.solicitado_por === "cliente" ? "Solicitação sua" : "Proposta do profissional"}
             </CardTitle>
-            <p className="mt-1 text-xs text-zinc-500">
-              {new Date(sc.created_at).toLocaleString("pt-BR")}
-              {sc.urgencia ? ` · urgência ${sc.urgencia}` : null}
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-xs text-zinc-500">
+              <span>{new Date(sc.created_at).toLocaleString("pt-BR")}</span>
+              {sc.urgencia ? (
+                <>
+                  <span>·</span>
+                  <span
+                    className={
+                      sc.urgencia === "alta"
+                        ? "font-medium text-red-600 dark:text-red-400"
+                        : sc.urgencia === "media"
+                          ? "font-medium text-amber-600 dark:text-amber-400"
+                          : "text-emerald-600 dark:text-emerald-400"
+                    }
+                  >
+                    {sc.urgencia === "alta" ? "🔴" : sc.urgencia === "media" ? "🟡" : "🟢"} urgência{" "}
+                    {sc.urgencia}
+                  </span>
+                </>
+              ) : null}
             </p>
           </div>
           <Badge variant={STATUS_VARIANT[sc.status]}>{STATUS_LABEL[sc.status]}</Badge>
