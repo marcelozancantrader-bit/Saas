@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -23,6 +22,7 @@ import {
 import { saveZoneamentoCustomAction } from "@/server/actions/zoneamento/save-custom.action";
 import { toast } from "sonner";
 import { SparklesIcon } from "lucide-react";
+import { PlanoDiretorMetaCard } from "./PlanoDiretorMetaCard";
 
 type ZonaIA = (ListZonasIaResult & { ok: true })["data"]["zonas"][number];
 
@@ -80,18 +80,6 @@ function findCidadeCurada(nome: string, uf: string): CidadeData | null {
   );
 }
 
-/** Idade da lei pra warning visual */
-function idadeLei(
-  ano: number | null,
-  revisao: number | null,
-): { anos: number; isAntiga: boolean; refAno: number } | null {
-  const refAno = revisao ?? ano;
-  if (!refAno) return null;
-  const anoAtual = new Date().getFullYear();
-  const anos = anoAtual - refAno;
-  return { anos, isAntiga: anos > 10, refAno };
-}
-
 function extractAnoFromLei(lei: string): number | null {
   const m = lei.match(/(\d{4})/);
   return m ? Number(m[1]) : null;
@@ -144,6 +132,8 @@ export function ZoneamentoFields({
     ultima_revisao_ano: number | null;
     fonte_url: string | null;
     confianca: "alta" | "media" | "baixa" | null;
+    consultado_em: string;
+    usd_cost: number | null;
   } | null>(null);
   const [iaLoading, setIaLoading] = useState(false);
   const [saving, startSaving] = useTransition();
@@ -186,16 +176,6 @@ export function ZoneamentoFields({
     return out;
   }, [uf]);
 
-  const curadaIdade = useMemo(() => {
-    if (!cidadeCurada) return null;
-    return idadeLei(extractAnoFromLei(cidadeCurada.lei), null);
-  }, [cidadeCurada]);
-
-  const customIdade = useMemo(() => {
-    if (!iaMeta) return null;
-    return idadeLei(iaMeta.ano_lei, iaMeta.ultima_revisao_ano);
-  }, [iaMeta]);
-
   function onUfChange(v: string) {
     setUf(v);
     setCidadeNome("");
@@ -231,6 +211,8 @@ export function ZoneamentoFields({
         ultima_revisao_ano: d.ultima_revisao_ano,
         fonte_url: d.fonte_url,
         confianca: d.confianca,
+        consultado_em: new Date().toISOString(),
+        usd_cost: res.usd_cost,
       });
       const dataInfo = d.ultima_revisao_ano
         ? `lei ${d.ano_lei}, revisada em ${d.ultima_revisao_ano}`
@@ -453,73 +435,30 @@ export function ZoneamentoFields({
         </p>
       </div>
 
-      {/* Card de dados da lei (cidade definida + zona escolhida) */}
+      {/* Card de dados do plano diretor (cidade definida) */}
       {cidadeCurada || iaMeta ? (
-        <div
-          className={`rounded-md border p-3 ${
-            curadaIdade?.isAntiga || customIdade?.isAntiga
-              ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950"
-              : "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
-          }`}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-medium text-zinc-900 dark:text-zinc-50">
-              {cidadeCurada ? (
-                <>
-                  ★ Regras curadas: <strong>{cidadeCurada.lei}</strong>
-                </>
-              ) : (
-                <>
-                  🤖 IA · <strong>{iaMeta?.lei}</strong>
-                </>
-              )}
-            </p>
-            <div className="flex flex-wrap gap-1.5 text-[10px]">
-              {iaMeta?.confianca ? (
-                <Badge
-                  variant={
-                    iaMeta.confianca === "alta"
-                      ? "default"
-                      : iaMeta.confianca === "media"
-                        ? "secondary"
-                        : "destructive"
-                  }
-                >
-                  Confiança: {iaMeta.confianca}
-                </Badge>
-              ) : null}
-              {(curadaIdade ?? customIdade) ? (
-                <Badge
-                  variant={
-                    curadaIdade?.isAntiga || customIdade?.isAntiga ? "destructive" : "default"
-                  }
-                >
-                  📅 {(curadaIdade ?? customIdade)!.refAno} · {(curadaIdade ?? customIdade)!.anos}{" "}
-                  anos
-                </Badge>
-              ) : null}
-            </div>
-          </div>
-
-          {curadaIdade?.isAntiga || customIdade?.isAntiga ? (
-            <p className="mt-2 text-[11px] font-medium text-amber-900 dark:text-amber-100">
-              ⚠ Lei com mais de 10 anos sem revisão registrada. Confirme com a prefeitura se há
-              decretos/leis complementares recentes antes de aprovar o projeto.
-            </p>
-          ) : null}
-
-          {cidadeCurada?.fonte_url || iaMeta?.fonte_url ? (
-            <p className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">
-              <a
-                href={cidadeCurada?.fonte_url ?? iaMeta?.fonte_url ?? "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-2"
-              >
-                Fonte oficial
-              </a>
-            </p>
-          ) : null}
+        <>
+          <PlanoDiretorMetaCard
+            origem={cidadeCurada ? "curada" : "ia"}
+            cidade_nome={cidadeCurada?.nome ?? cidadeNome}
+            uf={cidadeCurada?.uf ?? uf}
+            lei={cidadeCurada?.lei ?? iaMeta?.lei ?? "Não informado"}
+            ano_lei={cidadeCurada ? extractAnoFromLei(cidadeCurada.lei) : (iaMeta?.ano_lei ?? null)}
+            ultima_revisao_ano={iaMeta?.ultima_revisao_ano ?? null}
+            fonte_url={cidadeCurada?.fonte_url ?? iaMeta?.fonte_url ?? null}
+            confianca={iaMeta?.confianca ?? null}
+            consultado_em={iaMeta?.consultado_em ?? null}
+            usd_cost={iaMeta?.usd_cost ?? null}
+            zona_label={(() => {
+              const zc = cidadeCurada?.zonas.find((z) => z.zona === zona);
+              if (zc) return zc.label;
+              if (zonaEscolhidaIA) return zonaEscolhidaIA.zona_label;
+              return null;
+            })()}
+            zona_observacao={zonaEscolhidaIA?.observacao ?? null}
+            onRefresh={isCustomMode && iaMeta ? buscarZonasComIa : undefined}
+            refreshing={iaLoading}
+          />
 
           {(() => {
             const zonaCurada = cidadeCurada?.zonas.find((z) => z.zona === zona);
@@ -544,38 +483,46 @@ export function ZoneamentoFields({
                 : null;
             if (!params) return null;
             return (
-              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-zinc-700 sm:grid-cols-3 dark:text-zinc-300">
-                <div>
-                  <span className="text-zinc-500">CA:</span>{" "}
-                  <strong>
-                    {params.ca_basico}
-                    {params.ca_maximo && params.ca_maximo !== params.ca_basico
-                      ? ` / ${params.ca_maximo}`
-                      : ""}
-                  </strong>
+              <div className="rounded-md border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                <p className="mb-2 text-[10px] font-medium tracking-wider text-zinc-500 uppercase">
+                  Parâmetros desta zona
+                </p>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-zinc-700 sm:grid-cols-3 dark:text-zinc-300">
+                  <div>
+                    <span className="text-[10px] text-zinc-500 uppercase">CA básico/máx</span>
+                    <p className="font-semibold">
+                      {params.ca_basico}
+                      {params.ca_maximo && params.ca_maximo !== params.ca_basico
+                        ? ` / ${params.ca_maximo}`
+                        : ""}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-zinc-500 uppercase">Tx. ocupação</span>
+                    <p className="font-semibold">{params.to_max_pct}%</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-zinc-500 uppercase">Altura máx</span>
+                    <p className="font-semibold">
+                      {params.altura_max_m ? `${params.altura_max_m} m` : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-zinc-500 uppercase">Recuo frontal</span>
+                    <p className="font-semibold">{params.recuo_frontal_m} m</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-zinc-500 uppercase">Vagas/unidade</span>
+                    <p className="font-semibold">{params.vagas_por_unidade}</p>
+                  </div>
+                  {saving ? (
+                    <div className="text-purple-700 dark:text-purple-300">Salvando…</div>
+                  ) : null}
                 </div>
-                <div>
-                  <span className="text-zinc-500">TO:</span> <strong>{params.to_max_pct}%</strong>
-                </div>
-                <div>
-                  <span className="text-zinc-500">Altura:</span>{" "}
-                  <strong>{params.altura_max_m ? `${params.altura_max_m}m` : "—"}</strong>
-                </div>
-                <div>
-                  <span className="text-zinc-500">Recuo:</span>{" "}
-                  <strong>{params.recuo_frontal_m}m</strong>
-                </div>
-                <div>
-                  <span className="text-zinc-500">Vagas/un:</span>{" "}
-                  <strong>{params.vagas_por_unidade}</strong>
-                </div>
-                {saving ? (
-                  <div className="text-purple-700 dark:text-purple-300">Salvando…</div>
-                ) : null}
               </div>
             );
           })()}
-        </div>
+        </>
       ) : null}
     </div>
   );
