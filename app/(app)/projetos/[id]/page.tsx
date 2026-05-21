@@ -331,9 +331,12 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
       <div className="grid gap-3 sm:grid-cols-2">
         <Link
           href={`/projetos/${project.id}/documentos`}
-          className="group rounded-lg border border-zinc-200 p-4 transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
+          aria-label="Abrir documentos por IA do projeto"
+          className="group rounded-lg border border-zinc-200 p-4 transition-colors hover:border-zinc-400 hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:border-zinc-800 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:focus-visible:outline-zinc-100"
         >
-          <p className="font-medium">📄 Documentos por IA</p>
+          <p className="font-medium">
+            <span aria-hidden>📄 </span>Documentos por IA
+          </p>
           <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
             Memorial, caderno, proposta, contrato, cronograma + 5 técnicos por disciplina.
           </p>
@@ -344,9 +347,12 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
 
         <Link
           href={`/projetos/${project.id}/orcamento`}
-          className="group rounded-lg border border-zinc-200 p-4 transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
+          aria-label="Abrir orçamento SINAPI do projeto"
+          className="group rounded-lg border border-zinc-200 p-4 transition-colors hover:border-zinc-400 hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:border-zinc-800 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:focus-visible:outline-zinc-100"
         >
-          <p className="font-medium">📊 Orçamento SINAPI</p>
+          <p className="font-medium">
+            <span aria-hidden>📊 </span>Orçamento SINAPI
+          </p>
           <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
             Composição automática com BDI + breakdown por disciplina.
           </p>
