@@ -3,12 +3,14 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/features/shell/AppShell";
 import { loadRecentNotifications } from "@/server/services/notifications-load";
+import { loadActiveAnnouncements } from "@/server/services/announcements-load";
 import { isPlatformAdmin } from "@/lib/auth/platform-admin";
+import type { PlanId } from "@/lib/plans/limits";
 
 type Membership = {
   org_id: string;
   role: "owner" | "admin" | "member";
-  organizations: { id: string; name: string };
+  organizations: { id: string; name: string; plano: PlanId };
 };
 
 export default async function ProtectedLayout({ children }: { children: ReactNode }) {
@@ -23,7 +25,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
 
   const { data: memberships } = await supabase
     .from("organization_members")
-    .select("org_id, role, organizations ( id, name )")
+    .select("org_id, role, organizations ( id, name, plano )")
     .eq("user_id", user.id)
     .returns<Membership[]>();
 
@@ -33,9 +35,12 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
     redirect("/login?error=no_org");
   }
 
-  const [notifications, platformAdmin] = await Promise.all([
+  const orgPlano = currentMembership.organizations.plano ?? "free";
+
+  const [notifications, platformAdmin, announcements] = await Promise.all([
     loadRecentNotifications(),
     isPlatformAdmin(user.id),
+    loadActiveAnnouncements(currentMembership.organizations.id, orgPlano),
   ]);
 
   return (
@@ -44,6 +49,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
       orgName={currentMembership.organizations.name}
       role={currentMembership.role}
       notifications={notifications}
+      announcements={announcements}
       isPlatformAdmin={platformAdmin}
     >
       {children}

@@ -22,9 +22,9 @@ export default async function AnnouncementsPage() {
       </div>
 
       <div className="rounded-lg border border-zinc-800/60 bg-zinc-900/20 p-3 text-xs text-zinc-400">
-        <strong className="text-zinc-200">UI ainda não exibe os anúncios no app principal</strong>—
-        esta seção cria/gerencia. Próximo passo (futuro): banner no topo do AppShell consumindo a
-        tabela <code className="text-amber-300">announcements</code> filtrada por audiência.
+        Anúncios ativos aparecem como banner no topo do app, filtrados por audiência. O usuário pode
+        dispensar via X (preferência persistida em{" "}
+        <code className="text-amber-300">localStorage</code>).
       </div>
 
       <AnnouncementsManager announcements={announcements} />
