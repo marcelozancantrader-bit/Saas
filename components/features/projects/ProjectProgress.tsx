@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CheckIcon, CircleIcon } from "lucide-react";
 
 type StepKey =
@@ -14,10 +15,11 @@ type Step = {
   label: string;
   hint: string;
   status: "done" | "current" | "todo" | "optional";
-  anchor: string;
+  href: string;
 };
 
 type Props = {
+  projectId: string;
   hasFiles: boolean;
   extractionConfirmed: boolean;
   briefingStatus: "none" | "aguardando" | "preenchido";
@@ -30,6 +32,7 @@ type Props = {
 };
 
 export function ProjectProgress({
+  projectId,
   hasFiles,
   extractionConfirmed,
   briefingStatus,
@@ -39,6 +42,8 @@ export function ProjectProgress({
   hasClient,
   hasAddress,
 }: Props) {
+  const tab = (t: string) => `/projetos/${projectId}?tab=${t}`;
+  const docsPage = `/projetos/${projectId}/documentos`;
   const cadastroComplete = !!hasClient && !!hasAddress;
   const steps: Step[] = [
     {
@@ -50,7 +55,7 @@ export function ProjectProgress({
           ? "Vincule um cliente ao projeto"
           : "Adicione o endereço da obra",
       status: cadastroComplete ? "done" : "current",
-      anchor: "#dados-projeto",
+      href: tab("visao"),
     },
     {
       key: "planta",
@@ -61,7 +66,7 @@ export function ProjectProgress({
           : "Aguardando confirmação da extração"
         : "Faça upload da planta em PDF",
       status: extractionConfirmed ? "done" : hasFiles ? "current" : "todo",
-      anchor: "#arquivos",
+      href: tab("planta"),
     },
     {
       key: "validacao",
@@ -70,7 +75,7 @@ export function ProjectProgress({
         ? "NBR + zoneamento avaliados"
         : "Disponível após confirmar a extração",
       status: extractionConfirmed ? "done" : "todo",
-      anchor: "#validacao",
+      href: tab("validacao"),
     },
     {
       key: "briefing",
@@ -87,7 +92,7 @@ export function ProjectProgress({
           : briefingStatus === "aguardando"
             ? "current"
             : "optional",
-      anchor: "#briefing",
+      href: tab("briefing"),
     },
     {
       key: "documentos",
@@ -95,7 +100,7 @@ export function ProjectProgress({
       hint:
         documentsCount > 0 ? `${documentsCount} doc(s) gerado(s)` : "Gere memorial, proposta etc",
       status: documentsCount > 0 ? "done" : extractionConfirmed ? "current" : "todo",
-      anchor: "#documentos",
+      href: docsPage,
     },
     {
       key: "aprovacao",
@@ -105,14 +110,14 @@ export function ProjectProgress({
           ? `${approvedDocuments} doc(s) aprovado(s)`
           : "Envie ao cliente pelo portal",
       status: approvedDocuments > 0 ? "done" : documentsCount > 0 ? "current" : "todo",
-      anchor: "#documentos",
+      href: docsPage,
     },
     {
       key: "art-rrt",
       label: "ART/RRT",
       hint: hasArtRrtData ? "Pronta para baixar" : "Pré-preenchimento opcional",
       status: hasArtRrtData ? "done" : "optional",
-      anchor: "#art-rrt",
+      href: tab("art-rrt"),
     },
   ];
 
@@ -121,9 +126,11 @@ export function ProjectProgress({
       <ol className="flex w-full gap-2 overflow-x-auto pb-2 md:gap-3">
         {steps.map((s, i) => (
           <li key={s.key} className="flex min-w-[110px] flex-1 flex-col">
-            <a
-              href={s.anchor}
-              className="group flex flex-col gap-1.5 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+            <Link
+              href={s.href}
+              scroll
+              className="group flex flex-col gap-1.5 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:focus-visible:outline-zinc-100"
+              aria-label={`Etapa ${i + 1}: ${s.label} — ${s.hint}`}
             >
               <div className="flex items-center gap-2">
                 <StatusDot status={s.status} />
@@ -143,7 +150,7 @@ export function ProjectProgress({
                 {s.label}
               </p>
               <p className="text-[11px] leading-snug text-zinc-500">{s.hint}</p>
-            </a>
+            </Link>
           </li>
         ))}
       </ol>

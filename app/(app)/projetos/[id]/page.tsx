@@ -316,6 +316,7 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
 
       {/* ====== PROGRESSO ====== */}
       <ProjectProgress
+        projectId={id}
         hasFiles={(files ?? []).length > 0}
         extractionConfirmed={confirmedByUser}
         briefingStatus={briefingStatus}
