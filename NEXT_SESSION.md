@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-23 — **Continuação polish UX (P4): 3 batches I/J/K cobrindo áreas que P3 não tocou — auth (reset password, copy, a11y), workspace (máscaras CPF/PIX), portal (gating sem cliente) e billing (status em PT-BR + cores).**
+**Última pausa:** 2026-05-23 (P5) — **5 features novas implementadas em batches autônomos L–P: Onboarding gamificado, Templates de contrato CAU, Cotação de fornecedor, Diário de obra com fotos, WhatsApp Business notifications.**
 
 **Sessões anteriores:**
 
@@ -10,12 +10,78 @@
 - 2026-05-21 madrugada P1: blindagem pré-beta (rate-limit + Sentry + captcha + cancelar plano self-service + UF dinâmico + admin SINAPI/CUB + verificação e-mail + RLS audit)
 - 2026-05-21 madrugada P2: polish pós-deploy (8 fixes visíveis + auto-push)
 - 2026-05-21 madrugada P3: auditoria UX completa (6 commits, ~15 fixes em portal/copy/dashboard/briefing/orçamento/a11y)
-- 2026-05-23 P4: 3 batches I/J/K (auth + workspace + portal gating + billing PT-BR) — esta sessão
+- 2026-05-23 P4: 3 batches I/J/K (auth + workspace + portal gating + billing PT-BR)
+- 2026-05-23 P5: 5 features novas L–P (onboarding, contratos CAU, cotação, diário, WhatsApp) — esta sessão
 
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
-**App live:** https://memorial-ai-mu.vercel.app · **Último commit pushed:** `e94d756` (tudo em prod)
+**App live:** https://memorial-ai-mu.vercel.app · **Último commit pushed:** `2e25b23` (tudo em prod)
 **Repo:** https://github.com/marcelozancantrader-bit/Saas
+
+---
+
+## 🚀 P5 — 5 features novas (2026-05-23) — 5 commits
+
+Pesquisa via 2 agents (inventário + benchmark de 12 concorrentes BR) gerou
+12 candidatas em 3 categorias. Marcelo escolheu 5 (1, 2, 3, 4, 7). Executei
+em batches autônomos com auto-permission mode ativo.
+
+### `06d3a56` Batch L — Onboarding gamificado (#1)
+
+Checklist no dashboard após WelcomeCard sumir (≥1 projeto). 4 passos:
+criar projeto → extrair planta → gerar documento → enviar ao portal. Barra
+de progresso animada, CTA azul no próximo passo, steps concluídos verdes
+com checkmark. Dismiss persiste em `organizations.meta.onboarding.dismissed_at`.
+
+### `4f6d233` Batch M — Templates de contrato CAU (#2)
+
+6 templates em `lib/contract-templates/templates.ts`: Residencial PF,
+Residencial multifamiliar PJ, Comercial, Reforma/Retrofit, Apenas Projeto
+Legal, Projeto Completo + RT. Cita resolução CAU/BR aplicável (51/2013,
+67/2013, 91/2014) e injeta diretivas específicas. Dialog de escolha abre
+quando usuário clica "Gerar contrato" no menu. `prompt_versao` salvo fica
+`contrato.v1+residencial_pf` pra rastreio.
+
+### `aff2bd5` Batch N — Cotação de fornecedor PDF/XLSX (#3)
+
+Botão "Pedido de cotação" no orçamento. Classificador heurístico
+(`lib/budget/family-classifier.ts`) agrupa em 13 famílias (alvenaria,
+esquadrias, pisos, elétrica, hidráulica, cobertura, gás, HVAC, etc).
+PDF formatado pra fornecedor preencher coluna "Preço unit. (R$)" + XLSX.
+
+### `cc980bc` Batch O — Diário de obra com fotos (#4)
+
+**Migration 20260727000001_project_diary.sql PENDENTE de aplicar no Dashboard.**
+
+Nova aba "Diário de obra" em `/projetos/[id]?tab=diario`. Até 6 fotos por
+entrada (JPG/PNG/WebP/HEIC, 8MB cada). Input com `capture="environment"`
+abre câmera no celular. Toggle "olho aberto/fechado" mostra/esconde do
+portal do cliente. RLS dupla: members + anon via portal_token. Fotos em
+bucket `project-files` com path `<org_id>/<project_id>/diary/<entry_id>-N`.
+
+### `2e25b23` Batch P — WhatsApp Business (#7)
+
+Provider-agnostic e gated em `WHATSAPP_PROVIDER`. V1: Z-API (provider BR
+popular). Action `send-to-portal` agora dispara tanto Resend e-mail
+quanto WhatsApp template (canais independentes). Sem provider configurado,
+fluxo continua com e-mail.
+
+**Setup externo (opcional):** conta https://z-api.io + envs
+`WHATSAPP_PROVIDER=z-api`, `ZAPI_INSTANCE_ID`, `ZAPI_TOKEN`,
+`ZAPI_CLIENT_TOKEN` (opcional).
+
+### Pendências externas do P5
+
+1. **Aplicar migration 20260727000001_project_diary.sql** no Supabase
+   Dashboard (mesmo padrão de migrations anteriores)
+2. **Conta Z-API + envs** quando quiser ativar WhatsApp (opcional)
+
+---
+
+## 🎨 P4 Polish UX continuação (2026-05-23) — 3 commits
+
+3 batches (I/J/K) cobrindo auth, workspace, portal e billing — detalhes
+no histórico de commits 37f1c5a, fcd4aee, e94d756.
 
 ---
 
