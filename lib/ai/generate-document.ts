@@ -39,6 +39,12 @@ export type DocumentTipo =
 
 export type GenerateDocumentInput = {
   tipo: DocumentTipo;
+  /**
+   * Diretivas adicionais que serão anexadas ao user message — usado por
+   * `contrato` quando o usuário escolhe um template específico (residencial,
+   * comercial, reforma, etc). Não cacheia pois muda por template.
+   */
+  templateAddition?: string | null;
   /** Dados do projeto + extração que viram contexto para o prompt. */
   context: {
     project: {
@@ -181,6 +187,11 @@ function renderContextMarkdown(input: GenerateDocumentInput): string {
         "> A IA marcou confiança MÉDIA — pode confiar mas mencione 'sujeito a confirmação técnica em obra'.",
       );
     }
+  }
+
+  if (input.templateAddition) {
+    lines.push("", "## Diretrizes adicionais (template escolhido pelo profissional)", "");
+    lines.push(input.templateAddition);
   }
 
   lines.push(

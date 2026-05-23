@@ -8,6 +8,7 @@ import { documentToTiptap } from "@/lib/tiptap/from-sections";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { canGenerateAiDoc, getPlanUsage } from "@/server/services/plan-usage";
 import { checkRateLimit, rateLimitError } from "@/lib/ratelimit/check";
+import { getContractTemplate } from "@/lib/contract-templates/templates";
 import type { PlanId } from "@/lib/plans/limits";
 
 const inputSchema = z.object({
@@ -24,6 +25,8 @@ const inputSchema = z.object({
     "impermeabilizacao",
     "cronograma",
   ]),
+  /** ID do template (somente quando tipo === "contrato"). */
+  contract_template_id: z.string().min(1).max(60).optional(),
 });
 
 export type GenerateDocumentActionInput = z.infer<typeof inputSchema>;
@@ -37,7 +40,14 @@ export async function generateDocumentAction(
 ): Promise<GenerateDocumentActionResult> {
   const parsed = inputSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Parâmetros inválidos." };
-  const { project_id, tipo } = parsed.data;
+  const { project_id, tipo, contract_template_id } = parsed.data;
+
+  // Resolve template (somente pra contrato — ignora pra outros tipos)
+  const contractTemplate =
+    tipo === "contrato" && contract_template_id ? getContractTemplate(contract_template_id) : null;
+  if (tipo === "contrato" && contract_template_id && !contractTemplate) {
+    return { ok: false, error: "Template de contrato inválido." };
+  }
 
   const supabase = await createClient();
 
@@ -139,6 +149,7 @@ export async function generateDocumentAction(
   const result = await generateDocument(
     {
       tipo,
+      templateAddition: contractTemplate?.systemAddition ?? null,
       context: {
         project: {
           nome: project.nome,
@@ -190,6 +201,10 @@ export async function generateDocumentAction(
 
   const titulo = result.document.titulo;
 
+  const promptVersaoFinal = contractTemplate
+    ? `${result.promptVersion}+${contractTemplate.id}`
+    : result.promptVersion;
+
   const { data: inserted, error: insertErr } = await supabase
     .from("documents")
     .insert({
@@ -199,7 +214,7 @@ export async function generateDocumentAction(
       titulo,
       conteudo_tiptap: tiptap,
       status: "rascunho",
-      prompt_versao: result.promptVersion,
+      prompt_versao: promptVersaoFinal,
       custo_tokens: result.usage,
     })
     .select("id")

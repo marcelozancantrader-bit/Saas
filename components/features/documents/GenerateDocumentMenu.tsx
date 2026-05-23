@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { generateDocumentAction } from "@/server/actions/documents/generate.action";
 import { DOCUMENT_LABELS, type DocumentTipo } from "@/lib/ai/generate-document";
+import { ContractTemplateDialog } from "./ContractTemplateDialog";
 import { toast } from "sonner";
 
 type Props = {
@@ -91,8 +92,14 @@ export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction, hasCli
   const router = useRouter();
   const [generating, setGenerating] = useState<DocumentTipo | null>(null);
   const [, startTransition] = useTransition();
+  const [contractDialogOpen, setContractDialogOpen] = useState(false);
 
   function onGenerate(tipo: DocumentTipo) {
+    // Contrato abre dialog de escolha de template antes de gerar.
+    if (tipo === "contrato") {
+      setContractDialogOpen(true);
+      return;
+    }
     setGenerating(tipo);
     startTransition(async () => {
       const result = await generateDocumentAction({ project_id: projectId, tipo });
@@ -107,44 +114,51 @@ export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction, hasCli
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className="bg-primary text-primary-foreground hover:bg-primary/80 inline-flex h-8 items-center gap-1.5 rounded-lg border border-transparent px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={generating !== null}
-      >
-        {generating ? `Gerando ${DOCUMENT_LABELS[generating]}…` : "Gerar documento por IA"}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="max-h-[70vh] w-80 overflow-y-auto">
-        {GROUPS.map((group, gi) => (
-          <div key={group.label}>
-            {gi > 0 ? <DropdownMenuSeparator /> : null}
-            <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
-            {group.tipos.map((tipo) => {
-              const needsExtraction = REQUIRES_EXTRACTION[tipo] && !hasConfirmedExtraction;
-              const needsClient = REQUIRES_CLIENT[tipo] && !hasClient;
-              const blocked = needsExtraction || needsClient;
-              const blockReason = needsClient
-                ? "Vincule um cliente ao projeto primeiro"
-                : needsExtraction
-                  ? "Confirme a extração da planta primeiro"
-                  : null;
-              return (
-                <DropdownMenuItem
-                  key={tipo}
-                  disabled={blocked || generating !== null}
-                  onClick={() => onGenerate(tipo)}
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium">{DOCUMENT_LABELS[tipo]}</span>
-                    <span className="text-xs text-zinc-500">{blockReason ?? HINTS[tipo]}</span>
-                  </div>
-                </DropdownMenuItem>
-              );
-            })}
-          </div>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <ContractTemplateDialog
+        projectId={projectId}
+        open={contractDialogOpen}
+        onClose={() => setContractDialogOpen(false)}
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="bg-primary text-primary-foreground hover:bg-primary/80 inline-flex h-8 items-center gap-1.5 rounded-lg border border-transparent px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={generating !== null}
+        >
+          {generating ? `Gerando ${DOCUMENT_LABELS[generating]}…` : "Gerar documento por IA"}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="max-h-[70vh] w-80 overflow-y-auto">
+          {GROUPS.map((group, gi) => (
+            <div key={group.label}>
+              {gi > 0 ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+              {group.tipos.map((tipo) => {
+                const needsExtraction = REQUIRES_EXTRACTION[tipo] && !hasConfirmedExtraction;
+                const needsClient = REQUIRES_CLIENT[tipo] && !hasClient;
+                const blocked = needsExtraction || needsClient;
+                const blockReason = needsClient
+                  ? "Vincule um cliente ao projeto primeiro"
+                  : needsExtraction
+                    ? "Confirme a extração da planta primeiro"
+                    : null;
+                return (
+                  <DropdownMenuItem
+                    key={tipo}
+                    disabled={blocked || generating !== null}
+                    onClick={() => onGenerate(tipo)}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{DOCUMENT_LABELS[tipo]}</span>
+                      <span className="text-xs text-zinc-500">{blockReason ?? HINTS[tipo]}</span>
+                    </div>
+                  </DropdownMenuItem>
+                );
+              })}
+            </div>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }
 
