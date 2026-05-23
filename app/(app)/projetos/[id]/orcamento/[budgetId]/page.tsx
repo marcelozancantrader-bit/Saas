@@ -9,6 +9,8 @@ import { BudgetItemsTable } from "@/components/features/budgets/BudgetItemsTable
 import { BudgetHeader } from "@/components/features/budgets/BudgetHeader";
 import { CurvaABC } from "@/components/features/budgets/CurvaABC";
 import { ExportButtons } from "@/components/features/budgets/ExportButtons";
+import { QuotationExportButton } from "@/components/features/budgets/QuotationExportButton";
+import { getCurrentOrg } from "@/server/services/current-org";
 import { RegenerateBudgetButton } from "@/components/features/budgets/RegenerateBudgetButton";
 import { BaseDadosBadge } from "@/components/features/budgets/BaseDadosBadge";
 import { loadSinapiCatalog } from "@/lib/budget/sinapi-options";
@@ -52,7 +54,9 @@ export default async function BudgetDetailPage({ params }: Props) {
   const { id: projectId, budgetId } = await params;
   const supabase = await createClient();
 
-  const [{ data: budget, error: budgetErr }, { data: items }, { data: project }] =
+  const me = await getCurrentOrg();
+
+  const [{ data: budget, error: budgetErr }, { data: items }, { data: project }, { data: orgRow }] =
     await Promise.all([
       supabase
         .from("budgets")
@@ -74,6 +78,15 @@ export default async function BudgetDetailPage({ params }: Props) {
         .select("nome, padrao_construtivo, meta")
         .eq("id", projectId)
         .single(),
+      supabase
+        .from("organizations")
+        .select("profissional_nome, registro_cau, registro_crea")
+        .eq("id", me.orgId)
+        .single<{
+          profissional_nome: string | null;
+          registro_cau: string | null;
+          registro_crea: string | null;
+        }>(),
     ]);
 
   if (budgetErr || !budget) notFound();
@@ -161,6 +174,16 @@ export default async function BudgetDetailPage({ params }: Props) {
               budget={budget}
               items={itemsList}
               projectName={project?.nome ?? "Projeto"}
+            />
+            <QuotationExportButton
+              items={itemsList}
+              projectName={project?.nome ?? "Projeto"}
+              budgetVersao={budget.versao}
+              orgName={me.orgName}
+              profissional={{
+                nome: orgRow?.profissional_nome ?? null,
+                cau_crea: orgRow?.registro_cau ?? orgRow?.registro_crea ?? null,
+              }}
             />
           </div>
         </div>
