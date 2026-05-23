@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { selectAllRows } from "@/lib/supabase/paginate";
 import { CIDADES } from "@/lib/zoneamento/cidades";
 
 export type SinapiCatalog = {
@@ -21,20 +22,24 @@ export type SinapiCatalog = {
  */
 export async function loadSinapiCatalog(): Promise<SinapiCatalog> {
   const supabase = createAdminClient();
-  // PostgREST limita a 1000 rows por default. Como a base SINAPI tem
-  // ~2.5k+ rows (27 UFs × ~48 códigos × 2 regimes), precisa range explícito
-  // ou só os primeiros 10 UFs alfabéticos aparecem.
-  const { data } = await supabase
-    .from("sinapi_compositions")
-    .select("uf, mes_referencia")
-    .order("uf", { ascending: true })
-    .order("mes_referencia", { ascending: false })
-    .range(0, 99999);
+  // PostgREST aplica max_rows=1000 por default. Como a base SINAPI tem
+  // ~2.5k+ rows (27 UFs × ~48 códigos × 2 regimes), .range() sozinho NÃO
+  // resolve — só pagina dentro do limite. Precisa paginação real.
+  // Sem isso, só os primeiros ~10 UFs alfabéticos aparecem no catálogo.
+  const data = await selectAllRows<{ uf: string; mes_referencia: string }>(supabase, (s) =>
+    s
+      .from("sinapi_compositions")
+      .select("uf, mes_referencia")
+      .order("uf", { ascending: true })
+      .order("mes_referencia", { ascending: false }),
+  );
 
-  if (!data) return { ufs: [], mesesPorUf: {}, latestMesPorUf: {} };
+  if (!data || data.length === 0) {
+    return { ufs: [], mesesPorUf: {}, latestMesPorUf: {} };
+  }
 
   const mesesPorUf: Record<string, Set<string>> = {};
-  for (const row of data as { uf: string; mes_referencia: string }[]) {
+  for (const row of data) {
     if (!mesesPorUf[row.uf]) mesesPorUf[row.uf] = new Set();
     mesesPorUf[row.uf]!.add(row.mes_referencia);
   }
