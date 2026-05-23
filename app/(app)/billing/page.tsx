@@ -150,30 +150,79 @@ export default async function BillingPage() {
             </p>
           ) : (
             <ul className="space-y-2 text-sm">
-              {subscriptions.map((s) => (
-                <li key={s.id} className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">
-                      {PLANS[s.plano as PlanId]?.label ?? s.plano}{" "}
-                      <span className="text-xs text-zinc-500">· {s.provider}</span>
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      {new Date(s.created_at as string).toLocaleDateString("pt-BR")}
-                      {s.current_period_end
-                        ? ` · até ${new Date(s.current_period_end as string).toLocaleDateString("pt-BR")}`
-                        : null}
-                      {s.cancel_at_period_end ? " · cancelamento agendado" : null}
-                    </p>
-                  </div>
-                  <Badge variant={s.status === "active" ? "default" : "outline"}>{s.status}</Badge>
-                </li>
-              ))}
+              {subscriptions.map((s) => {
+                const isActive = s.status === "active";
+                return (
+                  <li
+                    key={s.id}
+                    className={
+                      isActive
+                        ? "flex items-start justify-between gap-3 rounded-md border border-emerald-200 bg-emerald-50/40 px-3 py-2 dark:border-emerald-900/40 dark:bg-emerald-950/20"
+                        : "flex items-start justify-between gap-3 px-3 py-1.5"
+                    }
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {PLANS[s.plano as PlanId]?.label ?? s.plano}{" "}
+                        <span className="text-xs text-zinc-500">· {s.provider}</span>
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        Início {new Date(s.created_at as string).toLocaleDateString("pt-BR")}
+                        {s.current_period_end
+                          ? ` · até ${new Date(s.current_period_end as string).toLocaleDateString("pt-BR")}`
+                          : null}
+                        {s.cancel_at_period_end ? " · cancelamento agendado" : null}
+                      </p>
+                    </div>
+                    <SubscriptionStatusBadge
+                      status={s.status}
+                      canceling={!!s.cancel_at_period_end}
+                    />
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>
       </Card>
     </div>
   );
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  active: "Ativa",
+  trialing: "Em trial",
+  past_due: "Pagamento atrasado",
+  canceled: "Cancelada",
+  incomplete: "Pagamento pendente",
+  paused: "Pausada",
+};
+
+function SubscriptionStatusBadge({ status, canceling }: { status: string; canceling: boolean }) {
+  const label =
+    status === "active" && canceling ? "Ativa (cancelando)" : (STATUS_LABEL[status] ?? status);
+
+  if (status === "active") {
+    return (
+      <Badge
+        className={
+          canceling
+            ? "border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200"
+            : "border-emerald-300 bg-emerald-100 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-200"
+        }
+      >
+        {label}
+      </Badge>
+    );
+  }
+  if (status === "past_due") {
+    return (
+      <Badge className="border-rose-300 bg-rose-100 text-rose-900 hover:bg-rose-100 dark:border-rose-900/40 dark:bg-rose-950/40 dark:text-rose-200">
+        {label}
+      </Badge>
+    );
+  }
+  return <Badge variant="outline">{label}</Badge>;
 }
 
 function UsageStat({ label, used, limit }: { label: string; used: number; limit: number | null }) {
