@@ -2,7 +2,14 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
-export type TabKey = "visao" | "planta" | "validacao" | "briefing" | "art-rrt" | "escopo";
+export type TabKey =
+  | "visao"
+  | "planta"
+  | "validacao"
+  | "briefing"
+  | "art-rrt"
+  | "escopo"
+  | "diario";
 
 type TabItem = {
   key: TabKey;

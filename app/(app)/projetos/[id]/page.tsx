@@ -39,6 +39,8 @@ import { getZona } from "@/lib/zoneamento/cidades";
 import { ProjectProgress } from "@/components/features/projects/ProjectProgress";
 import { DisciplineExtractionsCard } from "@/components/features/extraction/DisciplineExtractionsCard";
 import { ProjectTabs, type TabKey } from "@/components/features/projects/ProjectTabs";
+import { DiaryFeed } from "@/components/features/diary/DiaryFeed";
+import { loadDiaryEntries } from "@/server/services/diary";
 import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 
 export const dynamic = "force-dynamic";
@@ -91,7 +93,15 @@ type ExtracaoDisciplinaEntry = {
   usd_cost?: number;
 };
 
-const VALID_TABS: TabKey[] = ["visao", "planta", "validacao", "briefing", "art-rrt", "escopo"];
+const VALID_TABS: TabKey[] = [
+  "visao",
+  "planta",
+  "validacao",
+  "briefing",
+  "art-rrt",
+  "escopo",
+  "diario",
+];
 
 export default async function ProjetoDetailPage({ params, searchParams }: Props) {
   const { id } = await params;
@@ -285,7 +295,11 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
     },
     { key: "art-rrt", label: "ART/RRT" },
     { key: "escopo", label: "Alterações", badge: escopoPendentes || undefined },
+    { key: "diario", label: "Diário de obra" },
   ];
+
+  // Diário carregado só na aba (evita queries quando não usado)
+  const diaryEntries = currentTab === "diario" ? await loadDiaryEntries(id) : [];
 
   return (
     <div className="space-y-6">
@@ -607,6 +621,9 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
 
       {/* ====== TAB: ALTERAÇÕES DE ESCOPO ====== */}
       {currentTab === "escopo" ? <ScopeChangesCard scopeChanges={scopeChanges ?? []} /> : null}
+
+      {/* ====== TAB: DIÁRIO DE OBRA ====== */}
+      {currentTab === "diario" ? <DiaryFeed projectId={id} entries={diaryEntries} /> : null}
     </div>
   );
 }
