@@ -18,7 +18,7 @@ import {
   uploadLogoAction,
   removeLogoAction,
 } from "@/server/actions/organizations/upload-logo.action";
-import { maskCpf, maskCnpj } from "@/lib/utils/brazilian-formatters";
+import { maskCpf, maskCnpj, maskPhone } from "@/lib/utils/brazilian-formatters";
 
 export type WorkspaceInitial = {
   name: string;
@@ -60,13 +60,32 @@ function detectTipoPessoa(documento: string): TipoPessoa {
   return digits.length === 11 ? "pf" : "pj";
 }
 
+/** Aplica a máscara correta à chave PIX vinda do DB conforme o tipo. */
+function maskPixOnLoad(tipo: WorkspaceInitial["pix_tipo"], raw: string): string {
+  if (!raw) return "";
+  if (tipo === "cpf") return maskCpf(raw);
+  if (tipo === "cnpj") return maskCnpj(raw);
+  if (tipo === "telefone") return maskPhone(raw);
+  return raw;
+}
+
+/** Máscara durante a digitação — só aplica em campos numéricos. */
+function maskPixOnInput(tipo: WorkspaceInitial["pix_tipo"], raw: string): string {
+  if (tipo === "cpf") return maskCpf(raw);
+  if (tipo === "cnpj") return maskCnpj(raw);
+  if (tipo === "telefone") return maskPhone(raw);
+  return raw;
+}
+
 export function WorkspaceForm({ initial, canEdit }: Props) {
   const router = useRouter();
-  // Aplica máscara inicial — initial.cnpj vem como dígitos puros do DB.
+  // Aplica máscara inicial — initial.cnpj e prof_cpf vêm como dígitos puros do DB.
   const initialTipo = detectTipoPessoa(initial.cnpj);
   const [form, setForm] = useState<WorkspaceInitial>({
     ...initial,
     cnpj: initialTipo === "pf" ? maskCpf(initial.cnpj) : maskCnpj(initial.cnpj),
+    profissional_cpf: maskCpf(initial.profissional_cpf),
+    pix_chave: maskPixOnLoad(initial.pix_tipo, initial.pix_chave),
   });
   const [tipoPessoa, setTipoPessoa] = useState<TipoPessoa>(initialTipo);
   const [saving, setSaving] = useState(false);
@@ -102,6 +121,10 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
     setTipoPessoa(novoTipo);
     // Limpa o campo ao trocar — evita salvar um CPF como CNPJ ou vice-versa.
     field("cnpj", "");
+  }
+
+  function onPixTipoChange(novoTipo: WorkspaceInitial["pix_tipo"]) {
+    setForm((f) => ({ ...f, pix_tipo: novoTipo, pix_chave: "" }));
   }
 
   async function onLogoFile(file: File) {
@@ -267,9 +290,11 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
                 <Input
                   id="prof_cpf"
                   value={form.profissional_cpf}
-                  onChange={(e) => field("profissional_cpf", e.target.value)}
+                  onChange={(e) => field("profissional_cpf", maskCpf(e.target.value))}
                   placeholder="000.000.000-00"
                   maxLength={14}
+                  inputMode="numeric"
+                  autoComplete="off"
                 />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
@@ -371,7 +396,7 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
             <Label htmlFor="pix-tipo">Tipo de chave</Label>
             <Select
               value={form.pix_tipo}
-              onValueChange={(v) => field("pix_tipo", v as WorkspaceInitial["pix_tipo"])}
+              onValueChange={(v) => onPixTipoChange(v as WorkspaceInitial["pix_tipo"])}
             >
               <SelectTrigger id="pix-tipo">
                 <SelectValue placeholder="Sem PIX" />
@@ -390,7 +415,7 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
             <Input
               id="pix-chave"
               value={form.pix_chave}
-              onChange={(e) => field("pix_chave", e.target.value)}
+              onChange={(e) => field("pix_chave", maskPixOnInput(form.pix_tipo, e.target.value))}
               placeholder={
                 form.pix_tipo === "cpf"
                   ? "000.000.000-00"
@@ -399,11 +424,16 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
                     : form.pix_tipo === "email"
                       ? "voce@escritorio.com"
                       : form.pix_tipo === "telefone"
-                        ? "+5511999999999"
+                        ? "(11) 99999-9999"
                         : "chave aleatória"
               }
               disabled={!form.pix_tipo}
               maxLength={200}
+              inputMode={
+                form.pix_tipo === "cpf" || form.pix_tipo === "cnpj" || form.pix_tipo === "telefone"
+                  ? "numeric"
+                  : "text"
+              }
             />
           </div>
         </div>

@@ -50,7 +50,11 @@ export default async function DocumentEditorPage({ params }: Props) {
       )
       .eq("id", documentId)
       .single<DocumentDetail>(),
-    supabase.from("projects").select("nome").eq("id", projectId).single(),
+    supabase
+      .from("projects")
+      .select("nome, client_id")
+      .eq("id", projectId)
+      .single<{ nome: string; client_id: string | null }>(),
     getCurrentOrg(),
   ]);
 
@@ -113,7 +117,12 @@ export default async function DocumentEditorPage({ params }: Props) {
 
           <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
             <DocumentStatusToggle documentId={doc.id} status={doc.status} />
-            <SendToPortalButton documentId={doc.id} envioMeta={doc.envio_meta} />
+            <SendToPortalButton
+              documentId={doc.id}
+              envioMeta={doc.envio_meta}
+              projectId={projectId}
+              hasClient={!!project?.client_id}
+            />
             <DocumentPdfExport
               filename={filenameBase}
               titulo={doc.titulo}

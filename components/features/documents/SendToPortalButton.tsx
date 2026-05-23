@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { sendDocumentToPortalAction } from "@/server/actions/documents/send-to-portal.action";
@@ -8,9 +9,11 @@ import { sendDocumentToPortalAction } from "@/server/actions/documents/send-to-p
 type Props = {
   documentId: string;
   envioMeta: { enviado_em: string } | null;
+  projectId: string;
+  hasClient: boolean;
 };
 
-export function SendToPortalButton({ documentId, envioMeta }: Props) {
+export function SendToPortalButton({ documentId, envioMeta, projectId, hasClient }: Props) {
   const [sending, setSending] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const alreadySent = !!envioMeta;
@@ -34,6 +37,27 @@ export function SendToPortalButton({ documentId, envioMeta }: Props) {
     } finally {
       setSending(false);
     }
+  }
+
+  if (!hasClient) {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <Button
+          size="sm"
+          disabled
+          title="Vincule um cliente ao projeto antes de enviar"
+          aria-label="Enviar ao cliente — desabilitado, projeto sem cliente"
+        >
+          Enviar ao cliente
+        </Button>
+        <Link
+          href={`/projetos/${projectId}?tab=visao`}
+          className="text-[10px] text-blue-600 underline-offset-2 hover:underline dark:text-blue-400"
+        >
+          Vincular cliente ao projeto
+        </Link>
+      </div>
+    );
   }
 
   if (alreadySent && !link) {
