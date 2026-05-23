@@ -8,6 +8,8 @@ import { getDashboardMetrics } from "@/server/services/dashboard-metrics";
 import { getPlanUsage } from "@/server/services/plan-usage";
 import { getPlanInfo, type PlanId } from "@/lib/plans/limits";
 import { WelcomeCard } from "@/components/features/onboarding/WelcomeCard";
+import { OnboardingChecklist } from "@/components/features/onboarding/OnboardingChecklist";
+import { getOnboardingProgress } from "@/server/services/onboarding-progress";
 import { Sparkline } from "@/components/features/dashboard/Sparkline";
 import { KpiTile } from "@/components/features/dashboard/KpiTile";
 import {
@@ -63,7 +65,7 @@ export default async function DashboardPage() {
   const org = await getCurrentOrg();
   const supabase = await createClient();
 
-  const [{ data: orgRow }, metrics, usage, { data: userRow }] = await Promise.all([
+  const [{ data: orgRow }, metrics, usage, { data: userRow }, onboarding] = await Promise.all([
     supabase.from("organizations").select("plano").eq("id", org.orgId).single<{ plano: PlanId }>(),
     getDashboardMetrics(org.orgId),
     (async () => {
@@ -75,7 +77,12 @@ export default async function DashboardPage() {
       return getPlanUsage(org.orgId, data?.plano ?? "free");
     })(),
     supabase.auth.getUser().then((res) => ({ data: res.data.user })),
+    getOnboardingProgress(org.orgId),
   ]);
+
+  // Mostra checklist quando: já tem ao menos 1 projeto (WelcomeCard sumiu),
+  // não foi dispensado, e ainda há passo pendente OU acabou de completar.
+  const showOnboardingChecklist = onboarding.steps[0]?.done === true && !onboarding.dismissedAt;
 
   const planInfo = getPlanInfo(orgRow?.plano ?? "free");
   const userName =
@@ -129,6 +136,8 @@ export default async function DashboardPage() {
       </header>
 
       {metrics.activeProjects === 0 ? <WelcomeCard /> : null}
+
+      {showOnboardingChecklist ? <OnboardingChecklist progress={onboarding} /> : null}
 
       {/* ============== KPI GRID ============== */}
       <section>
