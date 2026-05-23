@@ -39,6 +39,18 @@ const envSchema = z.object({
   // widget não renderiza e validação server-side é pulada (dev local).
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
   TURNSTILE_SECRET_KEY: z.string().optional(),
+
+  // WhatsApp Business notifications — provider-agnostic. Quando WHATSAPP_PROVIDER
+  // não está setado, as notificações são silenciosamente puladas (fallback pra
+  // Resend e-mail). Provider atual: "z-api" (provider BR popular).
+  WHATSAPP_PROVIDER: z.enum(["z-api", "meta-cloud"]).optional(),
+  // Z-API credentials (https://z-api.io)
+  ZAPI_INSTANCE_ID: z.string().optional(),
+  ZAPI_TOKEN: z.string().optional(),
+  ZAPI_CLIENT_TOKEN: z.string().optional(),
+  // Meta Cloud (stub, V2)
+  META_WA_ACCESS_TOKEN: z.string().optional(),
+  META_WA_PHONE_NUMBER_ID: z.string().optional(),
 });
 
 type Env = z.infer<typeof envSchema>;
@@ -75,6 +87,12 @@ function parseEnv(): Env {
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
+    WHATSAPP_PROVIDER: process.env.WHATSAPP_PROVIDER,
+    ZAPI_INSTANCE_ID: process.env.ZAPI_INSTANCE_ID,
+    ZAPI_TOKEN: process.env.ZAPI_TOKEN,
+    ZAPI_CLIENT_TOKEN: process.env.ZAPI_CLIENT_TOKEN,
+    META_WA_ACCESS_TOKEN: process.env.META_WA_ACCESS_TOKEN,
+    META_WA_PHONE_NUMBER_ID: process.env.META_WA_PHONE_NUMBER_ID,
   });
   if (!parsed.success) {
     const issues = parsed.error.issues

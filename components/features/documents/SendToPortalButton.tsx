@@ -29,11 +29,14 @@ export function SendToPortalButton({ documentId, envioMeta, projectId, hasClient
       const url = `${window.location.origin}/portal/${r.portal_token}`;
       setLink(url);
       await navigator.clipboard.writeText(url).catch(() => {});
-      toast.success(
-        r.email_sent
-          ? "Cliente notificado por e-mail. Link copiado para o clipboard."
-          : "Link copiado para o clipboard (envio por e-mail desativado).",
-      );
+      const channels: string[] = [];
+      if (r.email_sent) channels.push("e-mail");
+      if (r.whatsapp_sent) channels.push("WhatsApp");
+      const channelMsg =
+        channels.length > 0
+          ? `Cliente notificado por ${channels.join(" + ")}.`
+          : "Envio automático desativado — compartilhe o link manualmente.";
+      toast.success(`${channelMsg} Link copiado para o clipboard.`);
     } finally {
       setSending(false);
     }

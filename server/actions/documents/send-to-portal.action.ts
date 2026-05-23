@@ -6,6 +6,8 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/resend";
 import { renderDocumentSentEmail } from "@/lib/email/templates";
+import { sendWhatsapp, isWhatsappEnabled } from "@/lib/whatsapp/client";
+import { renderDocumentSentWhatsapp } from "@/lib/whatsapp/templates";
 import { env } from "@/lib/validators/env";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 
@@ -15,7 +17,7 @@ const schema = z.object({
 
 export type SendToPortalInput = z.infer<typeof schema>;
 export type SendToPortalResult =
-  | { ok: true; portal_token: string; email_sent: boolean }
+  | { ok: true; portal_token: string; email_sent: boolean; whatsapp_sent: boolean }
   | { ok: false; error: string };
 
 export async function sendDocumentToPortalAction(
@@ -38,7 +40,7 @@ export async function sendDocumentToPortalAction(
       `id, titulo, project_id, conteudo_tiptap,
        projects!inner(
          nome, client_id, org_id,
-         clients!inner(portal_token, email, nome),
+         clients!inner(portal_token, email, telefone, nome),
          organizations!inner(name)
        )`,
     )
@@ -50,7 +52,12 @@ export async function sendDocumentToPortalAction(
     nome: string;
     client_id: string | null;
     org_id: string;
-    clients: { portal_token: string; email: string | null; nome: string } | null;
+    clients: {
+      portal_token: string;
+      email: string | null;
+      telefone: string | null;
+      nome: string;
+    } | null;
     organizations: { name: string } | null;
   };
   if (!project.client_id || !project.clients)
@@ -89,11 +96,13 @@ export async function sendDocumentToPortalAction(
     .eq("id", parsed.data.document_id);
   if (upErr) return { ok: false, error: upErr.message };
 
-  // E-mail para o cliente. Silenciosamente pulado se RESEND_API_KEY ausente.
+  // E-mail + WhatsApp pro cliente. Ambos são gated e silenciosamente
+  // pulados se providers não estiverem configurados.
+  const portalUrl = `${env.NEXT_PUBLIC_APP_URL}/portal/${project.clients.portal_token}`;
+  const orgName = project.organizations?.name ?? "Memorial.ai";
+
   let emailSent = false;
   if (project.clients.email) {
-    const portalUrl = `${env.NEXT_PUBLIC_APP_URL}/portal/${project.clients.portal_token}`;
-    const orgName = project.organizations?.name ?? "Memorial.ai";
     const { html, text, subject } = renderDocumentSentEmail({
       orgName,
       clientName: project.clients.nome,
@@ -111,7 +120,29 @@ export async function sendDocumentToPortalAction(
     emailSent = r.ok;
   }
 
+  let whatsappSent = false;
+  if (project.clients.telefone && isWhatsappEnabled()) {
+    const text = renderDocumentSentWhatsapp({
+      orgName,
+      clientName: project.clients.nome,
+      projectName: project.nome,
+      documentTitle: doc.titulo,
+      portalUrl,
+    });
+    const r = await sendWhatsapp({
+      to: project.clients.telefone,
+      text,
+      tag: "portal.document_sent",
+    });
+    whatsappSent = r.ok;
+  }
+
   revalidatePath(`/projetos/${doc.project_id}/documentos`);
   revalidatePath(`/projetos/${doc.project_id}/documentos/${parsed.data.document_id}`);
-  return { ok: true, portal_token: project.clients.portal_token, email_sent: emailSent };
+  return {
+    ok: true,
+    portal_token: project.clients.portal_token,
+    email_sent: emailSent,
+    whatsapp_sent: whatsappSent,
+  };
 }
