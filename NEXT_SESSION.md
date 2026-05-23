@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-21 (madrugada — Parte 3) — **Auditoria UX completa via 2 agents + 6 batches de fixes em produção: portal cliente humanizado, copy LGPD/status, /projetos/novo, BudgetItemsTable Dialog, dashboard polish, estados orçamento icônicos, briefing/scope, a11y quick actions.**
+**Última pausa:** 2026-05-23 — **Continuação polish UX (P4): 3 batches I/J/K cobrindo áreas que P3 não tocou — auth (reset password, copy, a11y), workspace (máscaras CPF/PIX), portal (gating sem cliente) e billing (status em PT-BR + cores).**
 
 **Sessões anteriores:**
 
@@ -9,12 +9,74 @@
 - 2026-05-21 noite: audit fluxo planta→orçamento + CUB estadual + IA plano diretor + recuos medidos + smoke test PDF real + 4 fixes + SINAPI nacional
 - 2026-05-21 madrugada P1: blindagem pré-beta (rate-limit + Sentry + captcha + cancelar plano self-service + UF dinâmico + admin SINAPI/CUB + verificação e-mail + RLS audit)
 - 2026-05-21 madrugada P2: polish pós-deploy (8 fixes visíveis + auto-push)
-- 2026-05-21 madrugada P3: auditoria UX completa (6 commits, ~15 fixes em portal/copy/dashboard/briefing/orçamento/a11y) — esta sessão
+- 2026-05-21 madrugada P3: auditoria UX completa (6 commits, ~15 fixes em portal/copy/dashboard/briefing/orçamento/a11y)
+- 2026-05-23 P4: 3 batches I/J/K (auth + workspace + portal gating + billing PT-BR) — esta sessão
 
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
-**App live:** https://memorial-ai-mu.vercel.app · **Último commit pushed:** `091436b` (tudo em prod)
+**App live:** https://memorial-ai-mu.vercel.app · **Último commit pushed:** `e94d756` (tudo em prod)
 **Repo:** https://github.com/marcelozancantrader-bit/Saas
+
+---
+
+## 🎨 P4 Polish UX continuação (2026-05-23) — 3 commits pushed
+
+Auditoria via 2 agents Explore (auth + docs/billing/settings) atrás de
+áreas não-cobertas pelos P2/P3. Triagem manual descartou achados falsos
+(agents inventaram alguns) e confirmou ~10 reais. 3 batches:
+
+### `37f1c5a` Batch I — auth polish
+
+1. **ResetPasswordForm** ganha `aria-label` no toggle Mostrar/Ocultar
+   (LoginForm/SignupForm já tinham).
+2. **Reset password fluxo**: action retornava `redirect()` direto, então
+   o cliente nunca via toast de sucesso. Agora retorna `{ok:true}`, o
+   client component dispara `toast.success("Senha atualizada. Entrando…")`
+   - `router.push("/dashboard")`.
+3. **Reset password copy**: "Você acessou via link de recuperação. Escolha
+   uma senha forte..." → "Crie uma senha forte pra voltar ao seu workspace.
+   Mínimo 8 caracteres." (mais humano).
+4. **`/sobre` typo**: "engeneheiro" → "engenheiro".
+5. **FAQ "URL com token UUID"** → "link único por cliente que você manda
+   por WhatsApp ou e-mail" (zero jargão pra Camila).
+6. **Padroniza "gratuito"** → "grátis" no botão signup (login link já
+   usava grátis).
+
+### `fcd4aee` Batch J — máscaras CPF/PIX + gating portal
+
+1. **WorkspaceForm `prof_cpf`**: aplica `maskCpf` no carregamento + no
+   onChange. Antes ficava sem formato visual até primeiro toque (o campo
+   `cnpj` principal já mascarava).
+2. **WorkspaceForm chave PIX**: máscara dinâmica por tipo (cpf→maskCpf,
+   cnpj→maskCnpj, telefone→maskPhone); placeholder telefone trocado pra
+   formato BR `(11) 99999-9999`; troca de tipo limpa o campo.
+3. **SendToPortalButton ganha prop `hasClient`**: se projeto sem cliente,
+   botão desabilitado + hint "Vincular cliente ao projeto" linkando pra
+   `/projetos/[id]?tab=visao`. Antes usuário clicava, ação retornava
+   erro, e ele descobria via toast.error.
+
+### `e94d756` Batch K — histórico de assinaturas em PT-BR
+
+1. **Status badges**: traduz status cru (`active`/`canceled`/`past_due`/
+   `trialing`/`incomplete`/`paused`) → labels PT-BR ("Ativa", "Cancelada",
+   "Pagamento atrasado", "Em trial", ...).
+2. **Cores distintas**: linha ativa com borda+bg verde leve; `past_due`
+   vermelha; demais neutras (outline). Antes era tudo cinza similar.
+3. **"Ativa (cancelando)"**: ativa-com-cancelamento-agendado vira badge
+   amber separado da ativa renovável (verde).
+
+### Achados refutados (não fixados — agent inventou)
+
+- WorkspaceForm: `tipoPessoa` JÁ sincroniza label CPF/CNPJ corretamente
+  via state derivada (`docLabel = tipoPessoa === "pf" ? "CPF" : "CNPJ"`).
+- send-to-portal action: JÁ retorna erro específico (`"vincule um cliente
+antes de enviar"`) — não é genérico. Mas o gating prévio é melhor UX.
+- CancelPlan: `canCancel` JÁ exclui quando `cancel_at_period_end=true`,
+  então o botão NÃO aparece em duplicado.
+- TiptapEditor título sem `max-w-full`: o `<Input>` shadcn já tem
+  `w-full` por padrão. Falso achado.
+- GenerateDocumentMenu: JÁ tem `disabled={generating !== null}` e label
+  do trigger muda pra "Gerando X…".
 
 ---
 
