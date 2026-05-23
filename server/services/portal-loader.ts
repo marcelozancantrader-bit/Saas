@@ -57,6 +57,17 @@ export type PortalBriefing = {
   respostas: Record<string, unknown> | null;
 };
 
+export type PortalDiaryEntry = {
+  id: string;
+  titulo: string;
+  body: string | null;
+  registrado_em: string;
+  local_label: string | null;
+  tags: string[];
+  /** URLs assinadas (1h) — geradas no loader, prontas pra renderizar. */
+  photo_urls: string[];
+};
+
 export type PortalProject = {
   client: {
     nome: string;
@@ -79,6 +90,7 @@ export type PortalProject = {
   documents: PortalDocument[];
   scope_changes: PortalScopeChange[];
   briefing: PortalBriefing | null;
+  diary_entries: PortalDiaryEntry[];
 };
 
 export type PortalLoadResult =
@@ -155,6 +167,16 @@ export async function loadPortalByToken(token: string): Promise<PortalLoadResult
     .eq("project_id", project.id)
     .maybeSingle();
 
+  // Diário: cliente vê só entradas marcadas como visíveis no portal.
+  const { data: diaryRows } = await admin
+    .from("project_diary_entries")
+    .select("id, titulo, body, registrado_em, local_label, tags, photo_paths")
+    .eq("project_id", project.id)
+    .eq("portal_visible", true)
+    .order("registrado_em", { ascending: false });
+
+  const diary_entries = await hydrateDiaryEntries(admin, diaryRows ?? []);
+
   return {
     ok: true,
     data: {
@@ -168,8 +190,47 @@ export async function loadPortalByToken(token: string): Promise<PortalLoadResult
       documents: (documents ?? []) as PortalDocument[],
       scope_changes: (scopeChanges ?? []) as PortalScopeChange[],
       briefing: briefingRow as PortalBriefing | null,
+      diary_entries,
     },
   };
+}
+
+type DiaryRow = {
+  id: string;
+  titulo: string;
+  body: string | null;
+  registrado_em: string;
+  local_label: string | null;
+  tags: string[] | null;
+  photo_paths: string[] | null;
+};
+
+async function hydrateDiaryEntries(
+  admin: ReturnType<typeof createAdminClient>,
+  rows: DiaryRow[],
+): Promise<PortalDiaryEntry[]> {
+  if (rows.length === 0) return [];
+
+  const allPaths = rows.flatMap((r) => r.photo_paths ?? []);
+  const urlByPath = new Map<string, string>();
+  if (allPaths.length > 0) {
+    const { data: signed } = await admin.storage
+      .from("project-files")
+      .createSignedUrls(allPaths, 60 * 60);
+    for (const s of signed ?? []) {
+      if (s.signedUrl && s.path) urlByPath.set(s.path, s.signedUrl);
+    }
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    titulo: r.titulo,
+    body: r.body,
+    registrado_em: r.registrado_em,
+    local_label: r.local_label,
+    tags: r.tags ?? [],
+    photo_urls: (r.photo_paths ?? []).map((p) => urlByPath.get(p) ?? "").filter(Boolean),
+  }));
 }
 
 /**

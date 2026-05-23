@@ -8,6 +8,7 @@ import { ApprovalCard } from "@/components/features/portal/ApprovalCard";
 import { ScopeChangeSection } from "@/components/features/portal/ScopeChangeSection";
 import { BriefingForm } from "@/components/features/portal/BriefingForm";
 import { ChatDaPlanta } from "@/components/features/portal/ChatDaPlanta";
+import { PortalDiarySection } from "@/components/features/portal/PortalDiarySection";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,8 @@ export default async function PortalPage({ params }: Props) {
     if (result.reason === "invalid_token" || result.reason === "no_project") notFound();
     throw new Error(`Portal load failed: ${result.reason}`);
   }
-  const { client, project, organization, documents, scope_changes, briefing } = result.data;
+  const { client, project, organization, documents, scope_changes, briefing, diary_entries } =
+    result.data;
 
   const pending = documents.filter((d) => !d.aprovacao_meta);
   const decided = documents.filter((d) => d.aprovacao_meta);
@@ -175,6 +177,13 @@ export default async function PortalPage({ params }: Props) {
             );
           })}
         </section>
+      ) : null}
+
+      {diary_entries.length > 0 ? (
+        <>
+          <Separator className="my-10" />
+          <PortalDiarySection entries={diary_entries} />
+        </>
       ) : null}
 
       <Separator className="my-10" />
