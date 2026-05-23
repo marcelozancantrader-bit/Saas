@@ -25,6 +25,7 @@ import { formatBRL } from "@/lib/utils/money";
 import { updateBudgetItemAction } from "@/server/actions/budgets/update-item.action";
 import { deleteBudgetItemAction } from "@/server/actions/budgets/delete-item.action";
 import { AddItemDialog } from "./AddItemDialog";
+import { ReplaceItemDialog } from "./ReplaceItemDialog";
 import type { BudgetItem } from "@/app/(app)/projetos/[id]/orcamento/[budgetId]/page";
 import { DISCIPLINA_LABEL, type Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 import { formatCodigoExibicao } from "@/lib/budget/format-codigo";
@@ -43,6 +44,7 @@ export function BudgetItemsTable({ items, budgetId, uf, mesReferencia, desonerad
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState<Record<string, { qty: string; preco: string }>>({});
   const [toRemove, setToRemove] = useState<BudgetItem | null>(null);
+  const [toReplace, setToReplace] = useState<BudgetItem | null>(null);
 
   function setField(id: string, key: "qty" | "preco", value: string) {
     setEditing((prev) => ({
@@ -197,14 +199,25 @@ export function BudgetItemsTable({ items, budgetId, uf, mesReferencia, desonerad
                           Salvar
                         </Button>
                       ) : (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setToRemove(item)}
-                          disabled={pending}
-                        >
-                          Remover
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setToReplace(item)}
+                            disabled={pending}
+                            title="Trocar por outra composição SINAPI"
+                          >
+                            Substituir
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setToRemove(item)}
+                            disabled={pending}
+                          >
+                            Remover
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
@@ -223,6 +236,14 @@ export function BudgetItemsTable({ items, budgetId, uf, mesReferencia, desonerad
           desonerado={desonerado}
         />
       </div>
+
+      <ReplaceItemDialog
+        item={toReplace}
+        uf={uf}
+        mesReferencia={mesReferencia}
+        desonerado={desonerado}
+        onClose={() => setToReplace(null)}
+      />
 
       <Dialog open={!!toRemove} onOpenChange={(v) => !pending && !v && setToRemove(null)}>
         <DialogContent className="sm:max-w-md">
