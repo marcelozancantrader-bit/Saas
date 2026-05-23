@@ -12,7 +12,7 @@ export default function ResetPasswordPage() {
       <CardHeader>
         <CardTitle className="text-xl">Defina uma nova senha</CardTitle>
         <CardDescription>
-          Você acessou via link de recuperação. Escolha uma senha forte e confirme abaixo.
+          Crie uma senha forte pra voltar ao seu workspace. Mínimo 8 caracteres.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

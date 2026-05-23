@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +10,7 @@ import { resetPasswordAction } from "@/server/actions/auth/reset-password.action
 import { PasswordStrength } from "./PasswordStrength";
 
 export function ResetPasswordForm() {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -21,11 +24,14 @@ export function ResetPasswordForm() {
     setFieldErrors({});
     startTransition(async () => {
       const result = await resetPasswordAction(formData);
-      if (!result) return; // redirect aconteceu
+      if (!result) return;
       if (!result.ok) {
         setError(result.error);
         if (result.fieldErrors) setFieldErrors(result.fieldErrors);
+        return;
       }
+      toast.success("Senha atualizada. Entrando no workspace…");
+      router.push("/dashboard");
     });
   }
 
@@ -50,6 +56,7 @@ export function ResetPasswordForm() {
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             className="absolute top-1/2 right-2 -translate-y-1/2 rounded px-2 py-0.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
           >
             {showPassword ? "Ocultar" : "Mostrar"}
           </button>

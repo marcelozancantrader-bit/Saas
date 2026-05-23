@@ -182,7 +182,7 @@ const FAQ = [
   },
   {
     q: "Meus clientes precisam criar conta?",
-    a: "Não. Você envia um link único por cliente (URL com token UUID); o cliente acessa, lê, assina e aprova sem nenhum cadastro. Funciona em qualquer celular.",
+    a: "Não. Você gera um link único por cliente e manda por WhatsApp ou e-mail; ele acessa, lê, assina e aprova sem cadastro nenhum. Funciona em qualquer celular.",
   },
 ];
 

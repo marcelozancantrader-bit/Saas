@@ -1,7 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z
@@ -55,5 +54,5 @@ export async function resetPasswordAction(formData: FormData): Promise<ResetPass
     return { ok: false, error: error.message };
   }
 
-  redirect("/dashboard?password_reset=1");
+  return { ok: true };
 }

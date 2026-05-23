@@ -13,7 +13,7 @@ const VALORES = [
   {
     icon: Sparkles,
     title: "Resolver problema, não vender feature",
-    body: "Cada feature do Memorial.ai existe porque um arquiteto ou engeneheiro real perdeu horas com aquilo. A IA acelera o que repete; você responde pelo que decide.",
+    body: "Cada feature do Memorial.ai existe porque um arquiteto ou engenheiro real perdeu horas com aquilo. A IA acelera o que repete; você responde pelo que decide.",
   },
   {
     icon: Heart,

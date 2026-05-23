@@ -158,7 +158,7 @@ export function SignupForm() {
       {turnstileSiteKey ? <TurnstileWidget siteKey={turnstileSiteKey} /> : null}
 
       <Button type="submit" className="w-full" disabled={pending} size="lg">
-        {pending ? "Criando workspace…" : "Criar workspace gratuito"}
+        {pending ? "Criando workspace…" : "Criar workspace grátis"}
       </Button>
 
       <div className="relative py-2">
