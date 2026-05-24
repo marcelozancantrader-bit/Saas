@@ -9,6 +9,7 @@ import { getPlanUsage } from "@/server/services/plan-usage";
 import { getPlanInfo, type PlanId } from "@/lib/plans/limits";
 import { WelcomeCard } from "@/components/features/onboarding/WelcomeCard";
 import { OnboardingChecklist } from "@/components/features/onboarding/OnboardingChecklist";
+import { OnboardingTour } from "@/components/features/onboarding/OnboardingTour";
 import { getOnboardingProgress } from "@/server/services/onboarding-progress";
 import { Sparkline } from "@/components/features/dashboard/Sparkline";
 import { KpiTile } from "@/components/features/dashboard/KpiTile";
@@ -134,6 +135,8 @@ export default async function DashboardPage() {
           />
         </div>
       </header>
+
+      <OnboardingTour shouldShow={!onboarding.tourCompletedAt} />
 
       {metrics.activeProjects === 0 ? <WelcomeCard /> : null}
 

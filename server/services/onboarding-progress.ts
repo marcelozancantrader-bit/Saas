@@ -12,6 +12,8 @@ export type OnboardingProgress = {
   dismissedAt: string | null;
   /** % de progresso (0-100) baseado em quantos passos foram concluídos. */
   percent: number;
+  /** Quando o tour guiado overlay foi concluído (ou pulado). Null = nunca rodou. */
+  tourCompletedAt: string | null;
 };
 
 /**
@@ -85,8 +87,12 @@ export async function getOnboardingProgress(orgId: string): Promise<OnboardingPr
   const completed = doneCount === steps.length;
   const percent = Math.round((doneCount / steps.length) * 100);
 
-  const onboardingMeta = (orgRow?.meta?.onboarding as { dismissed_at?: string } | undefined) ?? {};
+  const onboardingMeta =
+    (orgRow?.meta?.onboarding as
+      | { dismissed_at?: string; tour_completed_at?: string }
+      | undefined) ?? {};
   const dismissedAt = onboardingMeta.dismissed_at ?? null;
+  const tourCompletedAt = onboardingMeta.tour_completed_at ?? null;
 
-  return { steps, completed, dismissedAt, percent };
+  return { steps, completed, dismissedAt, percent, tourCompletedAt };
 }
