@@ -67,8 +67,9 @@ export function CurvaABC({ items }: { items: BudgetItem[] }) {
   const top10 = rows.slice(0, 10);
 
   return (
-    <div className="space-y-3">
-      <div className="h-56 w-full">
+    <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      {/* Gráfico — coluna larga, espalha em telas grandes */}
+      <div className="h-56 w-full lg:h-64">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={top10} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
@@ -93,7 +94,8 @@ export function CurvaABC({ items }: { items: BudgetItem[] }) {
         </ResponsiveContainer>
       </div>
 
-      <div className="space-y-1 text-xs">
+      {/* Top 5 + legenda — coluna estreita à direita em desktop */}
+      <div className="space-y-2 text-xs">
         <p className="font-medium text-zinc-700 dark:text-zinc-300">Top 5 itens</p>
         <ol className="space-y-0.5">
           {rows.slice(0, 5).map((r) => (
@@ -109,26 +111,26 @@ export function CurvaABC({ items }: { items: BudgetItem[] }) {
             </li>
           ))}
         </ol>
-        <div className="mt-2 flex flex-wrap gap-3 text-xs text-zinc-500">
-          <span>
+        <div className="mt-2 flex flex-wrap gap-3 border-t border-zinc-200 pt-2 text-xs text-zinc-500 dark:border-zinc-800">
+          <span className="inline-flex items-center gap-1">
             <span
               className="inline-block h-2 w-2 rounded-full"
               style={{ backgroundColor: COLORS.A }}
-            />{" "}
+            />
             A: até 80%
           </span>
-          <span>
+          <span className="inline-flex items-center gap-1">
             <span
               className="inline-block h-2 w-2 rounded-full"
               style={{ backgroundColor: COLORS.B }}
-            />{" "}
+            />
             B: 80–95%
           </span>
-          <span>
+          <span className="inline-flex items-center gap-1">
             <span
               className="inline-block h-2 w-2 rounded-full"
               style={{ backgroundColor: COLORS.C }}
-            />{" "}
+            />
             C: 95–100%
           </span>
         </div>

@@ -268,31 +268,29 @@ export default async function BudgetDetailPage({ params }: Props) {
         </Card>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Itens ({itemsList.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <BudgetItemsTable
-              items={itemsList}
-              budgetId={budgetId}
-              uf={budget.uf}
-              mesReferencia={budget.mes_referencia}
-              desonerado={budget.desonerado}
-            />
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Curva ABC</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CurvaABC items={itemsList} />
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Curva ABC</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CurvaABC items={itemsList} />
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Itens ({itemsList.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <BudgetItemsTable
+            items={itemsList}
+            budgetId={budgetId}
+            uf={budget.uf}
+            mesReferencia={budget.mes_referencia}
+            desonerado={budget.desonerado}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
