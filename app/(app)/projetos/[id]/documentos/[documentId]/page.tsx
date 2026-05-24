@@ -8,9 +8,11 @@ import { TiptapEditor } from "@/components/features/documents/TiptapEditor";
 import { DocumentPdfExport } from "@/components/features/documents/DocumentPdfExport";
 import { DocumentStatusToggle } from "@/components/features/documents/DocumentStatusToggle";
 import { SendToPortalButton } from "@/components/features/documents/SendToPortalButton";
+import { DocumentDiffCard } from "@/components/features/documents/DocumentDiffCard";
 import { DeleteButton } from "@/components/features/shell/DeleteButton";
 import { deleteDocumentAction } from "@/server/actions/documents/delete.action";
 import { DOCUMENT_LABELS, type DocumentTipo } from "@/lib/ai/generate-document";
+import { diffStats } from "@/lib/tiptap/diff-stats";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -60,6 +62,21 @@ export default async function DocumentEditorPage({ params }: Props) {
 
   if (error || !doc) notFound();
   if (doc.project_id !== projectId) notFound();
+
+  // Busca versão anterior do mesmo tipo pra calcular diff (se houver)
+  const previous =
+    doc.versao > 1
+      ? await supabase
+          .from("documents")
+          .select("versao, conteudo_tiptap")
+          .eq("project_id", projectId)
+          .eq("tipo", doc.tipo)
+          .lt("versao", doc.versao)
+          .order("versao", { ascending: false })
+          .limit(1)
+          .maybeSingle<{ versao: number; conteudo_tiptap: Record<string, unknown> }>()
+      : { data: null };
+  const diff = previous.data ? diffStats(previous.data.conteudo_tiptap, doc.conteudo_tiptap) : null;
 
   const projectName = project?.nome ?? "Projeto";
   const filenameBase = `${doc.tipo}-${projectName.replace(/\s+/g, "-")}-v${doc.versao}`;
@@ -137,6 +154,10 @@ export default async function DocumentEditorPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {diff && previous.data ? (
+        <DocumentDiffCard diff={diff} previousVersao={previous.data.versao} />
+      ) : null}
 
       <Card>
         <CardHeader>
