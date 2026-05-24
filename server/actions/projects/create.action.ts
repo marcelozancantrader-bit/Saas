@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { projectSchema } from "@/lib/validators/projects.schema";
+import { captureServer } from "@/lib/observability/posthog";
 
 export type CreateProjectResult =
   | { ok: true; id: string }
@@ -29,7 +30,7 @@ export async function createProjectAction(formData: FormData): Promise<CreatePro
     return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  const { orgId } = await getCurrentOrg();
+  const { orgId, userId } = await getCurrentOrg();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -41,6 +42,18 @@ export async function createProjectAction(formData: FormData): Promise<CreatePro
   if (error || !data) {
     return { ok: false, error: error?.message ?? "Não foi possível criar o projeto." };
   }
+
+  void captureServer({
+    event: "project.created",
+    distinctId: userId,
+    orgId,
+    properties: {
+      project_id: data.id,
+      tipologia: parsed.data.tipologia,
+      padrao_construtivo: parsed.data.padrao_construtivo ?? null,
+      has_client: !!parsed.data.client_id,
+    },
+  });
 
   revalidatePath("/projetos");
   return { ok: true, id: data.id };

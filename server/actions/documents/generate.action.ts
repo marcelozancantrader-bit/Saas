@@ -9,6 +9,7 @@ import { getCurrentOrg } from "@/server/services/current-org";
 import { canGenerateAiDoc, getPlanUsage } from "@/server/services/plan-usage";
 import { checkRateLimit, rateLimitError } from "@/lib/ratelimit/check";
 import { getContractTemplate } from "@/lib/contract-templates/templates";
+import { captureServer } from "@/lib/observability/posthog";
 import type { PlanId } from "@/lib/plans/limits";
 
 const inputSchema = z.object({
@@ -229,6 +230,21 @@ export async function generateDocumentAction(
 
   revalidatePath(`/projetos/${project_id}`);
   revalidatePath(`/projetos/${project_id}/documentos`);
+
+  void captureServer({
+    event: "document.generated",
+    distinctId: me.userId,
+    orgId: me.orgId,
+    properties: {
+      project_id,
+      document_id: inserted.id,
+      tipo,
+      versao: nextVersao,
+      contract_template_id: contract_template_id ?? null,
+      usd_cost: result.usage.usd_cost ?? null,
+      prompt_versao: promptVersaoFinal,
+    },
+  });
 
   return { ok: true, document_id: inserted.id };
 }

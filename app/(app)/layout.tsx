@@ -45,8 +45,11 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
 
   return (
     <AppShell
+      userId={user.id}
       userEmail={user.email ?? ""}
+      orgId={currentMembership.organizations.id}
       orgName={currentMembership.organizations.name}
+      plano={orgPlano}
       role={currentMembership.role}
       notifications={notifications}
       announcements={announcements}

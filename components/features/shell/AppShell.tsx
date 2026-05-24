@@ -3,13 +3,17 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { CommandPalette } from "./CommandPalette";
 import { AnnouncementBanner } from "./AnnouncementBanner";
+import { PosthogIdentify } from "@/components/features/analytics/PosthogIdentify";
 import type { NotificationRow } from "@/server/services/notifications-load";
 import type { ActiveAnnouncement } from "@/server/services/announcements-load";
 
 type Props = {
   children: ReactNode;
+  userId: string;
   userEmail: string;
+  orgId: string;
   orgName: string;
+  plano: string;
   role: "owner" | "admin" | "member";
   notifications: NotificationRow[];
   announcements: ActiveAnnouncement[];
@@ -18,8 +22,11 @@ type Props = {
 
 export function AppShell({
   children,
+  userId,
   userEmail,
+  orgId,
   orgName,
+  plano,
   role,
   notifications,
   announcements,
@@ -36,6 +43,13 @@ export function AppShell({
         </main>
       </div>
       <CommandPalette isPlatformAdmin={isPlatformAdmin} />
+      <PosthogIdentify
+        userId={userId}
+        email={userEmail}
+        orgId={orgId}
+        orgName={orgName}
+        plano={plano}
+      />
     </div>
   );
 }

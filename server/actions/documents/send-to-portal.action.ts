@@ -8,6 +8,7 @@ import { sendEmail } from "@/lib/email/resend";
 import { renderDocumentSentEmail } from "@/lib/email/templates";
 import { sendWhatsapp, isWhatsappEnabled } from "@/lib/whatsapp/client";
 import { renderDocumentSentWhatsapp } from "@/lib/whatsapp/templates";
+import { captureServer } from "@/lib/observability/posthog";
 import { env } from "@/lib/validators/env";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 
@@ -148,6 +149,19 @@ export async function sendDocumentToPortalAction(
 
   revalidatePath(`/projetos/${doc.project_id}/documentos`);
   revalidatePath(`/projetos/${doc.project_id}/documentos/${parsed.data.document_id}`);
+
+  void captureServer({
+    event: "document.sent_to_portal",
+    distinctId: user.id,
+    orgId: project.org_id,
+    properties: {
+      project_id: doc.project_id,
+      document_id: parsed.data.document_id,
+      email_sent: emailSent,
+      whatsapp_sent: whatsappSent,
+    },
+  });
+
   return {
     ok: true,
     portal_token: project.clients.portal_token,

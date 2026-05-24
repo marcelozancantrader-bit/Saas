@@ -1,14 +1,17 @@
 /**
- * Sprint 8 — PostHog client leve.
+ * PostHog client leve — sem dependência (~50KB economizados).
  *
- * Cliente-side (browser): inicializa só se NEXT_PUBLIC_POSTHOG_KEY está setado.
- * Usa o snippet HTTP direto em vez do posthog-js (~30KB) — capturamos apenas
- * eventos críticos do funnel de ativação. No browser injetamos via efeito.
+ * Browser: `capture()` usa sendBeacon, persistente entre page transitions.
+ *   localStorage("ph_did") guarda o distinct_id; vira user.id após `identify`.
  *
- * Para ativar PostHog full: instale posthog-js + posthog-node e expanda.
+ * Server: `captureServer({ distinctId, event, properties })` faz HTTP POST
+ *   direto. Use em server actions quando o evento é mais confiável de capturar
+ *   no backend (signup, doc gerado, doc aprovado pelo cliente via portal).
+ *
+ * Sem NEXT_PUBLIC_POSTHOG_KEY: tudo é no-op silencioso.
  */
 
-type CaptureProps = Record<string, string | number | boolean | null>;
+type CaptureProps = Record<string, string | number | boolean | null | undefined>;
 
 const POSTHOG_HOST_DEFAULT = "https://us.i.posthog.com";
 
@@ -61,4 +64,47 @@ export function identify(userId: string, properties?: CaptureProps): void {
     window.localStorage.setItem("ph_did", userId);
   }
   capture("$identify", properties);
+}
+
+/**
+ * Captura evento server-side. Use em server actions quando o evento é mais
+ * confiável de capturar no backend (ex: signup, generate document, portal
+ * approval). Não bloqueia — fire-and-forget. Sem NEXT_PUBLIC_POSTHOG_KEY,
+ * é no-op silencioso.
+ */
+export async function captureServer(input: {
+  event: string;
+  distinctId: string;
+  properties?: CaptureProps;
+  /** ID da org pra group analytics. Default: usado como property `org_id`. */
+  orgId?: string;
+}): Promise<void> {
+  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!key) return;
+  if (!input.distinctId) return;
+
+  const host = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? POSTHOG_HOST_DEFAULT;
+  const body = {
+    api_key: key,
+    event: input.event,
+    distinct_id: input.distinctId,
+    properties: {
+      ...input.properties,
+      org_id: input.orgId ?? input.properties?.org_id,
+      $lib: "memorial-ai-server",
+    },
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    await fetch(`${host}/i/v0/e/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      // Timeout curto pra nao atrasar a resposta da action
+      signal: AbortSignal.timeout(2000),
+    });
+  } catch {
+    // ignore — analytics é best-effort
+  }
 }

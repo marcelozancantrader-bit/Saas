@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertPortalAccess } from "@/server/services/portal-loader";
 import { notify } from "@/server/services/notifications";
+import { captureServer } from "@/lib/observability/posthog";
 
 const schema = z.object({
   token: z.string().uuid(),
@@ -105,5 +106,20 @@ export async function approveDocumentAction(
   revalidatePath(`/portal/${parsed.data.token}`);
   revalidatePath(`/projetos/${parsed.data.project_id}/documentos`);
   revalidatePath(`/projetos/${parsed.data.project_id}/documentos/${parsed.data.document_id}`);
+
+  // Analytics — cliente final NÃO tem user.id, então usamos o portal token
+  // como distinct_id pra atribuir o evento (anônimo do nosso lado).
+  // Mantém referência da org pra group analytics.
+  void captureServer({
+    event: "portal.document_decided",
+    distinctId: `portal:${parsed.data.token}`,
+    orgId: access.orgId,
+    properties: {
+      project_id: parsed.data.project_id,
+      document_id: parsed.data.document_id,
+      decisao: parsed.data.decisao,
+    },
+  });
+
   return { ok: true };
 }
