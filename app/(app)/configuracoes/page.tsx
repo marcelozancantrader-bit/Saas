@@ -96,6 +96,23 @@ export default async function ConfiguracoesPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Membros do workspace</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Quem tem acesso aos projetos. Owner/admin podem convidar novos membros por e-mail.
+          </p>
+          <Link
+            href="/configuracoes/membros"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Gerenciar membros →
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Templates de documento</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
