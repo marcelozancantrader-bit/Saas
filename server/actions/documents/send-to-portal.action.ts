@@ -37,7 +37,7 @@ export async function sendDocumentToPortalAction(
   const { data: doc, error: docErr } = await supabase
     .from("documents")
     .select(
-      `id, titulo, project_id, conteudo_tiptap,
+      `id, titulo, project_id, conteudo_tiptap, status,
        projects!inner(
          nome, client_id, org_id,
          clients!inner(portal_token, email, telefone, nome),
@@ -47,6 +47,15 @@ export async function sendDocumentToPortalAction(
     .eq("id", parsed.data.document_id)
     .single();
   if (docErr || !doc) return { ok: false, error: docErr?.message ?? "Documento não encontrado." };
+
+  // Bloqueia envio se ainda está aguardando revisão interna
+  if ((doc as { status?: string }).status === "aguardando_revisao_interna") {
+    return {
+      ok: false,
+      error:
+        "Este documento está aguardando revisão interna do workspace. Owner/admin precisa aprovar antes de enviar ao cliente.",
+    };
+  }
 
   const project = doc.projects as unknown as {
     nome: string;

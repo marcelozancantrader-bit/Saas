@@ -10,6 +10,10 @@ import { DocumentStatusToggle } from "@/components/features/documents/DocumentSt
 import { SendToPortalButton } from "@/components/features/documents/SendToPortalButton";
 import { SaveAsTemplateButton } from "@/components/features/documents/SaveAsTemplateButton";
 import { DocumentDiffCard } from "@/components/features/documents/DocumentDiffCard";
+import {
+  InternalReviewPanel,
+  type ReviewMeta,
+} from "@/components/features/documents/InternalReviewPanel";
 import { DeleteButton } from "@/components/features/shell/DeleteButton";
 import { deleteDocumentAction } from "@/server/actions/documents/delete.action";
 import { DOCUMENT_LABELS, type DocumentTipo } from "@/lib/ai/generate-document";
@@ -27,11 +31,18 @@ type DocumentDetail = {
   versao: number;
   titulo: string;
   conteudo_tiptap: Record<string, unknown>;
-  status: "rascunho" | "aguardando_aprovacao" | "aprovado" | "recusado" | "arquivado";
+  status:
+    | "rascunho"
+    | "aguardando_revisao_interna"
+    | "aguardando_aprovacao"
+    | "aprovado"
+    | "recusado"
+    | "arquivado";
   prompt_versao: string | null;
   custo_tokens: { usd_cost?: number } | null;
   envio_meta: { enviado_em: string } | null;
   aprovacao_meta: { decisao: "aprovado" | "recusado"; timestamp: string } | null;
+  revisao_interna_meta: ReviewMeta | null;
 };
 
 function tipoLabel(tipo: DocumentDetail["tipo"]): string {
@@ -49,7 +60,7 @@ export default async function DocumentEditorPage({ params }: Props) {
     supabase
       .from("documents")
       .select(
-        "id, project_id, tipo, versao, titulo, conteudo_tiptap, status, prompt_versao, custo_tokens, envio_meta, aprovacao_meta",
+        "id, project_id, tipo, versao, titulo, conteudo_tiptap, status, prompt_versao, custo_tokens, envio_meta, aprovacao_meta, revisao_interna_meta",
       )
       .eq("id", documentId)
       .single<DocumentDetail>(),
@@ -89,6 +100,13 @@ export default async function DocumentEditorPage({ params }: Props) {
     .eq("id", org.orgId)
     .single<{ logo_url: string | null; cor_primaria: string | null }>();
 
+  // Conta membros pra decidir se mostra fluxo de revisão interna
+  const { count: membersCount } = await supabase
+    .from("organization_members")
+    .select("user_id", { count: "exact", head: true })
+    .eq("org_id", org.orgId);
+  const hasMultipleMembers = (membersCount ?? 0) > 1;
+
   return (
     <div className="space-y-6">
       <div>
@@ -123,18 +141,22 @@ export default async function DocumentEditorPage({ params }: Props) {
             <Badge variant={doc.status === "rascunho" ? "outline" : "default"} className="mt-2">
               {doc.status === "rascunho"
                 ? "Rascunho (PDF sai com marca d'água)"
-                : doc.status === "aguardando_aprovacao"
-                  ? "Aguardando aprovação do cliente"
-                  : doc.status === "aprovado"
-                    ? "Aprovado"
-                    : doc.status === "recusado"
-                      ? "Recusado pelo cliente"
-                      : doc.status}
+                : doc.status === "aguardando_revisao_interna"
+                  ? "Aguardando revisão interna"
+                  : doc.status === "aguardando_aprovacao"
+                    ? "Aguardando aprovação do cliente"
+                    : doc.status === "aprovado"
+                      ? "Aprovado"
+                      : doc.status === "recusado"
+                        ? "Recusado pelo cliente"
+                        : doc.status}
             </Badge>
           </div>
 
           <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
-            <DocumentStatusToggle documentId={doc.id} status={doc.status} />
+            {doc.status !== "aguardando_revisao_interna" ? (
+              <DocumentStatusToggle documentId={doc.id} status={doc.status} />
+            ) : null}
             <SendToPortalButton
               documentId={doc.id}
               envioMeta={doc.envio_meta}
@@ -146,7 +168,7 @@ export default async function DocumentEditorPage({ params }: Props) {
               filename={filenameBase}
               titulo={doc.titulo}
               conteudoTiptap={doc.conteudo_tiptap}
-              status={doc.status}
+              status={doc.status === "aguardando_revisao_interna" ? "rascunho" : doc.status}
               orgName={org.orgName}
               projectName={projectName}
               logoUrl={brand?.logo_url ?? null}
@@ -160,6 +182,14 @@ export default async function DocumentEditorPage({ params }: Props) {
       {diff && previous.data ? (
         <DocumentDiffCard diff={diff} previousVersao={previous.data.versao} />
       ) : null}
+
+      <InternalReviewPanel
+        documentId={doc.id}
+        status={doc.status}
+        reviewMeta={doc.revisao_interna_meta}
+        userRole={org.role}
+        hasMultipleMembers={hasMultipleMembers}
+      />
 
       <Card>
         <CardHeader>
