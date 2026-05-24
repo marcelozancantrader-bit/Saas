@@ -12,8 +12,13 @@ import {
 } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase/server";
 import { GenerateDocumentMenu } from "@/components/features/documents/GenerateDocumentMenu";
+import {
+  UseTemplateDialog,
+  type OrgTemplate,
+} from "@/components/features/documents/UseTemplateDialog";
 import { DOCUMENT_LABELS, type DocumentTipo } from "@/lib/ai/generate-document";
 import { DocumentStatusTabs } from "@/components/features/documents/DocumentStatusTabs";
+import { getCurrentOrg } from "@/server/services/current-org";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -75,6 +80,7 @@ export default async function DocumentosPage({ params, searchParams }: Props) {
 
   const supabase = await createClient();
 
+  const me = await getCurrentOrg();
   const { data: project, error } = await supabase
     .from("projects")
     .select("id, nome, meta, client_id")
@@ -82,12 +88,20 @@ export default async function DocumentosPage({ params, searchParams }: Props) {
     .single();
   if (error || !project) notFound();
 
-  const { data: allDocuments } = await supabase
-    .from("documents")
-    .select("id, tipo, versao, titulo, status, prompt_versao, created_at, updated_at")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
-    .returns<DocumentRow[]>();
+  const [{ data: allDocuments }, { data: templates }] = await Promise.all([
+    supabase
+      .from("documents")
+      .select("id, tipo, versao, titulo, status, prompt_versao, created_at, updated_at")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .returns<DocumentRow[]>(),
+    supabase
+      .from("org_doc_templates")
+      .select("id, tipo, nome, created_at")
+      .eq("org_id", me.orgId)
+      .order("created_at", { ascending: false })
+      .returns<OrgTemplate[]>(),
+  ]);
 
   const documents = allDocuments ?? [];
 
@@ -118,11 +132,14 @@ export default async function DocumentosPage({ params, searchParams }: Props) {
         </Link>
         <div className="mt-1 flex items-end justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight">Documentos</h1>
-          <GenerateDocumentMenu
-            projectId={projectId}
-            hasConfirmedExtraction={hasConfirmedExtraction}
-            hasClient={!!project.client_id}
-          />
+          <div className="flex items-center gap-2">
+            <UseTemplateDialog projectId={projectId} templates={templates ?? []} />
+            <GenerateDocumentMenu
+              projectId={projectId}
+              hasConfirmedExtraction={hasConfirmedExtraction}
+              hasClient={!!project.client_id}
+            />
+          </div>
         </div>
       </div>
 

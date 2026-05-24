@@ -8,6 +8,7 @@ import { TiptapEditor } from "@/components/features/documents/TiptapEditor";
 import { DocumentPdfExport } from "@/components/features/documents/DocumentPdfExport";
 import { DocumentStatusToggle } from "@/components/features/documents/DocumentStatusToggle";
 import { SendToPortalButton } from "@/components/features/documents/SendToPortalButton";
+import { SaveAsTemplateButton } from "@/components/features/documents/SaveAsTemplateButton";
 import { DocumentDiffCard } from "@/components/features/documents/DocumentDiffCard";
 import { DeleteButton } from "@/components/features/shell/DeleteButton";
 import { deleteDocumentAction } from "@/server/actions/documents/delete.action";
@@ -140,6 +141,7 @@ export default async function DocumentEditorPage({ params }: Props) {
               projectId={projectId}
               hasClient={!!project?.client_id}
             />
+            <SaveAsTemplateButton documentId={doc.id} defaultName={doc.titulo} />
             <DocumentPdfExport
               filename={filenameBase}
               titulo={doc.titulo}
