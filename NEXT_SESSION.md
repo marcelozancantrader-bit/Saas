@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-23 (P5) — **5 features novas implementadas em batches autônomos L–P: Onboarding gamificado, Templates de contrato CAU, Cotação de fornecedor, Diário de obra com fotos, WhatsApp Business notifications.**
+**Última pausa:** 2026-05-23 (P6) — **Sessão maratona: 26 commits cobrindo polish UX, 12 features novas (incluindo análise de viabilidade de mercado), 1 bug crítico (PostgREST max_rows), CI GitHub Actions, sistema de convite de membros, revisão hierárquica e PostHog instrumentation.**
 
 **Sessões anteriores:**
 
@@ -11,12 +11,91 @@
 - 2026-05-21 madrugada P2: polish pós-deploy (8 fixes visíveis + auto-push)
 - 2026-05-21 madrugada P3: auditoria UX completa (6 commits, ~15 fixes em portal/copy/dashboard/briefing/orçamento/a11y)
 - 2026-05-23 P4: 3 batches I/J/K (auth + workspace + portal gating + billing PT-BR)
-- 2026-05-23 P5: 5 features novas L–P (onboarding, contratos CAU, cotação, diário, WhatsApp) — esta sessão
+- 2026-05-23 P5: 5 features novas L–P (onboarding, contratos CAU, cotação, diário, WhatsApp)
+- 2026-05-23 P6: sprint maratona — substituir item, composição própria, fix SINAPI, layout, landing, análise viabilidade, R-X, Y/Z (CI), AA (convite), BB (PostHog) — esta sessão
 
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`
-**App live:** https://memorial-ai-mu.vercel.app · **Último commit pushed:** `2e25b23` (tudo em prod)
+**App live:** https://memorial-ai-mu.vercel.app · **Último commit pushed:** `a0b4766` (tudo em prod)
 **Repo:** https://github.com/marcelozancantrader-bit/Saas
+
+---
+
+## 🏁 P6 — Sprint maratona (2026-05-23) — 26 commits
+
+### Polish UX visíveis (3 batches)
+
+- `37f1c5a` **Batch I — auth polish**: aria-label reset pwd, toast.success no fluxo reset, copy reset/sobre/FAQ humanizados, "grátis" padronizado
+- `fcd4aee` **Batch J — máscaras CPF/PIX**: prof_cpf maskCpf, PIX mascarado por tipo, SendToPortalButton gated se projeto sem cliente
+- `e94d756` **Batch K — billing histórico PT-BR**: status traduzidos, cores distintas (Ativa verde, past_due vermelha, "Ativa (cancelando)" amber)
+
+### Editor de orçamento (2 features)
+
+- `47fcae4` **Substituir item SINAPI** na tabela do orçamento (busca + click substitui mantendo qty)
+- `1f7394c` **Composição própria** no AddItemDialog (toggle SINAPI / livre)
+- `38f2b0f` **Layout orçamento** — Curva ABC vai acima da tabela (sem scroll horizontal)
+
+### 5 features grandes (batches L–P)
+
+- `06d3a56` **L — Onboarding gamificado**: checklist 4 passos no dashboard
+- `4f6d233` **M — Templates de contrato CAU**: 6 modelos (Residencial PF/PJ, Comercial, Reforma, Projeto Legal, Completo+RT) com refs CAU/BR
+- `aff2bd5` **N — Cotação de fornecedor**: PDF + XLSX agrupado por 13 famílias
+- `cc980bc` **O — Diário de obra com fotos**: nova aba, captura câmera celular, toggle portal
+- `2e25b23` **P — WhatsApp Business**: Z-API gated; notificação cliente
+- `d57bd85` **Q — Diário no portal cliente**: cliente vê entradas marcadas
+
+### Fix crítico
+
+- `b682ef8` **Bug PostgREST max_rows** escondia 17 UFs de novo — fix com paginação real (`selectAllRows`)
+
+### Landing + análise
+
+- `77c7572` **Landing atualizada** 12 → 16 features + Comparison + FAQ + metric 27 UFs
+- `001cfd2`, `79d1b09` docs NEXT_SESSION P4 e P5
+- **Análise de viabilidade** (3 agents, ~50 fontes) — TAM R$ 2,3bi/ano, SAM R$ 655M/ano, SOM 3 anos R$ 6-32M ARR. Tese: vertical SaaS + IA generativa em AEC = janela aberta. Bootstrap até R$ 50-80k MRR, depois seed R$ 2-4M
+
+### Sprint R-X (Quick wins + lock-in)
+
+- `5755734` **S — Importar do projeto anterior** em /projetos/novo
+- `ad96095` **T — Diff entre versões** de documento (chars, words, sections novas/removidas)
+- `02e657d` **R — Tour guiado overlay** com shepherd.js no primeiro acesso
+- `6b492e0` **U — 3 ferramentas grátis SEO**: orçamento SINAPI, honorário CAU, CUB regional
+- `99e9adb` **V — Blog técnico** com 4 posts (memorial NBR, SINAPI passo-a-passo, contrato CAU, aditivos)
+- `eacb9ea` **W — Biblioteca de templates do escritório** com substituição de variáveis `{{cliente.nome}}` etc
+
+### Infra + multi-user (Y/Z/AA/X/BB)
+
+- `f6183b4` **Y — UI gerenciar templates** + **Z — CI GitHub Actions** (typecheck + lint em todo PR)
+- `867b005` **AA — Sistema de convite de membros** (tabela invitations + UI /configuracoes/membros + landing /convite/[token] + e-mail Resend gated)
+- `90f4190` **X — Multi-user aprovação hierárquica**: status `aguardando_revisao_interna`, member solicita, owner/admin aprova/recusa com comentário
+- `a0b4766` **BB — PostHog instrumentation**: captureServer + PosthogIdentify auto + 4 eventos chave do funnel (project.created, document.generated, document.sent_to_portal, portal.document_decided). Gated em key.
+
+### ⚠️ Migrations ainda pendentes em prod
+
+Aplicar no Supabase Dashboard SQL Editor:
+
+1. **`20260727000003_invitations.sql`** (Batch AA — convidar membros não funciona sem)
+2. **`20260727000004_internal_review.sql`** (Batch X — revisão hierárquica não funciona sem)
+
+✅ Migrations já aplicadas pelo Marcelo: `20260727000001_project_diary.sql`, `20260727000002_org_doc_templates.sql`.
+
+### Configurações externas opcionais (app funciona sem)
+
+- **PostHog** — conta posthog.com + setar `NEXT_PUBLIC_POSTHOG_KEY` + opcional `NEXT_PUBLIC_POSTHOG_HOST` no Vercel. Funnel começa a popular automaticamente.
+- **Z-API WhatsApp** — conta z-api.io + `WHATSAPP_PROVIDER=z-api`, `ZAPI_INSTANCE_ID`, `ZAPI_TOKEN`, `ZAPI_CLIENT_TOKEN` (opcional).
+- **Resend** — verificar domínio + setar `RESEND_API_KEY` + `RESEND_FROM_EMAIL`. Sem isso, convite de membro + notificação portal funcionam só pelo link copiado, sem e-mail automático.
+- **Sentry** — conta sentry.io + `SENTRY_DSN`.
+- **Asaas produção** — homologação 3-5 dias úteis + trocar `ASAAS_ENVIRONMENT=production` + nova `ASAAS_API_KEY`.
+- **Domínio próprio** — registrar + DNS + atualizar `NEXT_PUBLIC_APP_URL` no Vercel + Site URL/Redirect URLs no Supabase Auth.
+
+### Backlog pra próxima sessão
+
+- **#13 Trial 7/14d** pré-pago (alavanca de conversão direta — médio escopo)
+- **#19 App mobile Capacitor** (escopo grande, ~1-2 semanas, $99/ano Apple + $25 Google)
+- **Smoke test E2E Playwright** (adiado pra pós-beta)
+- **Publicar OAuth Google** (sair do modo teste — precisa domínio + tela consentimento)
+- **Portfolio público** do escritório (org-slug.memorial.ai com obras concluídas — sugestão da análise de viabilidade)
+- **Quantitativo automático IA** da planta (extender extração pra gerar lista de materiais alimentando orçamento)
 
 ---
 
