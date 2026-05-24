@@ -31,6 +31,21 @@ const ROWS = [
     manual: '5-15% do contrato perdido no "de favor"',
     memorial: "Formalizado: cliente solicita → você precifica → assina aditivo",
   },
+  {
+    capability: "Diário de obra / prova de estado",
+    manual: "Fotos soltas no celular, sem data confiável, perdidas no rolo",
+    memorial: "Timeline cronológica no projeto + visível no portal do cliente num clique",
+  },
+  {
+    capability: "Cotação com fornecedor",
+    manual: "Re-digitar lista de materiais em Excel ou WhatsApp pra cada fornecedor",
+    memorial: "PDF/XLSX agrupado por família com 1 clique pra mandar a 3 fornecedores",
+  },
+  {
+    capability: "Notificar cliente que o doc está pronto",
+    manual: "E-mail que o cliente não abre + cobrar resposta semana inteira",
+    memorial: "WhatsApp template direto pro celular do cliente com link do portal",
+  },
 ];
 
 export function ComparisonTable() {

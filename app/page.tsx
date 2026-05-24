@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Memorial.ai — Memorial técnico em minutos, não semanas",
   description:
-    "Copiloto de IA para arquitetos e engenheiros: extração de planta, 10 documentos técnicos por IA, orçamento SINAPI automático e portal do cliente com assinatura digital. Plano Free sem cartão.",
+    "Copiloto de IA para arquitetos e engenheiros: extração de planta, 10 documentos técnicos, orçamento SINAPI 27 UFs, diário de obra com fotos, portal do cliente com assinatura digital e notificação por WhatsApp. Plano Free sem cartão.",
 };
 
 const DORES = [
@@ -96,24 +96,39 @@ const FUNCIONALIDADES = [
       "6 disciplinas: arquitetônica, elétrica, hidrossanitária, estrutural, gás, climatização.",
   },
   {
-    titulo: "10 documentos técnicos",
+    titulo: "10 documentos técnicos por IA",
     descricao:
       "Memorial descritivo, estrutural, hidrossanitário, elétrico, PPCI, impermeabilização, caderno, proposta, contrato, cronograma.",
   },
   {
-    titulo: "Orçamento SINAPI",
+    titulo: "Orçamento SINAPI nacional",
     descricao:
-      "Composição automática, preço do mês corrente, BDI configurável, breakdown por disciplina e curva ABC.",
+      "27 UFs com fator regional, CUB estadual, BDI configurável, breakdown por disciplina e curva ABC.",
   },
   {
-    titulo: "Análise NBR",
+    titulo: "Editor de orçamento livre",
     descricao:
-      "Verificações automáticas contra NBR 12.722 e 15.575: pé-direito, áreas mínimas, ventilação.",
+      "Edite qty/preço inline, substitua composição SINAPI com 1 clique ou adicione composição própria (descrição + unidade + preço de mercado).",
   },
   {
-    titulo: "Zoneamento universal",
+    titulo: "Cotação de fornecedor",
     descricao:
-      "5 capitais curadas (Curitiba/SP/POA/RJ/BH) + IA pra qualquer cidade BR. Valida CA, TO, altura, vagas.",
+      "1 clique gera PDF ou XLSX agrupado por família (alvenaria, esquadrias, elétrica...) com coluna em branco pro fornecedor preencher e devolver.",
+  },
+  {
+    titulo: "Diário de obra com fotos",
+    descricao:
+      "No canteiro pelo celular: foto + nota + data viram prova legal de estado da obra. Compartilhe com o cliente pelo portal num toggle.",
+  },
+  {
+    titulo: "Templates de contrato CAU",
+    descricao:
+      "6 modelos pré-curados (Residencial PF/PJ, Comercial, Reforma, Projeto Legal, Completo+RT) baseados nas resoluções 51/67/91 do CAU/BR.",
+  },
+  {
+    titulo: "Análise NBR + zoneamento",
+    descricao:
+      "Verificações automáticas (NBR 12.722, 15.575). Zoneamento em 5 capitais curadas + IA pra qualquer cidade BR.",
   },
   {
     titulo: "ART/RRT pré-preenchida",
@@ -122,7 +137,12 @@ const FUNCIONALIDADES = [
   {
     titulo: "Portal do cliente",
     descricao:
-      "URL única por cliente. Sem login. Cliente lê doc, assina no canvas, fica prova legal.",
+      "URL única por cliente. Sem login. Cliente lê doc, assina no canvas, fica prova legal (MP 2.200-2).",
+  },
+  {
+    titulo: "Notificação por WhatsApp",
+    descricao:
+      "Cliente recebe o link do portal direto no WhatsApp quando o documento fica pronto. Aumenta taxa de aprovação vs e-mail.",
   },
   {
     titulo: "Alteração de escopo formal",
@@ -183,6 +203,22 @@ const FAQ = [
   {
     q: "Meus clientes precisam criar conta?",
     a: "Não. Você gera um link único por cliente e manda por WhatsApp ou e-mail; ele acessa, lê, assina e aprova sem cadastro nenhum. Funciona em qualquer celular.",
+  },
+  {
+    q: "Como funciona a notificação por WhatsApp?",
+    a: "Quando você envia o documento ao portal, o cliente recebe automaticamente uma mensagem no WhatsApp dele com o link e o nome do seu escritório. Aumenta drasticamente a taxa de aprovação vs e-mail. Opcional: você pode desativar e usar só e-mail.",
+  },
+  {
+    q: "O diário de obra serve pra quê?",
+    a: "Você no canteiro abre o app no celular, tira foto e escreve uma nota curta — vira prova legal datada do estado da obra naquele momento. Útil pra justificar pedidos de aditivo (foto antes vs depois) e pra mostrar progresso ao cliente sem precisar mandar WhatsApp toda semana.",
+  },
+  {
+    q: "Posso adicionar itens fora do SINAPI no orçamento?",
+    a: 'Sim. No orçamento, "+ Adicionar item" tem dois modos: buscar no catálogo SINAPI OU criar uma "Composição própria" com descrição livre, unidade, quantidade e preço de mercado. Útil para bancada de quartzo sob medida, esquadria específica, mão de obra especializada, etc.',
+  },
+  {
+    q: "Os contratos seguem o padrão CAU?",
+    a: "Sim. Antes de gerar você escolhe entre 6 templates pré-curados (Residencial PF, Multifamiliar PJ, Comercial, Reforma, Apenas Projeto Legal, Projeto Completo + RT obra) baseados nas resoluções 51/2013, 67/2013 e 91/2014 do CAU/BR. A IA personaliza com os dados do projeto e cliente.",
   },
 ];
 
@@ -252,9 +288,9 @@ export default async function HomePage() {
             Memorial técnico em <span className="text-blue-600 dark:text-blue-400">minutos</span>.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 sm:text-xl dark:text-zinc-400">
-            Da planta ao contrato em uma sessão de trabalho. IA extrai a planta, gera{" "}
-            <strong>10 documentos técnicos</strong>, monta orçamento SINAPI e o cliente assina pelo
-            portal.
+            Da planta à entrega da obra em uma sessão de trabalho. IA extrai a planta, gera{" "}
+            <strong>10 documentos técnicos</strong>, monta orçamento SINAPI, registra diário de obra
+            com fotos e o cliente assina pelo portal — com aviso por WhatsApp.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link href="/signup" className={buttonVariants({ size: "lg" })}>
@@ -277,7 +313,7 @@ export default async function HomePage() {
             {[
               { v: "31h", l: "economizadas por projeto" },
               { v: "10", l: "documentos por IA" },
-              { v: "6", l: "disciplinas extraídas" },
+              { v: "27", l: "UFs com SINAPI" },
               { v: "60s", l: "extração da planta" },
             ].map((m) => (
               <div
@@ -380,7 +416,8 @@ export default async function HomePage() {
             </p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Funcionalidades</h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
-              12 features cobrindo todo o fluxo: da extração à cobrança do cliente.
+              16 features cobrindo todo o fluxo: da extração da planta à entrega da obra, com prova
+              legal em cada passo.
             </p>
           </div>
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
