@@ -96,6 +96,25 @@ export default async function ConfiguracoesPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Templates de documento</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Modelos de memorial, contrato, proposta etc salvos pelo escritório. Reusar em projetos
+            futuros com substituição automática de{" "}
+            <code className="text-xs">{"{{cliente.nome}}"}</code> e outras variáveis.
+          </p>
+          <Link
+            href="/configuracoes/templates"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Ver biblioteca de templates →
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Privacidade e LGPD</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
