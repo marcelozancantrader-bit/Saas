@@ -4,8 +4,15 @@ import { processFloorPlan } from "@/server/jobs/process-floor-plan";
 import { importSinapi } from "@/server/jobs/sinapi-import";
 import { staleProjectsCron } from "@/server/jobs/stale-projects-cron";
 import { expiredCancellationsCron } from "@/server/jobs/expired-cancellations-cron";
+import { expiredTrialsCron } from "@/server/jobs/expired-trials-cron";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [processFloorPlan, importSinapi, staleProjectsCron, expiredCancellationsCron],
+  functions: [
+    processFloorPlan,
+    importSinapi,
+    staleProjectsCron,
+    expiredCancellationsCron,
+    expiredTrialsCron,
+  ],
 });

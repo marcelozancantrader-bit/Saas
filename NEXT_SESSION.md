@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-23 (P6) — **Sessão maratona: 26 commits cobrindo polish UX, 12 features novas (incluindo análise de viabilidade de mercado), 1 bug crítico (PostgREST max_rows), CI GitHub Actions, sistema de convite de membros, revisão hierárquica e PostHog instrumentation.**
+**Última pausa:** 2026-05-24 (P7) — **Trial pré-pago 7d no plano Pro (alavanca direta de conversão #13 do backlog).**
 
 **Sessões anteriores:**
 
@@ -12,7 +12,54 @@
 - 2026-05-21 madrugada P3: auditoria UX completa (6 commits, ~15 fixes em portal/copy/dashboard/briefing/orçamento/a11y)
 - 2026-05-23 P4: 3 batches I/J/K (auth + workspace + portal gating + billing PT-BR)
 - 2026-05-23 P5: 5 features novas L–P (onboarding, contratos CAU, cotação, diário, WhatsApp)
-- 2026-05-23 P6: sprint maratona — substituir item, composição própria, fix SINAPI, layout, landing, análise viabilidade, R-X, Y/Z (CI), AA (convite), BB (PostHog) — esta sessão
+- 2026-05-23 P6: sprint maratona — substituir item, composição própria, fix SINAPI, layout, landing, análise viabilidade, R-X, Y/Z (CI), AA (convite), BB (PostHog)
+- 2026-05-24 P7: trial pré-pago 7d Pro — esta sessão
+
+---
+
+## 🎁 P7 — Trial pré-pago de 7 dias (2026-05-24) — 1 commit
+
+Backlog #13. Conversion lever clássico: orgs free podem ativar trial Pro de 7 dias sem cartão. Quando expira, downgrade automático pra free via cron — sem cobrança, sem fidelidade. 1 trial por workspace lifetime (anti-abuse via `organizations.trial_started_at`).
+
+### Arquitetura
+
+- **Schema**: `subscriptions.status='trialing'` já existia (Sprint 7). Adicionado:
+  - `organizations.trial_started_at timestamptz` (1 trial lifetime / org)
+  - `subscriptions.provider` aceita `'trial'` além de asaas/stripe/manual
+- **Helper canônico** `lib/billing/trial.ts` — `TRIAL_PLAN='pro'`, `TRIAL_DAYS=7`, `resolveTrialState()` (never_started/active/expired/converted), `canStartTrial()`, `trialDaysRemaining()`
+- **Action** `server/actions/billing/start-trial.action.ts` — owner/admin, org.plano=free, trial_started_at IS NULL. Cria subscription trialing + upgrade org pra pro + marca anti-abuse. Notification + audit_log + PostHog event `subscription.trial_started`. Rollback de sub se org update falhar.
+- **Cron** `server/jobs/expired-trials-cron.ts` — diário 9:35 BRT (30min após expired-cancellations). Encontra subs trialing+trial com cpe < now, marca canceled, downgrade org pra free, notification + audit + e-mail Resend pros owners (gated).
+- **UI banner global** `components/features/shell/TrialBanner.tsx` (RSC) — entre AnnouncementBanner e main no AppShell. 3 tons: azul (≥3d), âmbar (1-2d), vermelho (0d=hoje). CTA "Manter Pro" → /billing.
+- **UI billing**: `StartTrialCard` (azul/sparkles, sem cartão, 6 features destacadas) pra orgs com `canStartTrial`. Estado trial ativo mostrado no Card "Plano atual". Mensagem "você já testou" pra expirado+free.
+- **E-mail** `renderTrialExpiredEmail` em `lib/email/templates.ts` — disparado pelo cron.
+
+### Landing
+
+- Hero subtitle: "+ 7 dias de Pro grátis sem cartão"
+- Card Pro do PricingTable: badge "✨ 7 dias grátis · sem cartão" abaixo do preço
+- FAQ: nova entrada "Tem trial grátis pra testar o Pro?"
+
+### ⚠️ Migration pendente em prod
+
+- **`20260728000001_org_trial.sql`** — aplicar no Supabase Dashboard SQL Editor antes de qualquer signup novo poder ativar trial.
+
+Sem aplicar, a action falha com erro de coluna `trial_started_at` inexistente.
+
+### Migrations P5/P6 ainda pendentes (lembrete)
+
+- `20260727000003_invitations.sql` (Batch AA — convidar membros)
+- `20260727000004_internal_review.sql` (Batch X — revisão hierárquica)
+
+### Backlog que sobrou
+
+- **#19 App mobile Capacitor** (~1-2 semanas, $99/ano Apple + $25 Google)
+- **Smoke test E2E Playwright** (adiado pra pós-beta)
+- **Publicar OAuth Google** (sair do modo teste — precisa domínio + tela consentimento)
+- **Portfolio público do escritório** (org-slug.memorial.ai com obras concluídas)
+- **Quantitativo automático IA da planta** (extender extração pra gerar lista de materiais)
+- **Trial reminder e-mail D-3 / D-1** (cron separado disparando antes da expiração — alavanca de conversão extra)
+
+---
 
 **Source-of-truth do produto:** `C:\Users\zanca\OneDrive\Desktop\Saas\` (`CLAUDE.md`, `PROMPT_CLAUDE_CODE.md`, `ANALISE_MERCADO.md`)
 **Plano original:** `C:\Users\zanca\.claude\plans\saas-eng-e-arq-tender-curry.md`

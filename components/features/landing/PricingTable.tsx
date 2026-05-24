@@ -81,6 +81,11 @@ export function PricingTable() {
                     <span className="ml-1 text-sm font-normal text-zinc-500">/mês</span>
                   ) : null}
                 </p>
+                {id === "pro" ? (
+                  <p className="mt-1 text-xs font-medium text-blue-700 dark:text-blue-400">
+                    ✨ 7 dias grátis · sem cartão
+                  </p>
+                ) : null}
                 <ul className="mt-4 flex-1 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2">

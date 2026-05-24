@@ -181,6 +181,10 @@ const FAQ = [
     a: "Plano Free é gratuito (2 projetos, 3 docs/mês). Standard a R$ 199,90/mês cobre o autônomo médio. Pro a R$ 449,90 para volume maior. Veja os planos em detalhe acima.",
   },
   {
+    q: "Tem trial grátis pra testar o Pro?",
+    a: "Sim. Após criar conta, você ativa 7 dias do plano Pro sem cartão de crédito (1 trial por workspace). Tudo desbloqueado: projetos ilimitados, 100 docs IA/mês, portal do cliente, branding. Quando termina, o workspace volta automaticamente pro Free — nada é cobrado.",
+  },
+  {
     q: "Funciona com plantas escaneadas / fotos?",
     a: "Funciona com PDFs nítidos (idealmente exportados do AutoCAD/Revit). Plantas escaneadas com baixa resolução têm extração de menor confiança — a IA sinaliza isso pra você revisar com cuidado.",
   },
@@ -301,7 +305,7 @@ export default async function HomePage() {
             </a>
           </div>
           <p className="mt-4 text-sm text-zinc-500">
-            2 projetos e 3 docs IA grátis. Sem cartão de crédito. Sem fidelidade.
+            2 projetos e 3 docs IA grátis · 7 dias de Pro grátis sem cartão · sem fidelidade
           </p>
 
           <div className="mt-12">

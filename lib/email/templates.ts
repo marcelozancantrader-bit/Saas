@@ -157,3 +157,47 @@ Abra o portal: ${input.portalUrl}
 
   return { html, text, subject };
 }
+
+/**
+ * Template específico: trial encerrado (downgrade pra free).
+ * Disparado pelo cron expired-trials-cron pros owners/admins da org.
+ */
+export function renderTrialExpiredEmail(input: {
+  orgName: string;
+  planLabel: string;
+  billingUrl: string;
+}): { html: string; text: string; subject: string } {
+  const subject = `Seu trial ${input.planLabel} acabou — assine pra continuar`;
+
+  const html = renderEmailLayout({
+    preheader: `O trial de ${input.planLabel} encerrou. Workspace ${input.orgName} voltou pro Free.`,
+    orgName: input.orgName,
+    greeting: `Olá,`,
+    body: `
+      <p style="margin:0 0 14px;">
+        Seu período de teste do plano <strong>${input.planLabel}</strong> terminou. O workspace
+        <strong>${input.orgName}</strong> voltou automaticamente para o plano Free.
+      </p>
+      <p style="margin:0 0 14px;color:${TEXT_MID};font-size:14px;">
+        Os limites do Free voltaram a valer (2 projetos ativos, 3 documentos IA/mês, sem portal
+        do cliente). Seus projetos e documentos continuam intactos.
+      </p>
+      <p style="margin:0 0 6px;">
+        Para destravar tudo de novo, basta assinar pelo /billing — pagamento via PIX.
+      </p>
+    `,
+    cta: { label: "Assinar agora →", href: input.billingUrl },
+    footer: `Memorial.ai · copiloto documental para arquitetos e engenheiros`,
+  });
+
+  const text = `Seu trial ${input.planLabel} acabou.
+
+O workspace ${input.orgName} voltou pro Free. Seus projetos e documentos continuam intactos,
+mas os limites do Free voltaram a valer.
+
+Assine novamente: ${input.billingUrl}
+
+(Memorial.ai)`;
+
+  return { html, text, subject };
+}

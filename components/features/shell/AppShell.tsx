@@ -3,6 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { CommandPalette } from "./CommandPalette";
 import { AnnouncementBanner } from "./AnnouncementBanner";
+import { TrialBanner } from "./TrialBanner";
 import { PosthogIdentify } from "@/components/features/analytics/PosthogIdentify";
 import type { NotificationRow } from "@/server/services/notifications-load";
 import type { ActiveAnnouncement } from "@/server/services/announcements-load";
@@ -38,6 +39,7 @@ export function AppShell({
       <div className="flex flex-1 flex-col">
         <TopBar userEmail={userEmail} orgName={orgName} role={role} notifications={notifications} />
         <AnnouncementBanner announcements={announcements} />
+        <TrialBanner orgId={orgId} plano={plano} />
         <main id="main-content" className="flex-1 px-4 py-5 md:px-8 md:py-8">
           {children}
         </main>

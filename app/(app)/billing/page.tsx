@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { getPlanUsage } from "@/server/services/plan-usage";
 import { PLANS, PLAN_ORDER, formatBrlFromCents, type PlanId } from "@/lib/plans/limits";
 import { PlanUpgradeButton } from "@/components/features/billing/PlanUpgradeButton";
 import { CancelPlanButton } from "@/components/features/billing/CancelPlanButton";
+import { StartTrialCard } from "@/components/features/billing/StartTrialCard";
+import { resolveTrialState, TRIAL_PLAN, canStartTrial } from "@/lib/billing/trial";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +18,9 @@ export default async function BillingPage() {
 
   const { data: orgRow } = await supabase
     .from("organizations")
-    .select("plano")
+    .select("plano, trial_started_at")
     .eq("id", org.orgId)
-    .single<{ plano: PlanId }>();
+    .single<{ plano: PlanId; trial_started_at: string | null }>();
   const currentPlan = orgRow?.plano ?? "free";
   const usage = await getPlanUsage(org.orgId, currentPlan);
 
@@ -30,9 +33,21 @@ export default async function BillingPage() {
     .order("created_at", { ascending: false })
     .limit(10);
 
+  const trialingSub =
+    subscriptions?.find((s) => s.status === "trialing" && s.provider === "trial") ?? null;
+  const trialState = resolveTrialState({
+    trialStartedAt: orgRow?.trial_started_at ?? null,
+    trialingSub: trialingSub
+      ? { current_period_end: trialingSub.current_period_end as string | null }
+      : null,
+    currentPlano: currentPlan,
+  });
+
   const activeSub = subscriptions?.find((s) => s.status === "active") ?? null;
   const canCancel = currentPlan !== "free" && activeSub && !activeSub.cancel_at_period_end;
   const cancelScheduled = activeSub?.cancel_at_period_end === true;
+  const showStartTrial = canStartTrial(trialState, currentPlan);
+  const trialActive = trialState.kind === "active";
 
   return (
     <div className="space-y-6">
@@ -42,6 +57,8 @@ export default async function BillingPage() {
           Gerencie o plano da sua organização ({org.orgName}).
         </p>
       </div>
+
+      {showStartTrial ? <StartTrialCard /> : null}
 
       <Card>
         <CardHeader className="pb-2">
@@ -64,6 +81,29 @@ export default async function BillingPage() {
               ) : null}
             </p>
           </div>
+
+          {trialActive ? (
+            <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-200">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <div>
+                <p className="font-medium">
+                  Trial {PLANS[TRIAL_PLAN].label} — {trialState.daysRemaining}{" "}
+                  {trialState.daysRemaining === 1 ? "dia" : "dias"} restantes
+                </p>
+                <p className="opacity-80">
+                  Até {trialState.endsAt.toLocaleDateString("pt-BR")}. Assine antes pra manter o
+                  acesso ininterrupto.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {trialState.kind === "expired" && currentPlan === "free" ? (
+            <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+              Você já utilizou o trial. Para destravar tudo do {PLANS[TRIAL_PLAN].label}, escolha um
+              plano abaixo.
+            </div>
+          ) : null}
 
           {cancelScheduled && activeSub?.current_period_end ? (
             <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
