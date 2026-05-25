@@ -39,16 +39,13 @@ Backlog #13. Conversion lever clássico: orgs free podem ativar trial Pro de 7 d
 - Card Pro do PricingTable: badge "✨ 7 dias grátis · sem cartão" abaixo do preço
 - FAQ: nova entrada "Tem trial grátis pra testar o Pro?"
 
-### ⚠️ Migration pendente em prod
+### ✅ Migrations aplicadas em prod (2026-05-25)
 
-- **`20260728000001_org_trial.sql`** — aplicar no Supabase Dashboard SQL Editor antes de qualquer signup novo poder ativar trial.
+- `20260728000001_org_trial.sql` — trial pré-pago
+- `20260727000004_internal_review.sql` — revisão hierárquica (Batch X do P6)
+- `20260727000003_invitations.sql` — convite de membros (Batch AA, já estava aplicada; migration tornada idempotente em `65f14bf`)
 
-Sem aplicar, a action falha com erro de coluna `trial_started_at` inexistente.
-
-### Migrations P5/P6 ainda pendentes (lembrete)
-
-- `20260727000003_invitations.sql` (Batch AA — convidar membros)
-- `20260727000004_internal_review.sql` (Batch X — revisão hierárquica)
+**0 migrations pendentes em prod.**
 
 ### Backlog que sobrou
 
@@ -117,14 +114,10 @@ Sem aplicar, a action falha com erro de coluna `trial_started_at` inexistente.
 - `90f4190` **X — Multi-user aprovação hierárquica**: status `aguardando_revisao_interna`, member solicita, owner/admin aprova/recusa com comentário
 - `a0b4766` **BB — PostHog instrumentation**: captureServer + PosthogIdentify auto + 4 eventos chave do funnel (project.created, document.generated, document.sent_to_portal, portal.document_decided). Gated em key.
 
-### ⚠️ Migrations ainda pendentes em prod
+### ✅ Migrations aplicadas em prod
 
-Aplicar no Supabase Dashboard SQL Editor:
-
-1. **`20260727000003_invitations.sql`** (Batch AA — convidar membros não funciona sem)
-2. **`20260727000004_internal_review.sql`** (Batch X — revisão hierárquica não funciona sem)
-
-✅ Migrations já aplicadas pelo Marcelo: `20260727000001_project_diary.sql`, `20260727000002_org_doc_templates.sql`.
+Todas P6 aplicadas (`project_diary`, `org_doc_templates`, `invitations`, `internal_review`).
+Ver seção P7 acima pro status consolidado pós-trial.
 
 ### Configurações externas opcionais (app funciona sem)
 
