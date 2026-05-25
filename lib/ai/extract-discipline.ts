@@ -17,6 +17,7 @@ import * as structural from "@/lib/ai/prompts/extract-structural.v1";
 import * as gas from "@/lib/ai/prompts/extract-gas.v1";
 import * as hvac from "@/lib/ai/prompts/extract-hvac.v1";
 import { captureException } from "@/lib/observability/sentry";
+import { withRetry } from "@/lib/ai/retry";
 
 const MAX_PDF_BYTES = 32 * 1024 * 1024;
 
@@ -91,37 +92,41 @@ export async function extractDisciplineData(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await client.messages.create(
-      {
-        model,
-        max_tokens: 4096,
-        system: [
+    const response = await withRetry(
+      () =>
+        client.messages.create(
           {
-            type: "text",
-            text: mod.SYSTEM_PROMPT,
-            cache_control: { type: "ephemeral" },
-          },
-        ],
-        tools: [mod.TOOL_DEFINITION as never],
-        tool_choice: { type: "tool", name: mod.TOOL_NAME },
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "document",
-                source: { type: "base64", media_type: "application/pdf", data: base64 },
-                ...(filename ? { title: filename } : {}),
-              },
+            model,
+            max_tokens: 4096,
+            system: [
               {
                 type: "text",
-                text: `Analise este PDF do projeto ${disciplina} e extraia os dados estruturados. Lembre-se de invocar a tool ${mod.TOOL_NAME}.`,
+                text: mod.SYSTEM_PROMPT,
+                cache_control: { type: "ephemeral" },
+              },
+            ],
+            tools: [mod.TOOL_DEFINITION as never],
+            tool_choice: { type: "tool", name: mod.TOOL_NAME },
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "document",
+                    source: { type: "base64", media_type: "application/pdf", data: base64 },
+                    ...(filename ? { title: filename } : {}),
+                  },
+                  {
+                    type: "text",
+                    text: `Analise este PDF do projeto ${disciplina} e extraia os dados estruturados. Lembre-se de invocar a tool ${mod.TOOL_NAME}.`,
+                  },
+                ],
               },
             ],
           },
-        ],
-      },
-      { signal: controller.signal },
+          { signal: controller.signal },
+        ),
+      { maxAttempts: 3, baseDelayMs: 2000 },
     );
 
     const toolUse = response.content.find(

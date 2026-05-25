@@ -13,6 +13,10 @@ const envSchema = z.object({
     .transform((v) => v === "true"),
 
   ANTHROPIC_API_KEY: z.string().optional(),
+  // OpenAI gpt-4o-mini — usado como fallback se Anthropic Claude falhar (5xx/timeout)
+  // após esgotar retries. Quando não configurado, fallback não acontece (degrada
+  // graciosamente pro erro original do Anthropic).
+  OPENAI_API_KEY: z.string().optional(),
 
   // Inngest — optional in dev (uses local dev server at :8288)
   INNGEST_EVENT_KEY: z.string().optional(),
@@ -75,6 +79,7 @@ function parseEnv(): Env {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED: process.env.NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
     INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
     RESEND_API_KEY: process.env.RESEND_API_KEY,

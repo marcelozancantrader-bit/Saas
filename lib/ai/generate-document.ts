@@ -24,6 +24,8 @@ import {
   type GeneratedDocument,
 } from "@/lib/ai/prompts/_shared-document-schema";
 import { captureException } from "@/lib/observability/sentry";
+import { withRetry } from "@/lib/ai/retry";
+import { callOpenAiStructured, shouldFallbackToOpenAi } from "@/lib/ai/clients/openai";
 
 export type DocumentTipo =
   | "memorial"
@@ -218,29 +220,49 @@ export async function generateDocument(
     // Streaming keeps the HTTP connection alive (SSE pings) and avoids 60s drops
     // by intermediate proxies on long generations (90-180s). Functionally equivalent
     // to .create() — we only consume the final Message via .finalMessage().
-    const stream = client.messages.stream(
-      {
-        model,
-        max_tokens: 16384,
-        system: [
+    //
+    // Retry: 3 tentativas com backoff exponencial em 429/5xx/529. Falhas
+    // transientes (rate limit, overload) eram fatais antes do P15.
+    const response = await withRetry(
+      async () => {
+        const stream = client.messages.stream(
           {
-            type: "text",
-            text: SYSTEM_PROMPT,
-            cache_control: { type: "ephemeral" },
+            model,
+            max_tokens: 16384,
+            system: [
+              {
+                type: "text",
+                text: SYSTEM_PROMPT,
+                cache_control: { type: "ephemeral" },
+              },
+            ],
+            tools: [TOOL_DEFINITION],
+            tool_choice: { type: "tool", name: RECORD_DOCUMENT_TOOL_NAME },
+            messages: [
+              {
+                role: "user",
+                content: [{ type: "text", text: renderContextMarkdown(input) }],
+              },
+            ],
           },
-        ],
-        tools: [TOOL_DEFINITION],
-        tool_choice: { type: "tool", name: RECORD_DOCUMENT_TOOL_NAME },
-        messages: [
-          {
-            role: "user",
-            content: [{ type: "text", text: renderContextMarkdown(input) }],
-          },
-        ],
+          { signal: controller.signal },
+        );
+        return await stream.finalMessage();
       },
-      { signal: controller.signal },
+      {
+        maxAttempts: 3,
+        baseDelayMs: 2000,
+        onRetry: (attempt, err) => {
+          const status =
+            err && typeof err === "object" && "status" in err
+              ? (err as { status: unknown }).status
+              : "n/a";
+          console.warn(
+            `[generate-document] tentativa ${attempt} falhou (status=${status}). Retry…`,
+          );
+        },
+      },
     );
-    const response = await stream.finalMessage();
 
     const toolUse = response.content.find(
       (b) => b.type === "tool_use" && b.name === RECORD_DOCUMENT_TOOL_NAME,
@@ -280,6 +302,50 @@ export async function generateDocument(
       model,
     };
   } catch (err) {
+    // FALLBACK: Claude esgotou retries com 5xx/529/timeout → tenta OpenAI
+    // gpt-4o-mini. Documentos podem ter qualidade ligeiramente inferior, mas
+    // app continua funcionando durante outages do Anthropic.
+    if (shouldFallbackToOpenAi(err)) {
+      const fallbackController = new AbortController();
+      const fallbackTimer = setTimeout(() => fallbackController.abort(), 120_000);
+      try {
+        const fallback = await callOpenAiStructured({
+          systemPrompt: SYSTEM_PROMPT,
+          userPrompt: renderContextMarkdown(input),
+          jsonSchema: {
+            name: RECORD_DOCUMENT_TOOL_NAME,
+            schema: TOOL_DEFINITION.input_schema,
+          },
+          maxOutputTokens: 16384,
+          signal: fallbackController.signal,
+        });
+        if (fallback.ok) {
+          const parsed = generatedDocumentSchema.safeParse(fallback.data);
+          if (parsed.success) {
+            console.warn(
+              `[generate-document] Claude falhou, fallback OpenAI OK (custo $${fallback.usage.usd_cost.toFixed(4)})`,
+            );
+            return {
+              ok: true,
+              document: parsed.data,
+              usage: {
+                input_tokens: fallback.usage.input_tokens,
+                output_tokens: fallback.usage.output_tokens,
+                cache_creation_input_tokens: 0,
+                cache_read_input_tokens: 0,
+                usd_cost: fallback.usage.usd_cost,
+              },
+              promptVersion: `${PROMPT_VERSION}+openai-fallback`,
+              model: fallback.model,
+            };
+          }
+        }
+      } finally {
+        clearTimeout(fallbackTimer);
+      }
+      // Fallback também falhou — segue pro tratamento de erro original.
+    }
+
     if (err instanceof Error && err.name === "AbortError") {
       return {
         ok: false,

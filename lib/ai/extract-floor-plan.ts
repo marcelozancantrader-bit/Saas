@@ -15,6 +15,7 @@ import {
   type FloorPlanExtraction,
 } from "@/lib/ai/prompts/extract-floor-plan.v2";
 import { captureException } from "@/lib/observability/sentry";
+import { withRetry } from "@/lib/ai/retry";
 
 const MAX_PDF_BYTES = 32 * 1024 * 1024; // 32 MB hard cap per Anthropic PDF support
 
@@ -84,41 +85,47 @@ export async function extractFloorPlanData(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await client.messages.create(
-      {
-        model,
-        max_tokens: 4096,
-        system: [
+    // Retry interno (3x backoff) cobre 429/5xx além do retry de job Inngest,
+    // pra evitar reprocessar o download do PDF a cada falha transiente.
+    const response = await withRetry(
+      () =>
+        client.messages.create(
           {
-            type: "text",
-            text: SYSTEM_PROMPT,
-            cache_control: { type: "ephemeral" },
-          },
-        ],
-        tools: [TOOL_DEFINITION],
-        tool_choice: { type: "tool", name: TOOL_NAME },
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "document",
-                source: {
-                  type: "base64",
-                  media_type: "application/pdf",
-                  data: base64,
-                },
-                ...(filename ? { title: filename } : {}),
-              },
+            model,
+            max_tokens: 4096,
+            system: [
               {
                 type: "text",
-                text: "Analise esta planta baixa e extraia os dados estruturados. Lembre-se de invocar a tool record_floor_plan_extraction.",
+                text: SYSTEM_PROMPT,
+                cache_control: { type: "ephemeral" },
+              },
+            ],
+            tools: [TOOL_DEFINITION],
+            tool_choice: { type: "tool", name: TOOL_NAME },
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "document",
+                    source: {
+                      type: "base64",
+                      media_type: "application/pdf",
+                      data: base64,
+                    },
+                    ...(filename ? { title: filename } : {}),
+                  },
+                  {
+                    type: "text",
+                    text: "Analise esta planta baixa e extraia os dados estruturados. Lembre-se de invocar a tool record_floor_plan_extraction.",
+                  },
+                ],
               },
             ],
           },
-        ],
-      },
-      { signal: controller.signal },
+          { signal: controller.signal },
+        ),
+      { maxAttempts: 3, baseDelayMs: 2000 },
     );
 
     const toolUse = response.content.find(
