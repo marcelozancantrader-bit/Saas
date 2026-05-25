@@ -96,9 +96,11 @@ export function PlanUpgradeButton({ targetPlan, cycle = "monthly" }: Props) {
       >
         {pending
           ? "Aguarde…"
-          : targetPlan === "agency"
-            ? "Falar com a equipe"
-            : "Mudar para este plano"}
+          : targetPlan === "free"
+            ? "Voltar pro Free"
+            : targetPlan === "agency"
+              ? "Falar com a equipe"
+              : "Escolher"}
       </Button>
 
       <Dialog open={askCpfCnpj} onOpenChange={setAskCpfCnpj}>
