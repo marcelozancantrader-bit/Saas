@@ -14,9 +14,9 @@ export const dynamic = "force-dynamic";
 
 const PLAN_BADGE_COLORS: Record<PlanId, string> = {
   free: "border-zinc-700 bg-zinc-800 text-zinc-300",
-  standard: "border-blue-700 bg-blue-950/40 text-blue-300",
+  solo: "border-blue-700 bg-blue-950/40 text-blue-300",
   pro: "border-amber-700 bg-amber-950/40 text-amber-300",
-  pro_max: "border-violet-700 bg-violet-950/40 text-violet-300",
+  studio: "border-violet-700 bg-violet-950/40 text-violet-300",
   agency: "border-emerald-700 bg-emerald-950/40 text-emerald-300",
 };
 

@@ -4,10 +4,10 @@ import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { getPlanUsage } from "@/server/services/plan-usage";
-import { PLANS, PLAN_ORDER, formatBrlFromCents, type PlanId } from "@/lib/plans/limits";
-import { PlanUpgradeButton } from "@/components/features/billing/PlanUpgradeButton";
+import { PLANS, formatBrlFromCents, type PlanId } from "@/lib/plans/limits";
 import { CancelPlanButton } from "@/components/features/billing/CancelPlanButton";
 import { StartTrialCard } from "@/components/features/billing/StartTrialCard";
+import { BillingPlanGrid } from "@/components/features/billing/BillingPlanGrid";
 import { resolveTrialState, TRIAL_PLAN, canStartTrial } from "@/lib/billing/trial";
 
 export const dynamic = "force-dynamic";
@@ -124,41 +124,7 @@ export default async function BillingPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {PLAN_ORDER.map((id) => {
-          const plan = PLANS[id];
-          const isCurrent = id === currentPlan;
-          return (
-            <Card key={id} className={isCurrent ? "ring-2 ring-zinc-900 dark:ring-zinc-100" : ""}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{plan.label}</CardTitle>
-                  {isCurrent ? <Badge variant="default">Atual</Badge> : null}
-                </div>
-                <p className="text-sm">
-                  <span className="text-xl font-semibold">
-                    {formatBrlFromCents(plan.priceCents)}
-                  </span>
-                  {plan.priceCents !== null && plan.priceCents > 0 ? (
-                    <span className="ml-1 text-xs text-zinc-500">/mês</span>
-                  ) : null}
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <ul className="space-y-1 text-xs text-zinc-700 dark:text-zinc-300">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex gap-1.5">
-                      <span aria-hidden>•</span>
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                {!isCurrent ? <PlanUpgradeButton targetPlan={id} /> : null}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <BillingPlanGrid currentPlan={currentPlan} />
 
       <Card>
         <CardHeader>

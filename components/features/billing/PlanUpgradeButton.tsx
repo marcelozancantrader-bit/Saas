@@ -16,11 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { upgradePlanAction } from "@/server/actions/billing/upgrade-plan.action";
 import { setOrgCpfCnpjAction } from "@/server/actions/organizations/set-cpf-cnpj.action";
-import type { PlanId } from "@/lib/plans/limits";
+import type { PlanId, BillingCycle } from "@/lib/plans/limits";
 
-type Props = { targetPlan: PlanId };
+type Props = { targetPlan: PlanId; cycle?: BillingCycle };
 
-export function PlanUpgradeButton({ targetPlan }: Props) {
+export function PlanUpgradeButton({ targetPlan, cycle = "monthly" }: Props) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [askCpfCnpj, setAskCpfCnpj] = useState(false);
@@ -30,7 +30,7 @@ export function PlanUpgradeButton({ targetPlan }: Props) {
   async function executeUpgrade() {
     setPending(true);
     try {
-      const r = await upgradePlanAction({ target_plan: targetPlan });
+      const r = await upgradePlanAction({ target_plan: targetPlan, cycle });
       if (!r.ok) {
         if ("needs_cpf_cnpj" in r && r.needs_cpf_cnpj) {
           setAskCpfCnpj(true);

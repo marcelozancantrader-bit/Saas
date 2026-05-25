@@ -131,7 +131,9 @@ export async function sendDocumentToPortalAction(
   }
 
   let whatsappSent = false;
-  if (project.clients.telefone && isWhatsappEnabled()) {
+  // Plan gate: WhatsApp Z-API só pra Pro+ (env precisa estar configurado também)
+  const planAllowsWhatsapp = getPlanLimits(orgRow?.plano ?? "free").whatsappEnabled;
+  if (project.clients.telefone && isWhatsappEnabled() && planAllowsWhatsapp) {
     const text = renderDocumentSentWhatsapp({
       orgName,
       clientName: project.clients.nome,

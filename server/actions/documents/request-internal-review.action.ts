@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
+import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 
 const schema = z.object({
   document_id: z.string().uuid(),
@@ -27,6 +28,19 @@ export async function requestInternalReviewAction(
 
   const me = await getCurrentOrg();
   const supabase = await createClient();
+
+  // Plan gate: Revisão hierárquica é Studio+
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("plano")
+    .eq("id", me.orgId)
+    .single<{ plano: PlanId }>();
+  if (!getPlanLimits(orgRow?.plano ?? "free").revisaoHierarquica) {
+    return {
+      ok: false,
+      error: "Revisão hierárquica multi-user disponível no plano Studio. Faça upgrade em /billing.",
+    };
+  }
 
   // Lê doc pra validar status atual (deve estar em rascunho)
   const { data: doc, error: readErr } = await supabase

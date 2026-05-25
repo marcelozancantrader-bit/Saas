@@ -5,6 +5,7 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
+import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 
 const MAX_PHOTOS = 6;
 const MAX_PHOTO_SIZE_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -48,6 +49,20 @@ export async function createDiaryEntryAction(formData: FormData): Promise<Create
 
   const me = await getCurrentOrg();
   const supabase = await createClient();
+
+  // Plan gate: Diário de obra é Pro+
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("plano")
+    .eq("id", me.orgId)
+    .single<{ plano: PlanId }>();
+  if (!getPlanLimits(orgRow?.plano ?? "free").diarioObra) {
+    return {
+      ok: false,
+      error:
+        "Diário de obra disponível a partir do plano Pro. Faça upgrade em /billing para registrar marcos com fotos.",
+    };
+  }
 
   // Confirma que o projeto é da org do usuário (defense in depth — RLS cobre também).
   const { data: project, error: projErr } = await supabase

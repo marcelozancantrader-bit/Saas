@@ -16,6 +16,7 @@ import type {
   STATUS_VALUES,
   TIPOLOGIA_VALUES,
 } from "@/lib/validators/projects.schema";
+import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 import {
   ExtractionReview,
   type ExtractionData,
@@ -170,11 +171,12 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
     supabase
       .from("organizations")
       .select(
-        "name, cnpj, registro_cau, registro_crea, profissional_nome, profissional_cpf, profissional_endereco, portfolio_slug, portfolio_enabled",
+        "name, plano, cnpj, registro_cau, registro_crea, profissional_nome, profissional_cpf, profissional_endereco, portfolio_slug, portfolio_enabled",
       )
       .eq("id", org.orgId)
       .single<{
         name: string;
+        plano: PlanId;
         cnpj: string | null;
         registro_cau: string | null;
         registro_crea: string | null;
@@ -464,6 +466,7 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
                   confirmedByUser={confirmedByUser}
                   promptVersion={completedExtraction.extracao_resultado._meta?.prompt_version}
                   usdCost={completedExtraction.extracao_resultado._meta?.usage?.usd_cost}
+                  quantitativosEnabled={getPlanLimits(orgFull?.plano ?? "free").quantitativoIa}
                 />
               </CardContent>
             </Card>

@@ -178,7 +178,7 @@ const FAQ = [
   },
   {
     q: "Quanto custa pra rodar?",
-    a: "Plano Free é gratuito (2 projetos, 3 docs/mês). Standard a R$ 199,90/mês cobre o autônomo médio. Pro a R$ 449,90 para volume maior. Veja os planos em detalhe acima.",
+    a: "Plano Free é gratuito (1 projeto, 3 docs/mês). Solo a R$ 89,90/mês cobre autônomo iniciante. Pro a R$ 219,90 desbloqueia quantitativo IA, portal cliente, WhatsApp e diário de obra (mais popular). Studio a R$ 499,90 para escritório com equipe e revisão hierárquica. Pagando anual: -20%. PIX à vista: -25%. Veja a grade completa acima.",
   },
   {
     q: "Tem trial grátis pra testar o Pro?",
@@ -305,7 +305,7 @@ export default async function HomePage() {
             </a>
           </div>
           <p className="mt-4 text-sm text-zinc-500">
-            2 projetos e 3 docs IA grátis · 7 dias de Pro grátis sem cartão · sem fidelidade
+            A partir de R$ 89,90/mês · 7 dias de Pro grátis sem cartão · sem fidelidade
           </p>
 
           <div className="mt-12">

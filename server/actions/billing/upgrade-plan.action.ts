@@ -12,10 +12,17 @@ import {
   getFirstSubscriptionPayment,
   customerAreaUrl,
 } from "@/lib/billing/asaas";
-import { PLANS, type PlanId } from "@/lib/plans/limits";
+import {
+  PLANS,
+  CYCLES,
+  calculateCyclePrice,
+  type PlanId,
+  type BillingCycle,
+} from "@/lib/plans/limits";
 
 const schema = z.object({
-  target_plan: z.enum(["free", "standard", "pro", "pro_max", "agency"]),
+  target_plan: z.enum(["free", "solo", "pro", "studio", "agency"]),
+  cycle: z.enum(["monthly", "annual", "pix_annual"]).default("monthly"),
 });
 
 export type UpgradePlanInput = z.infer<typeof schema>;
@@ -43,8 +50,11 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
     return { ok: false, error: "Só owner ou admin pode mudar o plano." };
   }
 
-  const targetPlan = parsed.data.target_plan;
+  const targetPlan: PlanId = parsed.data.target_plan;
+  const targetCycle: BillingCycle = parsed.data.cycle;
   const planInfo = PLANS[targetPlan];
+  const cycleInfo = CYCLES[targetCycle];
+  const cyclePrice = calculateCyclePrice(targetPlan, targetCycle);
 
   // Free e Agency: sem cobrança automática nesta versão.
   const wantsAsaas =
@@ -72,12 +82,19 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
     });
     if (!customer.ok) return { ok: false, error: `Asaas: ${customer.error}` };
 
+    // Para anual/pix_annual, cobra o valor total do ciclo de uma vez. Para mensal,
+    // cobra o effectiveMonthly mês a mês (recorrente).
+    const isAnnualCycle = targetCycle !== "monthly";
+    const valueToCharge = isAnnualCycle
+      ? (cyclePrice?.totalCycleCents ?? planInfo.priceCents!) / 100
+      : (cyclePrice?.effectiveMonthlyCents ?? planInfo.priceCents!) / 100;
+
     const sub = await createSubscription({
       customer: customer.customerId,
       billingType: "PIX",
-      value: planInfo.priceCents! / 100,
-      cycle: "MONTHLY",
-      description: `Memorial.ai — plano ${planInfo.label}`,
+      value: valueToCharge,
+      cycle: isAnnualCycle ? "YEARLY" : "MONTHLY",
+      description: `Memorial.ai — plano ${planInfo.label} (${cycleInfo.label})`,
       externalReference: me.orgId,
       nextDueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
     });
@@ -92,7 +109,13 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
       provider: "asaas",
       provider_customer_id: customer.customerId,
       provider_subscription_id: sub.subscription.id,
-      meta: { asaas_response: sub.subscription },
+      cycle: targetCycle,
+      meta: {
+        asaas_response: sub.subscription,
+        discount_percent: cycleInfo.discountPercent,
+        cycle_total_cents: cyclePrice?.totalCycleCents ?? null,
+        effective_monthly_cents: cyclePrice?.effectiveMonthlyCents ?? null,
+      },
     });
     if (insertErr) {
       console.error(`[upgrade-plan] failed to insert pending subscription: ${insertErr.message}`);
@@ -139,9 +162,16 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
     plano: targetPlan,
     status: "active",
     provider: "manual",
+    cycle: targetCycle,
     current_period_start: new Date().toISOString(),
-    current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    meta: { reason: "manual_upgrade", changed_by: me.userId },
+    current_period_end: new Date(
+      Date.now() + cycleInfo.monthsCharged * 30 * 24 * 60 * 60 * 1000,
+    ).toISOString(),
+    meta: {
+      reason: "manual_upgrade",
+      changed_by: me.userId,
+      discount_percent: cycleInfo.discountPercent,
+    },
   });
 
   await admin.from("notifications").insert({

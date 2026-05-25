@@ -71,6 +71,8 @@ type Props = {
   confirmedByUser: boolean;
   promptVersion?: string;
   usdCost?: number;
+  /** Se false, esconde o card de quantitativos IA (gating por plano: Pro+). */
+  quantitativosEnabled?: boolean;
 };
 
 const CONFIANCA_BADGE: Record<
@@ -88,6 +90,7 @@ export function ExtractionReview({
   extraction,
   confirmedByUser,
   promptVersion,
+  quantitativosEnabled = true,
   usdCost,
 }: Props) {
   const router = useRouter();
@@ -342,80 +345,93 @@ export function ExtractionReview({
         </div>
       ) : null}
 
-      <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
-        <div className="flex items-center justify-between gap-2">
+      {!quantitativosEnabled ? (
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-sm font-medium">📊 Quantitativos da IA</p>
-          {q ? (
-            <Badge variant="outline" className="text-[10px]">
-              Contado pelo prompt v2
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-[10px]">
-              Não disponível — heurística será usada
-            </Badge>
-          )}
+          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+            A IA conta portas, janelas, louças, rodapé e revestimento da sua planta automaticamente
+            — disponível a partir do plano <strong>Pro</strong>.
+            <a href="/billing" className="ml-1 text-blue-700 hover:underline dark:text-blue-400">
+              Ver planos →
+            </a>
+          </p>
         </div>
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">
-          Itens que entram direto no orçamento SINAPI. Edite se a IA contou errado — ao confirmar, o
-          orçamento usa esses valores no lugar das estimativas automáticas.
-        </p>
+      ) : (
+        <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium">📊 Quantitativos da IA</p>
+            {q ? (
+              <Badge variant="outline" className="text-[10px]">
+                Contado pelo prompt v2
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-[10px]">
+                Não disponível — heurística será usada
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-zinc-600 dark:text-zinc-400">
+            Itens que entram direto no orçamento SINAPI. Edite se a IA contou errado — ao confirmar,
+            o orçamento usa esses valores no lugar das estimativas automáticas.
+          </p>
 
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <QtyInput
-            label="Portas internas"
-            value={portasInt}
-            onChange={setPortasInt}
-            disabled={pending}
-          />
-          <QtyInput
-            label="Portas externas"
-            value={portasExt}
-            onChange={setPortasExt}
-            disabled={pending}
-          />
-          <QtyInput
-            label="Janelas grandes"
-            value={janelasG}
-            onChange={setJanelasG}
-            disabled={pending}
-          />
-          <QtyInput
-            label="Janelas pequenas"
-            value={janelasP}
-            onChange={setJanelasP}
-            disabled={pending}
-          />
-          <QtyInput label="Bacios" value={bacios} onChange={setBacios} disabled={pending} />
-          <QtyInput
-            label="Lavatórios"
-            value={lavatorios}
-            onChange={setLavatorios}
-            disabled={pending}
-          />
-          <QtyInput
-            label="Pias de cozinha"
-            value={piasCozinha}
-            onChange={setPiasCozinha}
-            disabled={pending}
-          />
-          <QtyInput
-            label="Rodapé (m)"
-            value={mRodape}
-            onChange={setMRodape}
-            disabled={pending}
-            step="0.1"
-            placeholder="—"
-          />
-          <QtyInput
-            label="Revest. parede (m²)"
-            value={m2RevParede}
-            onChange={setM2RevParede}
-            disabled={pending}
-            step="0.1"
-            placeholder="—"
-          />
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <QtyInput
+              label="Portas internas"
+              value={portasInt}
+              onChange={setPortasInt}
+              disabled={pending}
+            />
+            <QtyInput
+              label="Portas externas"
+              value={portasExt}
+              onChange={setPortasExt}
+              disabled={pending}
+            />
+            <QtyInput
+              label="Janelas grandes"
+              value={janelasG}
+              onChange={setJanelasG}
+              disabled={pending}
+            />
+            <QtyInput
+              label="Janelas pequenas"
+              value={janelasP}
+              onChange={setJanelasP}
+              disabled={pending}
+            />
+            <QtyInput label="Bacios" value={bacios} onChange={setBacios} disabled={pending} />
+            <QtyInput
+              label="Lavatórios"
+              value={lavatorios}
+              onChange={setLavatorios}
+              disabled={pending}
+            />
+            <QtyInput
+              label="Pias de cozinha"
+              value={piasCozinha}
+              onChange={setPiasCozinha}
+              disabled={pending}
+            />
+            <QtyInput
+              label="Rodapé (m)"
+              value={mRodape}
+              onChange={setMRodape}
+              disabled={pending}
+              step="0.1"
+              placeholder="—"
+            />
+            <QtyInput
+              label="Revest. parede (m²)"
+              value={m2RevParede}
+              onChange={setM2RevParede}
+              disabled={pending}
+              step="0.1"
+              placeholder="—"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {extraction.observacoes ? (
         <div className="space-y-1.5">

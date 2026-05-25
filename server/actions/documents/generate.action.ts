@@ -10,7 +10,7 @@ import { canGenerateAiDoc, getPlanUsage } from "@/server/services/plan-usage";
 import { checkRateLimit, rateLimitError } from "@/lib/ratelimit/check";
 import { getContractTemplate } from "@/lib/contract-templates/templates";
 import { captureServer } from "@/lib/observability/posthog";
-import type { PlanId } from "@/lib/plans/limits";
+import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 
 const inputSchema = z.object({
   project_id: z.string().uuid(),
@@ -51,6 +51,37 @@ export async function generateDocumentAction(
   }
 
   const supabase = await createClient();
+
+  // Plan gate: limite de templates de contrato por plano.
+  // Ordem de templates (do mais básico ao mais completo, ver lib/contract-templates/templates.ts):
+  //   1. residencial_pf, 2. residencial_pj_multifamiliar, 3. comercial,
+  //   4. reforma_retrofit, 5. projeto_legal, 6. projeto_completo_rt
+  if (contractTemplate) {
+    const me0 = await getCurrentOrg();
+    const { data: orgRow0 } = await supabase
+      .from("organizations")
+      .select("plano")
+      .eq("id", me0.orgId)
+      .single<{ plano: PlanId }>();
+    const tplMax = getPlanLimits(orgRow0?.plano ?? "free").templatesContratoMax;
+    if (tplMax !== null) {
+      const TEMPLATE_ORDER = [
+        "residencial_pf",
+        "residencial_pj_multifamiliar",
+        "comercial",
+        "reforma_retrofit",
+        "projeto_legal",
+        "projeto_completo_rt",
+      ];
+      const idx = TEMPLATE_ORDER.indexOf(contractTemplate.id);
+      if (idx >= tplMax) {
+        return {
+          ok: false,
+          error: `Este template está disponível em planos superiores. Seu plano libera os primeiros ${tplMax} ${tplMax === 1 ? "template" : "templates"}. Faça upgrade em /billing.`,
+        };
+      }
+    }
+  }
 
   // Fetch project + client + extraction
   const { data: project, error: projErr } = await supabase

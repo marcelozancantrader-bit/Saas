@@ -1,6 +1,101 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-25 (P11) — **Smoke E2E Playwright (regressão landing/SEO/copy + heartbeat diário em prod).**
+**Última pausa:** 2026-05-25 (P12) — **Pricing v2: 4 planos + Agência, ciclos mensal/anual/PIX, gates de todas features novas P5-P11.**
+
+---
+
+## 💰 P12 — Pricing v2 (2026-05-25) — 3 commits
+
+Refactor completo da estrutura de planos baseado em pesquisa de mercado BR
+[PRICING_RESEARCH.md](PRICING_RESEARCH.md) e auditoria interna de gating
+[PRICING_PROPOSAL.md](PRICING_PROPOSAL.md), com aprovação do fundador.
+
+### Decisões aprovadas
+
+- **4 planos + Agência** (era 5): Free / **Solo R$ 89,90** / **Pro R$ 219,90** (highlighted) / **Studio R$ 499,90** / Agência sob consulta
+- **3 ciclos**: mensal (default) / anual −20% / PIX à vista anual −25% (diferencial real vs concorrentes)
+- **Tudo de uma vez, sem A/B** — grandfathering 12m pros clientes atuais via `organizations.meta.grandfathered_until`
+- **Trial mantém 7d Pro sem cartão**
+
+### Bug crítico corrigido (commit `a1fcf31`)
+
+`inviteMemberAction` agora valida `maxUsers` do plano. Free podia convidar
+infinitos membros — perda de valor + risco de billing.
+
+### Migration aplicável (commit principal)
+
+[`20260730000001_pricing_v2.sql`](supabase/migrations/20260730000001_pricing_v2.sql):
+
+- Backfill: `standard` → `solo`, `pro_max` → `studio` em `organizations.plano` e `subscriptions.plano`
+- Check constraint atualizado (aceita só novos IDs)
+- Coluna `subscriptions.cycle` (`monthly | annual | pix_annual`)
+- Grandfathering automático: marca `meta.grandfathered_until = now+365d` em todas as orgs pagas
+
+### Refactor [lib/plans/limits.ts](lib/plans/limits.ts)
+
+Novo `PlanLimits` com 11 campos novos (todos gated):
+
+- `quantitativoIa` (Pro+) — quantitativo IA da planta
+- `diarioObra` (Pro+) — diário de obra com fotos
+- `whatsappEnabled` (Pro+) — WhatsApp Z-API
+- `cotacaoFornecedor` (Pro+) — pedido de cotação PDF/XLSX
+- `portfolioPublico` (Solo+) — `/p/<slug>` vitrine
+- `bibliotecaTemplates` (Pro+) — templates do escritório
+- `revisaoHierarquica` (Studio+) — member solicita → owner aprova
+- `templatesContratoMax` (Free=1, Solo=3, Pro+=todos) — templates CAU
+- `chatDaPlanta` (Pro+) — IA Haiku no portal
+- `whiteLabel` (Agency) — esconder Prumai
+- `storageBytes` — limite por plano (100MB → ilimitado)
+
+Plus tipos novos: `BillingCycle`, `CycleInfo`, `calculateCyclePrice()`.
+
+### Feature guards adicionados nas actions
+
+| Action                                        | Guard                                               |
+| --------------------------------------------- | --------------------------------------------------- |
+| `send-to-portal.action.ts`                    | `whatsappEnabled` (já tinha `portalClienteEnabled`) |
+| `diary/create-entry.action.ts`                | `diarioObra`                                        |
+| `templates/save-template.action.ts`           | `bibliotecaTemplates`                               |
+| `documents/request-internal-review.action.ts` | `revisaoHierarquica`                                |
+| `documents/generate.action.ts`                | `templatesContratoMax` por índice de template       |
+| `invitations/invite-member.action.ts`         | `maxUsers` (já comitado em `a1fcf31`)               |
+| `billing/upgrade-plan.action.ts`              | Aceita `cycle` param + aplica desconto              |
+| UI `ExtractionReview.tsx`                     | `quantitativosEnabled` esconde card com CTA pra Pro |
+
+### UI atualizada
+
+- [PricingTable.tsx](components/features/landing/PricingTable.tsx) — toggle mensal/anual/PIX, badges de desconto, tabela detalhada de 18 features (era 8)
+- [BillingPlanGrid.tsx](components/features/billing/BillingPlanGrid.tsx) — novo componente client com seletor de ciclo
+- `/billing` usa o novo grid (substitui hardcoded)
+- Landing hero: "A partir de R$ 89,90/mês" (era "2 projetos e 3 docs grátis")
+- FAQ atualizado com nova grade
+
+### ⚠️ Migration pendente em prod
+
+Aplicar **`20260730000001_pricing_v2.sql`** no Supabase Dashboard SQL Editor.
+
+**Importante**: essa migration **renomeia planos existentes**. Antes de aplicar,
+exporte um backup dos dados (`pg_dump` ou snapshot Supabase). Migration é
+idempotente mas troca constraint de plano — uma org ou sub com plano "standard"
+ou "pro_max" antigos será renomeada automaticamente pra solo/studio.
+
+### Grandfathering
+
+Todas as orgs com plano != free recebem `meta.grandfathered_until = now+365d`.
+Significa: continuam pagando o preço cobrado no momento da migração (provider
+Asaas mantém valor da subscription existente). Depois de 12 meses, podemos
+migrar pra novo preço com aviso prévio.
+
+### Backlog que continua
+
+- Grandfathering script TS (`scripts/grandfather-existing-accounts.ts`) — não precisa, migration já faz via UPDATE
+- Email template "Plano atualizado" pros clientes existentes — fase 2
+- A/B test PostHog — não vamos fazer; cutover direto conforme aprovação
+- Componente `UpgradeGate` reusável — fase 2 (hoje cada action retorna erro com CTA pra /billing)
+
+---
+
+**Última pausa anterior:** 2026-05-25 (P11) — **Smoke E2E Playwright (regressão landing/SEO/copy + heartbeat diário em prod).**
 
 ---
 

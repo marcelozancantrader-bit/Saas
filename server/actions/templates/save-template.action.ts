@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
+import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 
 const ALLOWED_TIPOS = [
   "memorial",
@@ -38,6 +39,20 @@ export async function saveDocumentAsTemplateAction(
 
   const me = await getCurrentOrg();
   const supabase = await createClient();
+
+  // Plan gate: Biblioteca de templates é Pro+
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("plano")
+    .eq("id", me.orgId)
+    .single<{ plano: PlanId }>();
+  if (!getPlanLimits(orgRow?.plano ?? "free").bibliotecaTemplates) {
+    return {
+      ok: false,
+      error:
+        "Biblioteca de templates do escritório disponível a partir do plano Pro. Faça upgrade em /billing.",
+    };
+  }
 
   // Lê o documento fonte (RLS garante que é da org do usuário)
   const { data: doc, error: docErr } = await supabase

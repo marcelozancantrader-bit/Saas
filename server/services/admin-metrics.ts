@@ -193,9 +193,9 @@ export async function loadSaasOverviewMetrics(): Promise<SaasOverviewMetrics> {
   // Mix
   const orgsByPlan: Record<PlanId, number> = {
     free: 0,
-    standard: 0,
+    solo: 0,
     pro: 0,
-    pro_max: 0,
+    studio: 0,
     agency: 0,
   };
   for (const o of orgs) {

@@ -22,9 +22,9 @@ export const dynamic = "force-dynamic";
 
 const PLAN_COLORS: Record<string, string> = {
   free: "#71717a",
-  standard: "#60a5fa",
+  solo: "#60a5fa",
   pro: "#fbbf24",
-  pro_max: "#a78bfa",
+  studio: "#a78bfa",
   agency: "#34d399",
 };
 
