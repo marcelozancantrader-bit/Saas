@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-25 (P14) — **UpgradeGate reusável + fix de gate `maxActiveProjects` na criação de projeto.**
+**Última pausa:** 2026-05-25 (P15) — **Auditoria profunda + 5 batches de fix (storage, cache, resiliência IA, type safety, UX, polish).**
 
 > **Marca decidida**: `Prumai` (research em [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md))
 > **Domínio**: ainda em `memorial-ai-mu.vercel.app` — registrar `prumai.com.br` é a próxima ação externa
@@ -24,6 +24,15 @@
 - ✅ 7 features que dependiam de `organizations.meta` destravadas (migration P12 criou a coluna)
 - ✅ **UpgradeGate reusável** — modal rico em vez de toast plano em 9 gates de plano (P14)
 - ✅ **Bug fix P12 residual**: `createProjectAction` agora gateia `maxActiveProjects` (Free não cria mais ∞ projetos)
+- ✅ **Auditoria profunda (P15)** — 6 agents Explore varreram segurança/IA/billing/UX/perf/qualidade. Achados em [P15 abaixo].
+- ✅ **Storage quota enforcement** — Free não pode mais encher bucket sem limite (P15-B1)
+- ✅ **Cache em queries quentes** — dashboard/usage com unstable_cache 60s + updateTag em mutations (P15-B1)
+- ✅ **Resiliência IA** — retry exponencial + fallback OpenAI gpt-4o-mini se Claude cair (P15-B2)
+- ✅ **Type safety** — schema zod pra project.meta elimina 6× `as unknown as`; aritmética monetária com Big.js (P15-B3)
+- ✅ **UX ops longas** — overlay com tempo decorrido + fase atual durante geração de doc IA (60-180s) (P15-B4)
+- ✅ **Portal scope-change rate limit** — 5/h por token evita abuso (P15-B4)
+- ✅ **Branding centralizado** — `lib/branding.ts` PRODUCT_NAME — pronto pra rebrand Prumai (P15-B5)
+- ✅ **Grandfathering UI** — banner verde "preço congelado" em /billing pra orgs com `meta.grandfathered_until` (P15-B5)
 
 **Próxima ação externa (Marcelo executa)**:
 
@@ -64,8 +73,132 @@ cat BRANDING_RESEARCH.md                           # naming research
 | [MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md) | 10 fases passo-a-passo da migração Memorial.ai → Prumai (dominio + Vercel + Supabase + Resend + OAuth + Asaas + refactor copy + INPI).           |
 | [PRICING_RESEARCH.md](PRICING_RESEARCH.md)       | Pesquisa de mercado BR (Projete, ARQProject, Plana, Vobi, Construflow) + comparáveis globais (Monograph, Houzz Pro). Base da decisão de pricing. |
 | [PRICING_PROPOSAL.md](PRICING_PROPOSAL.md)       | Proposta consolidada de pricing v2, aprovada pelo fundador. Estado original pré-implementação.                                                   |
-| [NEXT_SESSION.md](NEXT_SESSION.md)               | Este documento — histórico de todas as sessões P1-P14.                                                                                           |
+| [NEXT_SESSION.md](NEXT_SESSION.md)               | Este documento — histórico de todas as sessões P1-P15.                                                                                           |
 | [CLAUDE.md](CLAUDE.md) + [AGENTS.md](AGENTS.md)  | Regras inegociáveis do projeto, stack, anti-padrões.                                                                                             |
+
+---
+
+## 🔍 P15 — Auditoria profunda + 5 batches de fix (2026-05-25) — 6 commits
+
+Marcelo pediu auditoria profunda pós-P14. Spawnados 6 agents Explore em paralelo
+cobrindo: segurança+RLS, IA/LLM, billing+Asaas, UX+a11y, performance, qualidade.
+Relatório consolidado identificou 6 críticos, 11 altos, 9 médios — atacados em
+5 batches sequenciais.
+
+### Batch 1 — Bomba financeira (commit `1ae73d5`)
+
+**Storage quota enforcement** ([server/services/storage-quota.ts](server/services/storage-quota.ts) +
+[register-upload.action.ts](server/actions/files/register-upload.action.ts)):
+
+- Antes: `storageBytes` existia em `PlanLimits` (Free=100MB, Pro=25GB) mas
+  **zero enforcement** → Free podia subir TB de fotos via API.
+- Agora: `checkStorageQuota(orgId, bytesToAdd, limit)` antes do insert, retorna
+  UpgradeGate payload com `feature: "storageBytes"`.
+
+**Cache em queries quentes** ([dashboard-metrics.ts](server/services/dashboard-metrics.ts) +
+[plan-usage.ts](server/services/plan-usage.ts)):
+
+- 26 RSCs tinham `force-dynamic` + zero `unstable_cache` → dashboard fazia 8
+  queries Supabase por pageload.
+- Wrap em `unstable_cache(..., { revalidate: 60, tags: [...] })` por org.
+- `updateTag("plan-usage")` e `updateTag("dashboard-metrics")` em mutations
+  chave (createProject, deleteProject, generateDocument) pra read-your-own-writes.
+- Next.js 16 API: `updateTag(tag)` é o substituto do `revalidateTag(tag, profile)`
+  pra actions — single-arg.
+
+### Batch 2 — Resiliência IA (commit `290b76f`)
+
+**Retry exponencial** ([lib/ai/retry.ts](lib/ai/retry.ts)):
+
+- `withRetry(fn, opts)` com backoff exponencial + jitter.
+- Retryable: 429, 529 (overload Anthropic), 5xx, network errors. NÃO retry em AbortError.
+- Aplicado em `generateDocument`, `extractFloorPlanData`, `extractDisciplineData`
+  (3 tentativas, 2s base).
+- Antes: uma única falha 5xx do Claude matava a operação.
+
+**Fallback OpenAI** ([lib/ai/clients/openai.ts](lib/ai/clients/openai.ts)):
+
+- Cliente OpenAI minimal via fetch (sem SDK npm).
+- `callOpenAiStructured(systemPrompt, userPrompt, jsonSchema, ...)` usa
+  `response_format: { type: "json_schema" }` — compatível com Anthropic tool
+  schema (mesmo formato JSON Schema), funciona pros 10 tipos de doc sem
+  adaptar prompts.
+- `generateDocument`: se Claude esgota retry com 5xx/529/timeout, tenta gpt-4o-mini.
+- Quando `OPENAI_API_KEY` não setada, fallback degrada gracefully.
+- CLAUDE.md prometia esse fallback desde Sprint 3 — nunca implementado até P15.
+
+### Batch 3 — Type safety + moeda (commit `6d792d5`)
+
+**Schema zod pra project.meta** ([lib/validators/project-meta.schema.ts](lib/validators/project-meta.schema.ts)):
+
+- Elimina 6× `(project.meta as Record<string,unknown>)?.x as { ... }` em RSCs.
+- `parseProjectMeta(raw)` faz `safeParse` e retorna `{}` se inválido.
+- Cobre `extracao_planta`, `extracoes_disciplinas`, `zoneamento_custom`, `recuos_medidos`.
+- Aplicado em `[id]/page.tsx`, `orcamento/page.tsx`, `orcamento/[budgetId]/page.tsx`,
+  `documentos/page.tsx`.
+
+**Aritmética monetária com Big.js** (CLAUDE.md exige):
+
+- `dashboard-metrics.ts`: soma de `valor_contrato` usa `new Big(v).times(100).round(0)`.
+  Antes: `Math.round(v * 100)` acumulava erro em float (0.1 × 100 = 10.000000000000002).
+- `clientes/[id]/page.tsx`: `totalContratos` usa `sumMoney()`.
+- `scope-changes/respond.action.ts`: zod `z.number().multipleOf(0.01)` rejeita
+  valores com 3+ casas decimais.
+
+### Batch 4 — UX + segurança portal (commit `b261f4c`)
+
+**Rate limit portal scope-change** ([request-scope-change.action.ts](server/actions/portal/request-scope-change.action.ts)):
+
+- Cliente podia disparar centenas de scope-changes em loop com token comprometido.
+- 5/hora por token, retorno com `retry-after` amigável.
+
+**GeneratingDocumentOverlay** ([components/features/documents/GeneratingDocumentOverlay.tsx](components/features/documents/GeneratingDocumentOverlay.tsx)):
+
+- Overlay flutuante (bottom-right) durante geração de doc IA (60-180s).
+- Mostra: nome do tipo, fase atual (Lendo dados → Analisando NBR → Escrevendo →
+  Finalizando), tempo decorrido. Atualiza a cada segundo.
+- Aplicado em `GenerateDocumentMenu` + `ContractTemplateDialog`.
+- Antes: usuário via só "Gerando…" no botão; achava que travou.
+
+### Batch 5 — Polish (commit `694352f`)
+
+**Branding centralizado** ([lib/branding.ts](lib/branding.ts)):
+
+- `PRODUCT_NAME`, `SUPPORT_EMAIL`, `PRODUCT_DOMAIN` num único arquivo.
+- Quando o rebrand Memorial.ai → Prumai rolar (depende de domínio), só este arquivo muda.
+- Aplicado em `invite-member`, `send-to-portal`, `use-template`.
+
+**Grandfathering UI** ([lib/plans/grandfathering.ts](lib/plans/grandfathering.ts)):
+
+- Migration P12 marcou `organizations.meta.grandfathered_until = now+365d` mas
+  **ninguém lia** → orgs antigas veriam preço novo na renovação sem aviso.
+- `/billing` agora mostra banner verde "🔒 Preço congelado por mais N dias"
+  pra orgs grandfathered.
+
+**Admin impersonate reforçado** ([impersonate.action.ts](server/actions/admin/impersonate.action.ts)):
+
+- `reason` min 10 chars (era 3 — aceitava "ok" sem rastreabilidade útil).
+- Notification persistente pro próprio admin que iniciou impersonate — evidência
+  se conta for comprometida.
+
+### O que NÃO foi feito (escopo intencional)
+
+- **Rebrand completo Memorial.ai → Prumai em 40+ arquivos UI** — depende do
+  domínio prumai.com.br ser registrado primeiro. Fase 8 do MIGRATION_CHECKLIST.
+- **Migrar valores monetários pra centavos integer** — exigiria migration de
+  banco + atualizar TODOS exports/forms. Sprint dedicado.
+- **Remover `force-dynamic` das 26 RSCs** — auditoria visual page-a-page antes
+  pra evitar regressão. Backlog.
+- **Edge runtime em rotas públicas** — micro-otimização, baixa prioridade.
+
+### Resumo numérico
+
+- 6 commits
+- ~30 arquivos modificados
+- 5 arquivos novos: storage-quota, retry, openai client, project-meta schema,
+  branding, grandfathering, GeneratingDocumentOverlay
+- 0 migrations
+- 0 env vars novas obrigatórias (OPENAI_API_KEY opcional)
 
 ---
 
