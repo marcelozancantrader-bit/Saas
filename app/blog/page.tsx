@@ -2,6 +2,8 @@ import Link from "next/link";
 import { BLOG_POSTS } from "@/lib/blog/posts";
 import { Badge } from "@/components/ui/badge";
 
+export const revalidate = 86400;
+
 export const metadata = {
   title: "Blog técnico — Memorial.ai",
   description:

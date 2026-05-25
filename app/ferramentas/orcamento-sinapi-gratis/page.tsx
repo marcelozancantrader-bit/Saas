@@ -2,6 +2,8 @@ import Link from "next/link";
 import { OrcamentoSinapiCalculator } from "@/components/features/ferramentas/OrcamentoSinapiCalculator";
 import { buttonVariants } from "@/components/ui/button";
 
+export const revalidate = 86400;
+
 export const metadata = {
   title: "Orçamento SINAPI estimativo grátis — Memorial.ai",
   description:

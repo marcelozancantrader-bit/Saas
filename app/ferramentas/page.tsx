@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Calculator, FileSpreadsheet, Home } from "lucide-react";
 
+export const revalidate = 86400;
+
 export const metadata = {
   title: "Ferramentas grátis para arquitetos e engenheiros — Memorial.ai",
   description:

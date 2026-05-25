@@ -3,6 +3,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { Logo } from "@/components/brand/Logo";
 import { Sparkles, Heart, Code, ShieldCheck } from "lucide-react";
 
+// Conteúdo institucional muda raramente — cache 1 dia melhora TTFB CDN.
+export const revalidate = 86400;
+
 export const metadata = {
   title: "Sobre · Memorial.ai",
   description:

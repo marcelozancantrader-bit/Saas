@@ -3,6 +3,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { selectAllRows } from "@/lib/supabase/paginate";
 import { buttonVariants } from "@/components/ui/button";
 
+// CUB atualiza mensalmente — revalidar a cada 12h sobe novo dado rápido.
+export const revalidate = 43200;
+
 export const metadata = {
   title: "Valor CUB por UF — Memorial.ai",
   description:

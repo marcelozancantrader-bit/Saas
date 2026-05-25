@@ -2,6 +2,8 @@ import Link from "next/link";
 import { HonorarioCauCalculator } from "@/components/features/ferramentas/HonorarioCauCalculator";
 import { buttonVariants } from "@/components/ui/button";
 
+export const revalidate = 86400;
+
 export const metadata = {
   title: "Calculadora de honorário CAU — Memorial.ai",
   description:
