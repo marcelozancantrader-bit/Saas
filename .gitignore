@@ -56,3 +56,9 @@ next-env.d.ts
 
 # Claude Code — local overrides (permissions, hooks, etc) específicos por máquina
 .claude/settings.local.json
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

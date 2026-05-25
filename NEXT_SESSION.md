@@ -1,6 +1,55 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-25 (P10) — **Portfólio público do escritório (`/p/[slug]`) — diferencial competitivo + SEO/aquisição.**
+**Última pausa:** 2026-05-25 (P11) — **Smoke E2E Playwright (regressão landing/SEO/copy + heartbeat diário em prod).**
+
+---
+
+## 🎯 P11 — Smoke E2E Playwright (2026-05-25) — 1 commit
+
+Backlog: "Smoke test E2E mínimo (Playwright)". Saída do "adiado pra pós-beta". Foco: regressão de páginas públicas, SEO e copy crítico. Fluxos autenticados ficam pra V2 (precisariam de fixture Supabase com seed/teardown — escopo grande pra valor incremental).
+
+### Stack
+
+- [`@playwright/test`](package.json) como devDep
+- [playwright.config.ts](playwright.config.ts) — chromium-only, baseURL via env (`PLAYWRIGHT_BASE_URL`)
+- Scripts: `npm run e2e`, `npm run e2e:install`, `npm run e2e:ui`
+
+### Cobertura
+
+- [tests/e2e/landing.spec.ts](tests/e2e/landing.spec.ts) — headline, CTA signup, pricing com 5 tiers, badge "7 dias grátis" no Pro, FAQ entries chave, footer legal
+- [tests/e2e/static-pages.spec.ts](tests/e2e/static-pages.spec.ts) — 11 páginas públicas (sobre, privacidade, termos, ferramentas/\*, blog, login, signup, forgot-password); 404 graceful; portal sem token não vaza
+- [tests/e2e/seo.spec.ts](tests/e2e/seo.spec.ts) — `/sitemap.xml` 200 + URLs core; `/robots.txt` permite landing e bloqueia /dashboard /portal /api; meta description + OG title na landing; portal com `noindex`
+
+### CI
+
+[.github/workflows/e2e.yml](.github/workflows/e2e.yml) — 2 triggers:
+
+1. **`workflow_dispatch`** (manual via Actions UI), com input `base_url` editável
+2. **`schedule: cron "0 9 * * *"`** — heartbeat diário 9h UTC contra prod. Falha = alerta de deploy quebrado sem precisar de banco de teste.
+
+Artefatos: `playwright-report/` sobe como artifact em falha, retenção 7d.
+
+### Como rodar localmente
+
+```bash
+npm run e2e:install         # 1x — baixa Chromium
+npm run dev                 # terminal 1
+npm run e2e                 # terminal 2 — testa localhost
+PLAYWRIGHT_BASE_URL=https://memorial-ai-mu.vercel.app npm run e2e   # testa prod
+```
+
+### Não cobre (V2 deliberada)
+
+- Signup/login/auth flows — precisa fixture Supabase
+- Criação de projeto + upload de planta — precisa mocks/storage
+- Geração de doc IA — custa $ por run em prod
+- Portal token + aprovação cliente — precisa seed completo
+
+Esses ficam pro próximo sprint de robustez, depois que o produto tiver volume real de uso e fizer sentido investir em fixtures.
+
+---
+
+**Última pausa anterior:** 2026-05-25 (P10) — **Portfólio público do escritório (`/p/[slug]`) — diferencial competitivo + SEO/aquisição.**
 
 ---
 
