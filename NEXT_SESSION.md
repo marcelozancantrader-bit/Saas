@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-25 (P13) — **Billing UX overhaul + features dos planos inclusivas (CAU/CREA) e completas.**
+**Última pausa:** 2026-05-25 (P14) — **UpgradeGate reusável + fix de gate `maxActiveProjects` na criação de projeto.**
 
 > **Marca decidida**: `Prumai` (research em [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md))
 > **Domínio**: ainda em `memorial-ai-mu.vercel.app` — registrar `prumai.com.br` é a próxima ação externa
@@ -22,6 +22,8 @@
 - ✅ Marca **Prumai** decidida (BRANDING_RESEARCH.md)
 - ✅ Bug fix invite-member maxUsers
 - ✅ 7 features que dependiam de `organizations.meta` destravadas (migration P12 criou a coluna)
+- ✅ **UpgradeGate reusável** — modal rico em vez de toast plano em 9 gates de plano (P14)
+- ✅ **Bug fix P12 residual**: `createProjectAction` agora gateia `maxActiveProjects` (Free não cria mais ∞ projetos)
 
 **Próxima ação externa (Marcelo executa)**:
 
@@ -39,7 +41,6 @@
 - App mobile Capacitor (~1-2 semanas, $99/ano Apple + $25 Google)
 - Publicar OAuth Google (sair do modo teste — precisa domínio + privacidade + verificação 3-5d)
 - Email template "Plano atualizado" pra notificar clientes sobre pricing v2
-- Componente `UpgradeGate` reusável (hoje cada action retorna erro com CTA pra /billing)
 - Trial reminder D-3 (hoje só tem D-1)
 
 **Comandos pra retomar contexto**:
@@ -63,8 +64,87 @@ cat BRANDING_RESEARCH.md                           # naming research
 | [MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md) | 10 fases passo-a-passo da migração Memorial.ai → Prumai (dominio + Vercel + Supabase + Resend + OAuth + Asaas + refactor copy + INPI).           |
 | [PRICING_RESEARCH.md](PRICING_RESEARCH.md)       | Pesquisa de mercado BR (Projete, ARQProject, Plana, Vobi, Construflow) + comparáveis globais (Monograph, Houzz Pro). Base da decisão de pricing. |
 | [PRICING_PROPOSAL.md](PRICING_PROPOSAL.md)       | Proposta consolidada de pricing v2, aprovada pelo fundador. Estado original pré-implementação.                                                   |
-| [NEXT_SESSION.md](NEXT_SESSION.md)               | Este documento — histórico de todas as sessões P1-P13.                                                                                           |
+| [NEXT_SESSION.md](NEXT_SESSION.md)               | Este documento — histórico de todas as sessões P1-P14.                                                                                           |
 | [CLAUDE.md](CLAUDE.md) + [AGENTS.md](AGENTS.md)  | Regras inegociáveis do projeto, stack, anti-padrões.                                                                                             |
+
+---
+
+## 🧱 P14 — UpgradeGate reusável (2026-05-25) — 1 commit
+
+Fechou item do backlog "Componente `UpgradeGate` reusável" + descobriu/corrigiu gap
+de gate `maxActiveProjects` que sobrou do P12.
+
+### Problema
+
+Antes: 8 actions retornavam `{ ok:false, error: "...faça upgrade em /billing" }`
+e o cliente fazia `toast.error(string)`. Sem hierarquia visual, sem preço, sem CTA
+estruturado — só uma frase com link textual no meio. Cada action escrevia copy
+diferente ("plano Pro", "planos superiores", "plano Studio"…), inconsistente.
+
+### Solução
+
+**Payload estruturado** em todas as actions com gate de plano:
+
+```ts
+{ ok: false, error: "...", upgrade: { feature, requiredPlan, currentPlan, message, limit? } }
+```
+
+A string `error` continua existindo (compat retro com `toast.error(r.error)`),
+mas o cliente novo lê `upgrade` e abre dialog rico.
+
+### Arquivos novos
+
+- [lib/billing/upgrade-gate.ts](lib/billing/upgrade-gate.ts) — helper server-safe
+  `denyForUpgrade({ feature, currentPlan, requires, message? })` + tipos
+  `UpgradeRequirement`/`ActionFailure`. Calcula plano mínimo automaticamente via
+  `nextPlanWithFeature(predicate)`.
+- [components/features/billing/UpgradeGateDialog.tsx](components/features/billing/UpgradeGateDialog.tsx) —
+  modal com preço mensal/anual descontado + top 5 features do plano alvo + CTA "Ver planos".
+- [lib/billing/use-upgrade-gate.ts](lib/billing/use-upgrade-gate.ts) — hook
+  `useUpgradeGate()` com `handle(result)` que decide entre `toast.error` e abrir dialog.
+
+### 9 actions refatoradas
+
+| Action                                        | Feature key                                                               |
+| --------------------------------------------- | ------------------------------------------------------------------------- |
+| `diary/create-entry.action.ts`                | `diarioObra`                                                              |
+| `documents/generate.action.ts` (template)     | `templatesContratoMax`                                                    |
+| `documents/generate.action.ts` (mensal)       | `monthlyAiDocs`                                                           |
+| `documents/send-to-portal.action.ts`          | `portalClienteEnabled` (copy fix: era "Pro", agora "Solo" — gate é Solo+) |
+| `documents/request-internal-review.action.ts` | `revisaoHierarquica`                                                      |
+| `templates/save-template.action.ts`           | `bibliotecaTemplates`                                                     |
+| `invitations/invite-member.action.ts`         | `maxUsers`                                                                |
+| **`projects/create.action.ts`** (NOVO gate)   | `maxActiveProjects`                                                       |
+
+### Bug crítico descoberto e corrigido
+
+`createProjectAction` **nunca** validou `maxActiveProjects` desde a refatoração
+P12. Free (limit=1) e Solo (limit=5) podiam criar projetos infinitos via UI
+ou API direta — só a UI escondia o botão. Gap real de receita.
+
+### 8 callers refatorados
+
+NewDiaryEntryDialog, GenerateDocumentMenu, ContractTemplateDialog,
+SaveAsTemplateButton, InternalReviewPanel, InviteMemberForm, SendToPortalButton,
+ProjectForm. Padrão de uso:
+
+```ts
+const gate = useUpgradeGate();
+// ...
+const r = await someAction(...);
+if (!gate.handle(r)) return;  // mostra dialog ou toast automático
+toast.success("ok");
+```
+
+```tsx
+<UpgradeGateDialog open={gate.open} onClose={gate.onClose} requirement={gate.requirement} />
+```
+
+### Sem migration. Sem env vars novas. 100% compat retro.
+
+Callers antigos que não foram migrados continuam mostrando `toast.error(r.error)`
+sem problema, porque `error` continua sendo string. A diferença é só visual: dialog
+rico > toast plano.
 
 ---
 
