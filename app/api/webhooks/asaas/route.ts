@@ -31,6 +31,8 @@ import { PLANS, type PlanId } from "@/lib/plans/limits";
 export const runtime = "nodejs";
 
 type AsaasEvent = {
+  /** id único do evento no Asaas (`evt_xxxxx`) — usado pra idempotência. */
+  id?: string;
   event: string;
   payment?: {
     subscription?: string;
@@ -62,6 +64,26 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient();
   const event = body.event;
   const now = new Date();
+
+  // Idempotência via webhook_events.unique(provider, external_event_id).
+  // Asaas pode reenviar o mesmo evento se o webhook anterior demorou pra
+  // responder. Sem isso, double-charge / double-upgrade era possível.
+  if (body.id) {
+    const { error: insErr } = await admin.from("webhook_events").insert({
+      provider: "asaas",
+      external_event_id: body.id,
+      event_type: event,
+      payload: body as unknown as Record<string, unknown>,
+    });
+    if (insErr) {
+      // Unique violation = evento já processado antes
+      if (insErr.code === "23505") {
+        return NextResponse.json({ ok: true, ignored: "duplicate_event", event_id: body.id });
+      }
+      // Outros erros: deixa passar mas loga (não bloqueia processamento)
+      console.warn(`[asaas-webhook] failed to log event ${body.id}: ${insErr.message}`);
+    }
+  }
 
   // ====== PAYMENT_RECEIVED — pagamento confirmado, ativa plano ======
   if (event === "PAYMENT_RECEIVED" && body.payment?.subscription) {

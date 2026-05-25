@@ -37,6 +37,8 @@ export function CepInput({ id, name, defaultValue, disabled, onAddressFound }: P
           toast.warning("CEP não encontrado");
         } else if (result.reason === "invalid") {
           toast.error("CEP inválido");
+        } else if (result.reason === "rate_limited") {
+          toast.error("Muitas consultas — espere alguns minutos e tente de novo.");
         } else {
           toast.error("Falha ao consultar ViaCEP");
         }
