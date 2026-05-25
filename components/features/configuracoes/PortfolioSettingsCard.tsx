@@ -17,9 +17,16 @@ type Props = {
   initialSlug: string | null;
   initialEnabled: boolean;
   canEdit: boolean;
+  appHost: string;
 };
 
-export function PortfolioSettingsCard({ orgName, initialSlug, initialEnabled, canEdit }: Props) {
+export function PortfolioSettingsCard({
+  orgName,
+  initialSlug,
+  initialEnabled,
+  canEdit,
+  appHost,
+}: Props) {
   const router = useRouter();
   const [slug, setSlug] = useState(initialSlug ?? "");
   const [enabled, setEnabled] = useState(initialEnabled);
@@ -66,7 +73,7 @@ export function PortfolioSettingsCard({ orgName, initialSlug, initialEnabled, ca
         <div className="space-y-1.5">
           <Label htmlFor="portfolio_slug">Endereço (slug)</Label>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <span className="text-sm text-zinc-500">memorial-ai-mu.vercel.app/p/</span>
+            <span className="text-sm text-zinc-500">{appHost}/p/</span>
             <Input
               id="portfolio_slug"
               value={slug}

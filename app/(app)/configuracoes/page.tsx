@@ -71,6 +71,12 @@ export default async function ConfiguracoesPage() {
 
   const canEdit = me.role === "owner" || me.role === "admin";
 
+  // Host visível na UI do portfolio. Vem de env e independe do nome de marca atual.
+  const appHost = (process.env.NEXT_PUBLIC_APP_URL ?? "https://memorial-ai-mu.vercel.app").replace(
+    /^https?:\/\//,
+    "",
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -138,6 +144,7 @@ export default async function ConfiguracoesPage() {
         initialSlug={org?.portfolio_slug ?? null}
         initialEnabled={org?.portfolio_enabled ?? false}
         canEdit={canEdit}
+        appHost={appHost}
       />
 
       <Card>
