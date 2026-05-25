@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { sendEmail } from "@/lib/email/resend";
 import { env } from "@/lib/validators/env";
+import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email("E-mail inválido").max(255),
@@ -28,6 +29,41 @@ export async function inviteMemberAction(raw: z.infer<typeof schema>): Promise<I
   }
 
   const supabase = await createClient();
+
+  // ============================================================
+  // BUG FIX P12: validar limite de usuários do plano antes de criar convite.
+  // Antes, Free (maxUsers=1) podia convidar infinitos membros sem bloqueio.
+  // ============================================================
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("plano")
+    .eq("id", me.orgId)
+    .single<{ plano: PlanId }>();
+  const planLimits = getPlanLimits(orgRow?.plano ?? "free");
+
+  if (planLimits.maxUsers !== null) {
+    // Conta membros atuais + convites pendentes (que ainda podem virar membros).
+    // Convite pendente conta porque, se virar member, vai estourar o limite.
+    const [{ count: memberCount }, { count: pendingInvitesCount }] = await Promise.all([
+      supabase
+        .from("organization_members")
+        .select("user_id", { count: "exact", head: true })
+        .eq("org_id", me.orgId),
+      supabase
+        .from("invitations")
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", me.orgId)
+        .eq("status", "pending"),
+    ]);
+
+    const totalPotencial = (memberCount ?? 0) + (pendingInvitesCount ?? 0);
+    if (totalPotencial >= planLimits.maxUsers) {
+      return {
+        ok: false,
+        error: `Limite do plano atingido: ${planLimits.maxUsers} ${planLimits.maxUsers === 1 ? "usuário" : "usuários"} (incluindo convites pendentes). Faça upgrade para convidar mais.`,
+      };
+    }
+  }
 
   // Cancela convites pendentes antigos pra esse e-mail (deduplica).
   // Se a pessoa já é membro, a acceptInvitationAction detecta e marca o convite
