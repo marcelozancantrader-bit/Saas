@@ -20,6 +20,12 @@
 -- Studio R$499,90 / Agência.
 -- =============================================
 
+-- 0. Adiciona coluna meta em organizations (não existia no schema original).
+--    É necessária pro grandfathering no passo 5 e pra outras features futuras
+--    que vão guardar config opcional aqui (ex: settings de display, flags).
+alter table public.organizations
+  add column if not exists meta jsonb not null default '{}'::jsonb;
+
 -- 1. Drop constraints PRIMEIRO — libera os UPDATEs com IDs novos
 alter table public.organizations
   drop constraint if exists organizations_plano_check;
