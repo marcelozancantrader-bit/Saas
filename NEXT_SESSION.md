@@ -72,12 +72,20 @@ Plus tipos novos: `BillingCycle`, `CycleInfo`, `calculateCyclePrice()`.
 
 ### ⚠️ Migration pendente em prod
 
-Aplicar **`20260730000001_pricing_v2.sql`** no Supabase Dashboard SQL Editor.
+**`20260730000001_pricing_v2.sql`** ✅ aplicada em prod (2026-05-25).
 
-**Importante**: essa migration **renomeia planos existentes**. Antes de aplicar,
-exporte um backup dos dados (`pg_dump` ou snapshot Supabase). Migration é
-idempotente mas troca constraint de plano — uma org ou sub com plano "standard"
-ou "pro_max" antigos será renomeada automaticamente pra solo/studio.
+Histórico de fixes (3 tentativas até passar):
+
+1. **1ª tentativa** falhou (`23514`): `UPDATE plano='studio'` violava o check constraint vigente — fix: dropar constraint ANTES dos UPDATEs (commit `f715a6e`)
+2. **2ª tentativa** falhou (`42703`): `organizations.meta` não existia no schema original — fix: adicionar coluna como passo 0 (commit `90415e7`). Bônus: destravou 7 features que dependiam de `meta` e falhavam silenciosamente em prod (onboarding tour, suspend-org, etc).
+3. **3ª tentativa**: ✅ sucesso.
+
+**Estado pós-migration:**
+
+- Plano "Zancan" e demais orgs pagas renomeadas (`standard→solo`, `pro_max→studio`)
+- `subscriptions.cycle` coluna criada (default `monthly`)
+- `organizations.meta` jsonb criada (default `{}`)
+- Grandfathering aplicado: `meta.grandfathered_until = now+365d` em todas orgs pagas
 
 ### Grandfathering
 
