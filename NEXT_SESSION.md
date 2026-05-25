@@ -1,6 +1,95 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-25 (P12) — **Pricing v2: 4 planos + Agência, ciclos mensal/anual/PIX, gates de todas features novas P5-P11.**
+**Última pausa:** 2026-05-25 (P13) — **Billing UX overhaul + features dos planos inclusivas (CAU/CREA) e completas.**
+
+> **Marca decidida**: `Prumai` (research em [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md))
+> **Domínio**: ainda em `memorial-ai-mu.vercel.app` — registrar `prumai.com.br` é a próxima ação externa
+> **Plano executivo de migração**: [MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)
+> **Pricing**: v2 em prod ([PRICING_PROPOSAL.md](PRICING_PROPOSAL.md))
+> **0 migrations pendentes** em prod
+
+---
+
+## 🎯 Como retomar (próxima sessão)
+
+**Estado em 2026-05-25 fim de dia:**
+
+- ✅ Pricing v2 em prod (4 planos + Agência, ciclos mensal/anual/PIX, gates de todas features)
+- ✅ Trial 7d Pro pré-pago funcionando + reminders D-1 + cleanup conversão
+- ✅ Quantitativo IA da planta (prompt v2)
+- ✅ Portfólio público `/p/[slug]` + setting no /configuracoes
+- ✅ Smoke E2E Playwright (heartbeat diário em prod via GitHub Actions)
+- ✅ Marca **Prumai** decidida (BRANDING_RESEARCH.md)
+- ✅ Bug fix invite-member maxUsers
+- ✅ 7 features que dependiam de `organizations.meta` destravadas (migration P12 criou a coluna)
+
+**Próxima ação externa (Marcelo executa)**:
+
+1. Registrar `prumai.com.br` no [registro.br](https://registro.br) (R$ 40/ano essencial) + opcional `prumai.com` no Cloudflare Registrar (~US$ 10/ano defensivo) — ver Fase 1 do [MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)
+2. Criar handles `@prumai` em Instagram + LinkedIn Company Page
+3. Verificar manualmente INPI classe 42 em `busca.inpi.gov.br/pePI` pra "Prumai" e "Prumo" (Prumo Projetos e Obras tem fonético próximo — pode opor)
+
+**Próxima ação no código (eu executo quando domínio existir)**:
+
+- Fase 3-7 do MIGRATION_CHECKLIST: DNS Vercel, env vars (`NEXT_PUBLIC_APP_URL=https://prumai.com.br`), Supabase Auth URL config, Resend DKIM, Asaas webhook URL
+- Fase 8: refactor copy Memorial.ai → Prumai (~40 arquivos UI listados no checklist)
+
+**Backlog que sobrou (sem prioridade definida)**:
+
+- App mobile Capacitor (~1-2 semanas, $99/ano Apple + $25 Google)
+- Publicar OAuth Google (sair do modo teste — precisa domínio + privacidade + verificação 3-5d)
+- Email template "Plano atualizado" pra notificar clientes sobre pricing v2
+- Componente `UpgradeGate` reusável (hoje cada action retorna erro com CTA pra /billing)
+- Trial reminder D-3 (hoje só tem D-1)
+
+**Comandos pra retomar contexto**:
+
+```bash
+cd C:\dev\memorial-ai
+git log --oneline -20                              # ver últimos commits
+cat NEXT_SESSION.md                                # este doc
+cat MIGRATION_CHECKLIST.md                         # roteiro Prumai migration
+cat PRICING_PROPOSAL.md                            # pricing v2 aprovado
+cat BRANDING_RESEARCH.md                           # naming research
+```
+
+---
+
+## 📚 Mapa dos documentos de referência criados nesta sessão
+
+| Doc                                              | Pra que serve                                                                                                                                    |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md)     | Pesquisa de naming (20 candidatos, RDAP registro.br, top-5 consolidado). Marca final: **Prumai**.                                                |
+| [MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md) | 10 fases passo-a-passo da migração Memorial.ai → Prumai (dominio + Vercel + Supabase + Resend + OAuth + Asaas + refactor copy + INPI).           |
+| [PRICING_RESEARCH.md](PRICING_RESEARCH.md)       | Pesquisa de mercado BR (Projete, ARQProject, Plana, Vobi, Construflow) + comparáveis globais (Monograph, Houzz Pro). Base da decisão de pricing. |
+| [PRICING_PROPOSAL.md](PRICING_PROPOSAL.md)       | Proposta consolidada de pricing v2, aprovada pelo fundador. Estado original pré-implementação.                                                   |
+| [NEXT_SESSION.md](NEXT_SESSION.md)               | Este documento — histórico de todas as sessões P1-P13.                                                                                           |
+| [CLAUDE.md](CLAUDE.md) + [AGENTS.md](AGENTS.md)  | Regras inegociáveis do projeto, stack, anti-padrões.                                                                                             |
+
+---
+
+## 🎨 P13 — Billing UX + Features inclusivas (2026-05-25) — 2 commits
+
+Feedback do fundador via screenshots: pricing na /billing estava desalinhado e features mencionavam só "CAU" sem "/CREA" (excluía engenheiros).
+
+### Commit `bfd73b6` — UX overhaul da /billing
+
+- **BillingPlanGrid** refatorado: cards equal-height, ribbons flutuantes ("Mais popular" no Pro azul / "Seu plano" no atual preto), CTA fixo no bottom, features balanceadas 6-8 bullets/card
+- **SubscriptionHistory** novo: active/pending/trialing sempre visíveis no topo, canceladas colapsadas em "Ver N anteriores" — fim da poluição de subs de teste
+- **PlanComparisonTable** novo: 18 features agrupadas em 7 categorias, colapsível
+- **Layout reorganizado**: header compacto com pill do plano atual, banners de estado (trial/expired/cancel), uso + cancelar lado-a-lado, progress bars com cor por threshold
+- Cycle toggle proeminente com selos de desconto coloridos
+
+### Commit `016e294` — Features inclusivas e completas
+
+Reescreveu lista de features de cada plano cobrindo TUDO que o produto entrega:
+
+- **CAU/CREA inclusivo**: "ART (CREA) e RRT (CAU) pré-preenchidas", "templates CAU/CREA", descriptions revisadas ("Arquiteto ou engenheiro autônomo")
+- **Especifico**: cita padrões BR concretos (NBR 13.531, MP 2.200-2, SINAPI 27 UFs, CUB estadual)
+- **12 tipos de documento explícitos no Solo**: memoriais (descritivo + 5 técnicos: estrutural, hidrossanitário, elétrico, PPCI, impermeabilização), caderno, proposta, contrato, briefing, aditivos, cronograma
+- **Pro destaca Quantitativo IA** com o que conta (portas/janelas/louças/rodapé)
+- **Sem repetição**: Pro/Studio/Agência começam com "Tudo do X, mais:"
+- Atualizou landing FAQ + comparativo + sobre
 
 ---
 
