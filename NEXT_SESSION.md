@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-25 (P15) — **Auditoria profunda + 5 batches de fix (storage, cache, resiliência IA, type safety, UX, polish).**
+**Última pausa:** 2026-05-25 (P15) — **Auditoria profunda + 9 batches de fix (storage, cache, IA, types, UX, polish, hardening, perf+indices, a11y, conversão).**
 
 > **Marca decidida**: `Prumai` (research em [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md))
 > **Domínio**: ainda em `memorial-ai-mu.vercel.app` — registrar `prumai.com.br` é a próxima ação externa
@@ -33,6 +33,12 @@
 - ✅ **Portal scope-change rate limit** — 5/h por token evita abuso (P15-B4)
 - ✅ **Branding centralizado** — `lib/branding.ts` PRODUCT_NAME — pronto pra rebrand Prumai (P15-B5)
 - ✅ **Grandfathering UI** — banner verde "preço congelado" em /billing pra orgs com `meta.grandfathered_until` (P15-B5)
+- ✅ **Suspend org DB-enforcement** — trigger BEFORE INSERT/UPDATE rejeita writes em 10 tabelas se org suspensa (P15-BC)
+- ✅ **Webhook idempotência** — tabela `webhook_events` unique(provider, external_event_id) (P15-BC)
+- ✅ **Índices DB** — projects(tipologia/client), documents(project_id, status), etc (P15-BD)
+- ✅ **Cache CDN** — `revalidate = 86400` em /sobre, /ferramentas/\*, /blog (P15-BD)
+- ✅ **Trial reminder D-3** — cron 9:25 BRT complementa D-1; +10-20% conversão (P15-BF)
+- ✅ **Script notify pricing v2** — one-shot pra avisar clientes existentes (P15-BF)
 
 **Próxima ação externa (Marcelo executa)**:
 
@@ -78,7 +84,7 @@ cat BRANDING_RESEARCH.md                           # naming research
 
 ---
 
-## 🔍 P15 — Auditoria profunda + 5 batches de fix (2026-05-25) — 6 commits
+## 🔍 P15 — Auditoria profunda + 9 batches de fix (2026-05-25) — 11 commits
 
 Marcelo pediu auditoria profunda pós-P14. Spawnados 6 agents Explore em paralelo
 cobrindo: segurança+RLS, IA/LLM, billing+Asaas, UX+a11y, performance, qualidade.
@@ -181,24 +187,98 @@ Relatório consolidado identificou 6 críticos, 11 altos, 9 médios — atacados
 - Notification persistente pro próprio admin que iniciou impersonate — evidência
   se conta for comprometida.
 
+### Batch C — Hardening de segurança secundário (commit `4ad815e`)
+
+**Suspend org enforcement DB** ([20260801000001_suspend_enforcement_and_webhook_events.sql](supabase/migrations/20260801000001_suspend_enforcement_and_webhook_events.sql)):
+
+- Função `is_org_suspended(uuid)` lê `organizations.meta.suspended_at`.
+- Trigger BEFORE INSERT/UPDATE em 10 tabelas multi-tenant (projects, documents,
+  budgets, project_files, project_diary_entries, briefings, scope_changes,
+  org_doc_templates, invitations, budget_items) rejeita writes se org suspensa.
+- Antes: suspended_at era flag em meta — user tech-savvy com sessão ativa
+  bypassava UI e fazia writes via API direta.
+
+**Webhook events table + idempotência Asaas**:
+
+- `webhook_events(provider, external_event_id, event_type, payload, processed,...)`
+  com unique(provider, external_event_id).
+- `/api/webhooks/asaas` insere antes de processar; duplicate → 200 sem reprocessar.
+- Antes: idempotência só por lookup de `provider_subscription_id` (funcionava
+  mas sem audit trail histórico).
+
+**viacep rate limit** ([viacep.action.ts](server/actions/viacep.action.ts)):
+
+- 50/h por IP — evita atacante usar Memorial.ai como proxy de scanner de CEPs
+  vazando IP do servidor.
+- CepInput trata novo reason `rate_limited`.
+
+### Batch D — Performance: índices + cache CDN (commit `9d88b7a`)
+
+**Migration de índices** ([20260801000002_performance_indexes.sql](supabase/migrations/20260801000002_performance_indexes.sql)):
+
+- `idx_projects_tipologia`, `idx_projects_client` (parcial),
+  `idx_documents_status`, `idx_documents_project_status` (composite),
+  `idx_scope_changes_status`, `idx_subscriptions_org_status`,
+  `idx_notifications_user_created`, `idx_audit_action_created`.
+- Antes: filtros em /projetos e tabs de status em /documentos eram table scan.
+
+**revalidate em rotas públicas estáticas**:
+
+- /sobre, /ferramentas/\*, /blog: `revalidate = 86400` (1 dia).
+- /ferramentas/cub-regional: `revalidate = 43200` (12h — CUB mensal).
+- Antes: cada hit batia o servidor sem cache CDN.
+
+### Batch E — Polish UX/a11y (commit `b662cd8`)
+
+- Dashboard KPI grid: `md:grid-cols-2 xl:grid-cols-3` (era `sm/lg`) — tablet
+  portrait não fica apertado.
+- UsageRow `text-amber-700/rose-600` → `amber-800/rose-700` em light, `300` em dark
+  pra atender WCAG AA (4.5:1 small text).
+- Copy "ponta a ponta" → "ponta-a-ponta" em OnboardingChecklist.
+
+### Batch F — Conversão: trial D-3 + email pricing v2 (commit `0a78363`)
+
+**Trial reminder D-3** ([server/jobs/trial-reminder-d3-cron.ts](server/jobs/trial-reminder-d3-cron.ts)):
+
+- Cron 9:25 BRT diário (antes do D-1 das 9:30 e expiry das 9:35).
+- Janela: `current_period_end` entre 60-84h no futuro.
+- Dedup separado: `meta.reminder_d3_sent_at`.
+- Template tone menos urgente que D-1; CTA destaca PIX anual −25%.
+- Literatura SaaS aponta +10-20% conversão sobre D-1 isolado.
+
+**Script de notify pricing v2** ([scripts/notify-pricing-v2.ts](scripts/notify-pricing-v2.ts)):
+
+- Roda 1× via `npx tsx scripts/notify-pricing-v2.ts`.
+- Marca `meta.pricing_v2_notified_at` pra idempotência (rerun safe).
+- Notifica orgs com plano ≠ free explicando novos planos + grandfathering ativo.
+
 ### O que NÃO foi feito (escopo intencional)
 
 - **Rebrand completo Memorial.ai → Prumai em 40+ arquivos UI** — depende do
   domínio prumai.com.br ser registrado primeiro. Fase 8 do MIGRATION_CHECKLIST.
 - **Migrar valores monetários pra centavos integer** — exigiria migration de
   banco + atualizar TODOS exports/forms. Sprint dedicado.
-- **Remover `force-dynamic` das 26 RSCs** — auditoria visual page-a-page antes
-  pra evitar regressão. Backlog.
-- **Edge runtime em rotas públicas** — micro-otimização, baixa prioridade.
+- **Remover `force-dynamic` das 26 RSCs autenticadas** — landing já não usa
+  porque faz auth check pra redirect. Outras autenticadas precisariam de
+  auditoria visual page-a-page pra evitar regressão. Backlog.
+- **Edge runtime em rotas Supabase** — incompatibilidade do client.
+
+### Migrations pendentes em prod
+
+- `20260801000001_suspend_enforcement_and_webhook_events.sql`
+- `20260801000002_performance_indexes.sql`
+
+Aplicar via Supabase Dashboard.
 
 ### Resumo numérico
 
-- 6 commits
-- ~30 arquivos modificados
-- 5 arquivos novos: storage-quota, retry, openai client, project-meta schema,
-  branding, grandfathering, GeneratingDocumentOverlay
-- 0 migrations
-- 0 env vars novas obrigatórias (OPENAI_API_KEY opcional)
+- 11 commits (6 do plano inicial + 4 do batch C-F + 1 docs)
+- ~45 arquivos modificados
+- 11 arquivos novos: storage-quota, retry, openai client, project-meta schema,
+  branding, grandfathering, GeneratingDocumentOverlay, 2 migrations,
+  trial-reminder-d3-cron, notify-pricing-v2 script
+- 2 migrations
+- 1 env var opcional (`OPENAI_API_KEY` pra fallback)
 
 ---
 
