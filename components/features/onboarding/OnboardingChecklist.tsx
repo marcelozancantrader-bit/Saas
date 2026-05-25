@@ -101,7 +101,7 @@ export function OnboardingChecklist({ progress }: Props) {
             <h2 className="mt-1 text-lg font-semibold tracking-tight">
               {completed
                 ? "Você dominou o Memorial.ai!"
-                : "Em ~30 minutos você tem um projeto rodando ponta a ponta"}
+                : "Em ~30 minutos você tem um projeto rodando ponta-a-ponta"}
             </h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               {completed

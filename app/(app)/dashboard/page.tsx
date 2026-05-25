@@ -143,7 +143,8 @@ export default async function DashboardPage() {
 
       {/* ============== KPI GRID ============== */}
       <section>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {/* md (768px) só fica 2 cols pra evitar cards apertados em tablet portrait */}
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <KpiTile
             tone="blue"
             icon={Briefcase}
@@ -376,7 +377,7 @@ function UsageRow({ label, used, limit }: { label: string; used: number; limit: 
       {(exceeded || warning) && (
         <p
           className={`mt-1 text-[10px] font-medium ${
-            exceeded ? "text-rose-600 dark:text-rose-400" : "text-amber-700 dark:text-amber-400"
+            exceeded ? "text-rose-700 dark:text-rose-300" : "text-amber-800 dark:text-amber-300"
           }`}
         >
           {exceeded ? "Limite atingido — considere upgrade" : "Próximo do limite"}
