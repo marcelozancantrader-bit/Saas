@@ -29,7 +29,7 @@ const FEATURE_GROUPS: Array<{ title: string; rows: FeatureRow[] }> = [
     title: "Geração de documentos",
     rows: [
       { key: "watermarkOnExport", label: "Sem marca d'água nos PDFs", type: "negbool" },
-      { key: "templatesContratoMax", label: "Templates de contrato CAU", type: "limit" },
+      { key: "templatesContratoMax", label: "Templates de contrato CAU/CREA", type: "limit" },
       { key: "bibliotecaTemplates", label: "Biblioteca de templates da org", type: "bool" },
     ],
   },

@@ -121,9 +121,9 @@ const FUNCIONALIDADES = [
       "No canteiro pelo celular: foto + nota + data viram prova legal de estado da obra. Compartilhe com o cliente pelo portal num toggle.",
   },
   {
-    titulo: "Templates de contrato CAU",
+    titulo: "Templates de contrato CAU/CREA",
     descricao:
-      "6 modelos pré-curados (Residencial PF/PJ, Comercial, Reforma, Projeto Legal, Completo+RT) baseados nas resoluções 51/67/91 do CAU/BR.",
+      "6 modelos pré-curados (Residencial PF/PJ, Comercial, Reforma, Projeto Legal, Completo+RT) com cláusulas alinhadas às resoluções CAU/BR e responsabilidade técnica via ART (CREA) ou RRT (CAU).",
   },
   {
     titulo: "Análise NBR + zoneamento",
