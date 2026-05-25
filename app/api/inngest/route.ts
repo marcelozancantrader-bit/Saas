@@ -5,6 +5,7 @@ import { importSinapi } from "@/server/jobs/sinapi-import";
 import { staleProjectsCron } from "@/server/jobs/stale-projects-cron";
 import { expiredCancellationsCron } from "@/server/jobs/expired-cancellations-cron";
 import { expiredTrialsCron } from "@/server/jobs/expired-trials-cron";
+import { trialReminderCron } from "@/server/jobs/trial-reminder-cron";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -14,5 +15,6 @@ export const { GET, POST, PUT } = serve({
     staleProjectsCron,
     expiredCancellationsCron,
     expiredTrialsCron,
+    trialReminderCron,
   ],
 });

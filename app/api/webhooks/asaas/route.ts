@@ -97,13 +97,22 @@ export async function POST(req: NextRequest) {
       .eq("status", "active")
       .neq("id", sub.id);
 
-    // 3. Atualiza org.plano.
+    // 3. Se a org estava em trial, marca a sub trialing como canceled
+    //    (converteu antes do prazo — não esperar o cron expirar).
+    await admin
+      .from("subscriptions")
+      .update({ status: "canceled", updated_at: now.toISOString() })
+      .eq("org_id", sub.org_id)
+      .eq("status", "trialing")
+      .eq("provider", "trial");
+
+    // 4. Atualiza org.plano.
     await admin
       .from("organizations")
       .update({ plano: sub.plano as PlanId, updated_at: now.toISOString() })
       .eq("id", sub.org_id);
 
-    // 4. Notifica.
+    // 5. Notifica.
     const planLabel = PLANS[sub.plano as PlanId]?.label ?? sub.plano;
     await admin.from("notifications").insert({
       org_id: sub.org_id,

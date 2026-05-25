@@ -159,6 +159,52 @@ Abra o portal: ${input.portalUrl}
 }
 
 /**
+ * Template específico: trial acabando em ~24h.
+ * Disparado pelo cron trial-reminder-cron pros owners/admins da org.
+ */
+export function renderTrialReminderEmail(input: {
+  orgName: string;
+  planLabel: string;
+  endsAt: Date;
+  billingUrl: string;
+}): { html: string; text: string; subject: string } {
+  const dateStr = input.endsAt.toLocaleDateString("pt-BR");
+  const subject = `Seu trial ${input.planLabel} acaba amanhã (${dateStr})`;
+
+  const html = renderEmailLayout({
+    preheader: `Seu trial ${input.planLabel} acaba em menos de 24 horas — assine pra manter o acesso.`,
+    orgName: input.orgName,
+    greeting: `Olá,`,
+    body: `
+      <p style="margin:0 0 14px;">
+        Seu trial do plano <strong>${input.planLabel}</strong> acaba <strong>amanhã (${dateStr})</strong>.
+      </p>
+      <p style="margin:0 0 14px;color:${TEXT_MID};font-size:14px;">
+        Depois disso, o workspace <strong>${input.orgName}</strong> volta pro plano Free automaticamente.
+        Seus projetos e documentos continuam intactos, mas você perde projetos ilimitados,
+        100 docs IA/mês, portal do cliente e branding completo.
+      </p>
+      <p style="margin:0 0 6px;">
+        Para manter tudo desbloqueado, assine agora pelo /billing — pagamento via PIX.
+      </p>
+    `,
+    cta: { label: "Assinar agora →", href: input.billingUrl },
+    footer: `Memorial.ai · copiloto documental para arquitetos e engenheiros`,
+  });
+
+  const text = `Seu trial ${input.planLabel} acaba amanhã (${dateStr}).
+
+Sem assinatura, o workspace ${input.orgName} volta pro Free. Seus dados ficam intactos, mas
+você perde projetos ilimitados, 100 docs IA/mês, portal do cliente e branding.
+
+Assine agora: ${input.billingUrl}
+
+(Memorial.ai)`;
+
+  return { html, text, subject };
+}
+
+/**
  * Template específico: trial encerrado (downgrade pra free).
  * Disparado pelo cron expired-trials-cron pros owners/admins da org.
  */

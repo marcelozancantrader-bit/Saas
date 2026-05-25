@@ -1,6 +1,34 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-24 (P7) — **Trial pré-pago 7d no plano Pro (alavanca direta de conversão #13 do backlog).**
+**Última pausa:** 2026-05-25 (P8) — **Reminder D-1 do trial + cleanup ao converter (fecha ciclo P7).**
+
+---
+
+## 📨 P8 — Reminder D-1 + cleanup conversão (2026-05-25) — 1 commit
+
+Continuação direta do P7. Trial em si já funcionava; faltava (a) lembrar quem está acabando antes de virar pumpkin e (b) fechar sub trialing quando o cara converte de fato.
+
+### Conversion cleanup
+
+- **Webhook Asaas `PAYMENT_RECEIVED`** ([app/api/webhooks/asaas/route.ts](app/api/webhooks/asaas/route.ts)) agora também cancela sub `status='trialing' provider='trial'` da mesma org quando pagamento confirma. Senão a sub trialing ficava fantasma até o cron das 9:35 expirar.
+- **Upgrade manual** ([server/actions/billing/upgrade-plan.action.ts](server/actions/billing/upgrade-plan.action.ts)) idem — fecha trialing quando manual upgrade roda.
+
+### Reminder cron
+
+- [`server/jobs/trial-reminder-cron.ts`](server/jobs/trial-reminder-cron.ts) — diário 9:30 BRT. Busca trialing+trial com `current_period_end` entre 12h-36h no futuro (janela ampla). Dedup via `subscriptions.meta.reminder_sent_at` (1 reminder por trial). Envia notification + e-mail Resend pros owners/admins.
+- Template `renderTrialReminderEmail` em [lib/email/templates.ts](lib/email/templates.ts) — assunto "Seu trial Pro acaba amanhã (DATA)", CTA "Assinar agora".
+- Literatura SaaS: D-1 reminder dá +15-30% trial-to-paid conversion. Esse pequeno cron tende a ser dos features mais ROI da sessão.
+
+### Sequência dos crons trial (9:30-9:35 BRT)
+
+1. `trial-reminder-cron` (9:30) — avisa quem acaba em 24h
+2. `expired-trials-cron` (9:35) — downgrade quem já passou
+
+Não tem race condition: o reminder pega janela 12-36h no futuro; expirar pega cpe < now. Conjuntos disjuntos.
+
+---
+
+**Última pausa anterior:** 2026-05-24 (P7) — **Trial pré-pago 7d no plano Pro (alavanca direta de conversão #13 do backlog).**
 
 **Sessões anteriores:**
 

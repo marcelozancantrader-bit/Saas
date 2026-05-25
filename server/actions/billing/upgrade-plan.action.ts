@@ -126,6 +126,14 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
     .eq("org_id", me.orgId)
     .eq("status", "active");
 
+  // Se org estava em trial, encerra também — converteu antes do prazo.
+  await admin
+    .from("subscriptions")
+    .update({ status: "canceled" })
+    .eq("org_id", me.orgId)
+    .eq("status", "trialing")
+    .eq("provider", "trial");
+
   await admin.from("subscriptions").insert({
     org_id: me.orgId,
     plano: targetPlan,
