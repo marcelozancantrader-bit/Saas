@@ -13,7 +13,7 @@ import {
   TOOL_NAME,
   floorPlanExtractionSchema,
   type FloorPlanExtraction,
-} from "@/lib/ai/prompts/extract-floor-plan.v1";
+} from "@/lib/ai/prompts/extract-floor-plan.v2";
 import { captureException } from "@/lib/observability/sentry";
 
 const MAX_PDF_BYTES = 32 * 1024 * 1024; // 32 MB hard cap per Anthropic PDF support

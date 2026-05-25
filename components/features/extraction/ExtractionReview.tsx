@@ -23,12 +23,24 @@ import {
 } from "@/lib/validators/projects.schema";
 import { toast } from "sonner";
 
-// Shape mirrors lib/ai/prompts/extract-floor-plan.v1 → FloorPlanExtraction
+// Shape mirrors lib/ai/prompts/extract-floor-plan.v2 → FloorPlanExtraction
 // (kept loose here to avoid pulling server-only imports into a client component)
 type Ambiente = {
   nome: string;
   area_m2: number | null;
   tipo: string;
+};
+
+export type QuantitativosData = {
+  portas_internas: number;
+  portas_externas: number;
+  janelas_grandes: number;
+  janelas_pequenas: number;
+  bacios: number;
+  lavatorios: number;
+  pias_cozinha: number;
+  m_rodape: number | null;
+  m2_rev_parede: number | null;
 };
 
 export type ExtractionData = {
@@ -46,6 +58,8 @@ export type ExtractionData = {
     jardim: boolean;
     area_servico_externa: boolean;
   };
+  /** Disponível para projetos extraídos com prompt v2+. */
+  quantitativos?: QuantitativosData;
   observacoes: string;
   confianca: "alta" | "media" | "baixa";
 };
@@ -87,6 +101,44 @@ export function ExtractionReview({
   );
   const [padrao, setPadrao] = useState<string>(extraction.padrao_construtivo ?? "");
 
+  // Quantitativos editáveis (prompt v2). Projetos antigos não têm — campos
+  // ficam vazios e o orçamento cai no fallback heurístico.
+  const q = extraction.quantitativos;
+  const [portasInt, setPortasInt] = useState(q?.portas_internas?.toString() ?? "");
+  const [portasExt, setPortasExt] = useState(q?.portas_externas?.toString() ?? "");
+  const [janelasG, setJanelasG] = useState(q?.janelas_grandes?.toString() ?? "");
+  const [janelasP, setJanelasP] = useState(q?.janelas_pequenas?.toString() ?? "");
+  const [bacios, setBacios] = useState(q?.bacios?.toString() ?? "");
+  const [lavatorios, setLavatorios] = useState(q?.lavatorios?.toString() ?? "");
+  const [piasCozinha, setPiasCozinha] = useState(q?.pias_cozinha?.toString() ?? "");
+  const [mRodape, setMRodape] = useState(q?.m_rodape?.toString() ?? "");
+  const [m2RevParede, setM2RevParede] = useState(q?.m2_rev_parede?.toString() ?? "");
+
+  function buildQuantitativosPayload(): QuantitativosData | undefined {
+    // Se a IA não retornou quantitativos e usuário não preencheu nada, omitimos.
+    const anyFilled =
+      [portasInt, portasExt, janelasG, janelasP, bacios, lavatorios, piasCozinha].some(
+        (v) => v !== "",
+      ) ||
+      mRodape !== "" ||
+      m2RevParede !== "";
+    if (!q && !anyFilled) return undefined;
+
+    const intOrZero = (s: string) => (s === "" ? 0 : Math.max(0, Math.floor(Number(s))));
+    const numOrNull = (s: string) => (s === "" ? null : Math.max(0, Number(s)));
+    return {
+      portas_internas: intOrZero(portasInt),
+      portas_externas: intOrZero(portasExt),
+      janelas_grandes: intOrZero(janelasG),
+      janelas_pequenas: intOrZero(janelasP),
+      bacios: intOrZero(bacios),
+      lavatorios: intOrZero(lavatorios),
+      pias_cozinha: intOrZero(piasCozinha),
+      m_rodape: numOrNull(mRodape),
+      m2_rev_parede: numOrNull(m2RevParede),
+    };
+  }
+
   function onConfirm() {
     startTransition(async () => {
       const result = await confirmExtractionAction({
@@ -96,6 +148,7 @@ export function ExtractionReview({
         numero_pavimentos: pavimentos === "" ? null : Number(pavimentos),
         tipologia,
         padrao_construtivo: padrao === "" ? null : (padrao as (typeof PADRAO_VALUES)[number]),
+        quantitativos: buildQuantitativosPayload(),
       });
       if (result.ok) {
         toast.success(
@@ -289,6 +342,81 @@ export function ExtractionReview({
         </div>
       ) : null}
 
+      <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">📊 Quantitativos da IA</p>
+          {q ? (
+            <Badge variant="outline" className="text-[10px]">
+              Contado pelo prompt v2
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-[10px]">
+              Não disponível — heurística será usada
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">
+          Itens que entram direto no orçamento SINAPI. Edite se a IA contou errado — ao confirmar, o
+          orçamento usa esses valores no lugar das estimativas automáticas.
+        </p>
+
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <QtyInput
+            label="Portas internas"
+            value={portasInt}
+            onChange={setPortasInt}
+            disabled={pending}
+          />
+          <QtyInput
+            label="Portas externas"
+            value={portasExt}
+            onChange={setPortasExt}
+            disabled={pending}
+          />
+          <QtyInput
+            label="Janelas grandes"
+            value={janelasG}
+            onChange={setJanelasG}
+            disabled={pending}
+          />
+          <QtyInput
+            label="Janelas pequenas"
+            value={janelasP}
+            onChange={setJanelasP}
+            disabled={pending}
+          />
+          <QtyInput label="Bacios" value={bacios} onChange={setBacios} disabled={pending} />
+          <QtyInput
+            label="Lavatórios"
+            value={lavatorios}
+            onChange={setLavatorios}
+            disabled={pending}
+          />
+          <QtyInput
+            label="Pias de cozinha"
+            value={piasCozinha}
+            onChange={setPiasCozinha}
+            disabled={pending}
+          />
+          <QtyInput
+            label="Rodapé (m)"
+            value={mRodape}
+            onChange={setMRodape}
+            disabled={pending}
+            step="0.1"
+            placeholder="—"
+          />
+          <QtyInput
+            label="Revest. parede (m²)"
+            value={m2RevParede}
+            onChange={setM2RevParede}
+            disabled={pending}
+            step="0.1"
+            placeholder="—"
+          />
+        </div>
+      </div>
+
       {extraction.observacoes ? (
         <div className="space-y-1.5">
           <p className="text-sm font-medium">Observações da IA</p>
@@ -307,6 +435,40 @@ export function ExtractionReview({
               : "Confirmar e atualizar projeto"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+function QtyInput({
+  label,
+  value,
+  onChange,
+  disabled,
+  step,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  disabled: boolean;
+  step?: string;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-[11px] tracking-wide text-zinc-600 uppercase dark:text-zinc-400">
+        {label}
+      </Label>
+      <Input
+        type="number"
+        step={step ?? "1"}
+        min="0"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        placeholder={placeholder ?? "0"}
+        className="h-8"
+      />
     </div>
   );
 }

@@ -1,6 +1,53 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-25 (P8) — **Reminder D-1 do trial + cleanup ao converter (fecha ciclo P7).**
+**Última pausa:** 2026-05-25 (P9) — **Quantitativo automático IA da planta (prompt v2 + UI editável + integração no orçamento).**
+
+---
+
+## 📐 P9 — Quantitativo IA da planta (2026-05-25) — 1 commit
+
+Backlog: "extender extração pra gerar lista de materiais alimentando orçamento". Estado anterior: v3 derivava portas/janelas/louças heuristicamente via `contarPorTipo(ambientes, [...])` — funcionava razoavelmente mas era opaco e impreciso (suite com porta de quarto + porta de banheiro contava 1).
+
+### Mudança chave: prompt v2
+
+Novo arquivo [lib/ai/prompts/extract-floor-plan.v2.ts](lib/ai/prompts/extract-floor-plan.v2.ts) estende v1 com seção `quantitativos`:
+
+| Campo              | O que conta                                                |
+| ------------------ | ---------------------------------------------------------- |
+| `portas_internas`  | TODAS as portas dentro (suite com banh = 2)                |
+| `portas_externas`  | Entrada + serviço + acesso varanda externa                 |
+| `janelas_grandes`  | Sala, quarto, suíte, cozinha (≥ 1.2m)                      |
+| `janelas_pequenas` | Basc/maxi-ar de banh, lavabo, área serviço                 |
+| `bacios`           | 1 por banheiro + 1 por lavabo                              |
+| `lavatorios`       | 1 por banheiro/lavabo, 2 em suítes premium                 |
+| `pias_cozinha`     | 1 por cozinha + 1 por área serviço                         |
+| `m_rodape`         | Comprimento linear estimado (null se planta sem cotas)     |
+| `m2_rev_parede`    | m² cerâmica de parede (banh = ~25m² cada, cozinha = ~15m²) |
+
+v1 nunca é sobrescrito (regra inegociável do CLAUDE.md).
+
+### Integração
+
+- **Extractor** [lib/ai/extract-floor-plan.ts](lib/ai/extract-floor-plan.ts) importa de v2 — `PROMPT_VERSION` vira `extract-floor-plan.v2`. Resultado persiste em `meta.extracao_planta.quantitativos`.
+- **v3 das regras** [lib/budget/rules/v3.ts](lib/budget/rules/v3.ts) ganha helper `preferQuantitativo(p, key, fallback)` — preferre número da IA, cai no heurístico se ausente. Atualizadas: `ruleEsquadrias` (portas/janelas), `rulePisosRevestimentos` (m² rev parede), `ruleAcabamentosLineares` (rodapé + soleira + peitoril), `ruleLoucasMetais` (bacios/lavatórios/pias). **Projetos antigos sem quantitativos continuam funcionando** — fallback automático.
+- **`ExtractedPlantaV3.quantitativos?`** é opcional — compat retro total.
+- **`confirm-extraction.action.ts`** agora aceita campo opcional `quantitativos` e persiste em `meta.extracao_planta`.
+
+### UI
+
+[ExtractionReview.tsx](components/features/extraction/ExtractionReview.tsx) ganha card azul "📊 Quantitativos da IA" com grid 4-colunas de inputs editáveis. Badge indica se veio da IA (v2) ou se será usada heurística (v1 antigo). Edição inline → "Confirmar e atualizar projeto" envia tudo junto.
+
+### Sem migration
+
+Tudo persiste em `meta jsonb` existente. Zero novo schema.
+
+### Validação rodando
+
+Próximo upload de planta vai usar v2 automaticamente. Custo da extração estima-se +5-10% em tokens (output ligeiramente maior por causa do bloco quantitativos), mas ROI é claro: orçamento mais preciso, menos retrabalho do arquiteto.
+
+---
+
+**Última pausa anterior:** 2026-05-25 (P8) — **Reminder D-1 do trial + cleanup ao converter (fecha ciclo P7).**
 
 ---
 

@@ -86,6 +86,22 @@ export type ExtractedPlantaV3 = {
     jardim: boolean;
     area_servico_externa: boolean;
   };
+  /**
+   * Quantitativos contados pela IA (prompt v2). Quando presentes, as regras
+   * preferem esses números sobre as heurísticas que contam por tipo de ambiente.
+   * Projetos antigos não têm esse campo — fallback automático pra heurística.
+   */
+  quantitativos?: {
+    portas_internas: number;
+    portas_externas: number;
+    janelas_grandes: number;
+    janelas_pequenas: number;
+    bacios: number;
+    lavatorios: number;
+    pias_cozinha: number;
+    m_rodape: number | null;
+    m2_rev_parede: number | null;
+  };
 };
 
 export type RuleItemV3 = {
@@ -120,6 +136,23 @@ function perimetroExternoEstimado(areaM2: number): number {
 
 function contarPorTipo(ambientes: ExtractedPlantaV3["ambientes"], tipos: string[]): number {
   return ambientes.filter((a) => tipos.includes(a.tipo)).length;
+}
+
+/**
+ * Retorna a quantidade preferida pra um campo de quantitativo:
+ * usa o número da IA (prompt v2) quando presente; senão cai no fallback
+ * heurístico que conta por tipo de ambiente.
+ *
+ * Mantém compat com projetos extraídos antes de v2 (sem campo quantitativos).
+ */
+function preferQuantitativo(
+  p: ExtractedPlantaV3,
+  key: keyof NonNullable<ExtractedPlantaV3["quantitativos"]>,
+  fallback: number | null,
+): number | null {
+  const q = p.quantitativos?.[key];
+  if (q === undefined || q === null) return fallback;
+  return q;
 }
 
 function big(n: number): Big {
@@ -372,24 +405,29 @@ const ruleEsquadrias: Rule = (p) => {
   const ambientes = p.ambientes;
   const fAcab = fatorPadraoAcabamento(p.padrao_construtivo);
 
-  // Porta de entrada (custom — madeira maciça)
-  items.push({
-    codigo_sinapi: "custom-porta-entrada",
-    descricao_local: "Porta de entrada de madeira maciça 90x210cm com batente e fechadura",
-    unidade: "un",
-    quantidade: big(1),
-    preco_unitario_custom: big(1850 * fAcab), // fAcab embutido no preço
-    rule_id: "esquadrias.porta-entrada",
-  });
+  // Porta de entrada (custom — madeira maciça). Usa portas_externas se disponível,
+  // senão presume 1 (entrada principal).
+  const portasExternas = preferQuantitativo(p, "portas_externas", 1) ?? 1;
+  if (portasExternas > 0) {
+    items.push({
+      codigo_sinapi: "custom-porta-entrada",
+      descricao_local:
+        portasExternas > 1
+          ? `Porta de madeira maciça 90x210cm com batente e fechadura (${portasExternas} unidades — entrada + serviço)`
+          : "Porta de entrada de madeira maciça 90x210cm com batente e fechadura",
+      unidade: "un",
+      quantidade: big(portasExternas),
+      preco_unitario_custom: big(1850 * fAcab), // fAcab embutido no preço
+      rule_id: "esquadrias.porta-entrada",
+    });
+  }
 
-  const portasInternas = contarPorTipo(ambientes, [
-    "quarto",
-    "suite",
-    "banheiro",
-    "lavabo",
-    "escritorio",
-    "deposito",
-  ]);
+  const portasInternas =
+    preferQuantitativo(
+      p,
+      "portas_internas",
+      contarPorTipo(ambientes, ["quarto", "suite", "banheiro", "lavabo", "escritorio", "deposito"]),
+    ) ?? 0;
   if (portasInternas > 0) {
     // Padrão alto/luxo: porta de madeira maciça (mexicana). Popular/médio: semi-oca.
     const portaPremium = isPadraoAlto(p.padrao_construtivo);
@@ -405,8 +443,18 @@ const ruleEsquadrias: Rule = (p) => {
     });
   }
 
-  const janelasGrandes = contarPorTipo(ambientes, ["quarto", "suite", "sala", "cozinha"]);
-  const janelasPequenas = contarPorTipo(ambientes, ["banheiro", "lavabo", "area_servico"]);
+  const janelasGrandes =
+    preferQuantitativo(
+      p,
+      "janelas_grandes",
+      contarPorTipo(ambientes, ["quarto", "suite", "sala", "cozinha"]),
+    ) ?? 0;
+  const janelasPequenas =
+    preferQuantitativo(
+      p,
+      "janelas_pequenas",
+      contarPorTipo(ambientes, ["banheiro", "lavabo", "area_servico"]),
+    ) ?? 0;
   if (janelasGrandes > 0) {
     items.push({
       codigo_sinapi: "94573",
@@ -467,7 +515,9 @@ const rulePisosRevestimentos: Rule = (p) => {
 
   const banheiros = contarPorTipo(p.ambientes, ["banheiro", "lavabo"]);
   const cozinhas = contarPorTipo(p.ambientes, ["cozinha", "area_servico"]);
-  const areaRevPared = banheiros * 25 + cozinhas * 15;
+  // m² de revestimento de parede: prefere quantitativo IA, senão estima
+  // (25m² por banheiro padrão + 15m² por cozinha/serviço).
+  const areaRevPared = preferQuantitativo(p, "m2_rev_parede", banheiros * 25 + cozinhas * 15) ?? 0;
   if (areaRevPared > 0) {
     items.push({
       codigo_sinapi: "87265",
@@ -489,7 +539,8 @@ const ruleAcabamentosLineares: Rule = (p) => {
   const items: RuleItemV3[] = [];
   const fAcab = fatorPadraoAcabamento(p.padrao_construtivo);
 
-  const metragemRodape = area * 0.9;
+  // Rodapé: prefere quantitativo IA (m_rodape em metros), senão estima 0.9 × área.
+  const metragemRodape = preferQuantitativo(p, "m_rodape", area * 0.9) ?? area * 0.9;
   items.push({
     codigo_sinapi: "custom-rodape",
     descricao_local: "Rodapé cerâmico/madeira (fornecido e instalado)",
@@ -499,15 +550,21 @@ const ruleAcabamentosLineares: Rule = (p) => {
     rule_id: "acabamentos.rodape",
   });
 
-  const portasInternas = contarPorTipo(p.ambientes, [
-    "quarto",
-    "suite",
-    "banheiro",
-    "lavabo",
-    "escritorio",
-    "deposito",
-  ]);
-  const totalPortas = portasInternas + 1;
+  const portasInternasQ =
+    preferQuantitativo(
+      p,
+      "portas_internas",
+      contarPorTipo(p.ambientes, [
+        "quarto",
+        "suite",
+        "banheiro",
+        "lavabo",
+        "escritorio",
+        "deposito",
+      ]),
+    ) ?? 0;
+  const portasExternasQ = preferQuantitativo(p, "portas_externas", 1) ?? 1;
+  const totalPortas = portasInternasQ + portasExternasQ;
   if (totalPortas > 0) {
     items.push({
       codigo_sinapi: "custom-soleira",
@@ -519,8 +576,18 @@ const ruleAcabamentosLineares: Rule = (p) => {
     });
   }
 
-  const janelasGrandes = contarPorTipo(p.ambientes, ["quarto", "suite", "sala", "cozinha"]);
-  const janelasPequenas = contarPorTipo(p.ambientes, ["banheiro", "lavabo", "area_servico"]);
+  const janelasGrandes =
+    preferQuantitativo(
+      p,
+      "janelas_grandes",
+      contarPorTipo(p.ambientes, ["quarto", "suite", "sala", "cozinha"]),
+    ) ?? 0;
+  const janelasPequenas =
+    preferQuantitativo(
+      p,
+      "janelas_pequenas",
+      contarPorTipo(p.ambientes, ["banheiro", "lavabo", "area_servico"]),
+    ) ?? 0;
   const totalJanelas = janelasGrandes + janelasPequenas;
   if (totalJanelas > 0) {
     items.push({
@@ -760,26 +827,34 @@ const ruleHidraulica: Rule = (p) => {
 // ---------- Louças e metais ----------
 const ruleLoucasMetais: Rule = (p) => {
   const items: RuleItemV3[] = [];
-  const banheiros = contarPorTipo(p.ambientes, ["banheiro", "lavabo"]);
-  const cozinhas = contarPorTipo(p.ambientes, ["cozinha"]);
+  const banheirosCount = contarPorTipo(p.ambientes, ["banheiro", "lavabo"]);
+  const cozinhasCount = contarPorTipo(p.ambientes, ["cozinha"]);
   const fAcab = fatorPadraoAcabamento(p.padrao_construtivo);
 
-  if (banheiros > 0) {
+  // Prefere contagem da IA (bacios pode diferir de banheiros — ex: 2 banheiros mas
+  // 3 bacios se houver bidê separado em alguns casos).
+  const bacios = preferQuantitativo(p, "bacios", banheirosCount) ?? 0;
+  const lavatorios = preferQuantitativo(p, "lavatorios", banheirosCount) ?? 0;
+  const piasCozinha = preferQuantitativo(p, "pias_cozinha", cozinhasCount) ?? 0;
+
+  if (bacios > 0) {
     items.push({
       codigo_sinapi: "86931",
       descricao_local: "Vaso sanitário sifonado com caixa acoplada + engate flexível",
       unidade: "un",
-      quantidade: big(banheiros),
+      quantidade: big(bacios),
       multiplicador_preco: fAcab,
       rule_id: "loucas.vaso",
     });
+  }
+  if (lavatorios > 0) {
     // Padrão alto/luxo: lavatório suspenso premium (custom). Popular/médio: SINAPI 86939.
     if (isPadraoAlto(p.padrao_construtivo)) {
       items.push({
         codigo_sinapi: "custom-lavatorio-premium",
         descricao_local: "Lavatório de louça suspenso premium + torneira monocomando",
         unidade: "un",
-        quantidade: big(banheiros),
+        quantidade: big(lavatorios),
         preco_unitario_custom: big(950 * multResidualPremium(p.padrao_construtivo)),
         rule_id: "loucas.lavatorio-premium",
       });
@@ -788,18 +863,18 @@ const ruleLoucasMetais: Rule = (p) => {
         codigo_sinapi: "86939",
         descricao_local: "Lavatório de louça branca com coluna, padrão popular",
         unidade: "un",
-        quantidade: big(banheiros),
+        quantidade: big(lavatorios),
         multiplicador_preco: multResidualPremium(p.padrao_construtivo),
         rule_id: "loucas.lavatorio",
       });
     }
   }
-  if (cozinhas > 0) {
+  if (piasCozinha > 0) {
     items.push({
       codigo_sinapi: "custom-pia-cozinha",
-      descricao_local: `Pia de cozinha aço inox 1 cuba + torneira (${cozinhas})`,
+      descricao_local: `Pia de cozinha aço inox 1 cuba + torneira (${piasCozinha})`,
       unidade: "un",
-      quantidade: big(cozinhas),
+      quantidade: big(piasCozinha),
       preco_unitario_custom: big(725 * fAcab),
       rule_id: "loucas.pia",
     });
