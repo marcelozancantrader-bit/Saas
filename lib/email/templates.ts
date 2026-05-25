@@ -205,6 +205,53 @@ Assine agora: ${input.billingUrl}
 }
 
 /**
+ * Template específico: trial em D-3 (3 dias antes do fim).
+ * Tom menos urgente que o D-1 — convite a explorar antes do prazo apertar.
+ */
+export function renderTrialReminderD3Email(input: {
+  orgName: string;
+  planLabel: string;
+  endsAt: Date;
+  billingUrl: string;
+}): { html: string; text: string; subject: string } {
+  const dateStr = input.endsAt.toLocaleDateString("pt-BR");
+  const subject = `3 dias restantes do seu trial ${input.planLabel}`;
+
+  const html = renderEmailLayout({
+    preheader: `Seu trial ${input.planLabel} acaba em 3 dias (${dateStr}) — última chance de explorar antes.`,
+    orgName: input.orgName,
+    greeting: `Olá,`,
+    body: `
+      <p style="margin:0 0 14px;">
+        Faltam <strong>3 dias</strong> pro fim do seu trial do plano
+        <strong>${input.planLabel}</strong> (encerra em ${dateStr}).
+      </p>
+      <p style="margin:0 0 14px;color:${TEXT_MID};font-size:14px;">
+        Se ainda não testou tudo, esse é o momento — quantitativo IA da planta,
+        diário de obra com fotos, WhatsApp ao cliente, biblioteca de templates
+        do escritório. Coisas que viram horas de retrabalho.
+      </p>
+      <p style="margin:0 0 6px;">
+        Se já decidiu, assine agora (PIX à vista anual tem 25% OFF):
+      </p>
+    `,
+    cta: { label: "Ver planos →", href: input.billingUrl },
+    footer: `Memorial.ai · copiloto documental para arquitetos e engenheiros`,
+  });
+
+  const text = `3 dias restantes do seu trial ${input.planLabel} (acaba em ${dateStr}).
+
+Última chance de testar quantitativo IA, diário de obra, WhatsApp e biblioteca de templates
+antes de virar Free.
+
+PIX à vista anual: 25% OFF. Ver planos: ${input.billingUrl}
+
+(Memorial.ai)`;
+
+  return { html, text, subject };
+}
+
+/**
  * Template específico: trial encerrado (downgrade pra free).
  * Disparado pelo cron expired-trials-cron pros owners/admins da org.
  */
