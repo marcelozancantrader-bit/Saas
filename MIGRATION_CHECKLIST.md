@@ -6,19 +6,40 @@
 
 ---
 
-## 🚀 Fase 1 — Defesa imediata (HOJE, ~1h, ~R$ 350/ano)
+## 🚀 Fase 1 — Defesa imediata (HOJE, ~1h)
 
 Travar domínios + handles antes que squatter pegue. Você pode mudar de ideia depois — o seguro é barato.
 
-### 1.1 Domínios
+### 1.1 Domínios — hierarquia de prioridade
 
-- [ ] `prumai.com.br` no [registro.br](https://registro.br) — R$ 40/ano
-- [ ] `prumai.com` no [Cloudflare Registrar](https://dash.cloudflare.com/registrar) ou Namecheap — ~US$ 10/ano
-- [ ] **Defensivos** (se sobrar budget — protege contra confusion squatting):
-  - [ ] `detalhia.com.br` (top-1 da rodada 2)
-  - [ ] `memoreai.com.br` (plano B)
-  - [ ] `croquia.com.br`
-  - [ ] `draftia.com.br`
+#### 🔴 Essencial (R$ 40/ano)
+
+- [ ] **`prumai.com.br`** no [registro.br](https://registro.br) — R$ 40/ano
+  - É onde o app vai rodar. Brasileiro confia em `.com.br`. Google BR ranqueia melhor. Só registro.br oferece.
+
+#### 🟡 Defensivo recomendado (+~R$ 50/ano)
+
+- [ ] **`prumai.com`** no [Cloudflare Registrar](https://dash.cloudflare.com/registrar) — ~US$ 10/ano
+  - **Por quê**: impede squatter de pegar e tentar te vender por US$ 200-500 daqui 6 meses. Email global (`marcelo@prumai.com`). Redirect 301 → `.com.br` recupera tráfego de quem digita errado.
+  - **Por que Cloudflare** (e não Namecheap/GoDaddy): vende at-cost (US$ 10), sem upsell de WHOIS privacy paga, DNS rápido. Namecheap cobra ~US$ 13, GoDaddy ~US$ 20. **NÃO use registro.br pra `.com`** (faz via parceiro e cobra ~R$ 90).
+  - **Se orçamento apertado**: pula. Risco é baixo (ninguém monitora ativamente Prumai). Volta no ano que vem se quiser.
+
+#### 🟢 Defensivos secundários (opcional, +R$ 160/ano)
+
+Só vale se você quer **proteção máxima** contra alguém entrar no espaço "AEC + IA". Risco real: zero pra você ano 1, mas em 2-3 anos se o produto crescer, alguém pode tentar competir com nome similar.
+
+- [ ] `detalhia.com.br` (top-1 da rodada 2 — alternativa do nome)
+- [ ] `memoreai.com.br` (plano B)
+- [ ] `croquia.com.br`
+- [ ] `draftia.com.br`
+
+**Resumo dos cenários:**
+
+| Cenário                             | Custo ano 1 | O que protege                                |
+| ----------------------------------- | ----------- | -------------------------------------------- |
+| **Mínimo**: só `.com.br`            | R$ 40       | Operação imediata BR                         |
+| **Recomendado**: `.com.br` + `.com` | ~R$ 90      | + brand global + email + recuperação de typo |
+| **Máximo**: + 4 defensivos          | ~R$ 250     | + bloqueio total do espaço AEC+IA            |
 
 ### 1.2 Redes sociais
 
