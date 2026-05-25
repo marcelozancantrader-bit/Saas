@@ -12,6 +12,7 @@ import { captureServer } from "@/lib/observability/posthog";
 import { env } from "@/lib/validators/env";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 import { denyForUpgrade, type ActionFailure } from "@/lib/billing/upgrade-gate";
+import { PRODUCT_NAME } from "@/lib/branding";
 
 const schema = z.object({
   document_id: z.string().uuid(),
@@ -113,7 +114,7 @@ export async function sendDocumentToPortalAction(
   // E-mail + WhatsApp pro cliente. Ambos são gated e silenciosamente
   // pulados se providers não estiverem configurados.
   const portalUrl = `${env.NEXT_PUBLIC_APP_URL}/portal/${project.clients.portal_token}`;
-  const orgName = project.organizations?.name ?? "Memorial.ai";
+  const orgName = project.organizations?.name ?? PRODUCT_NAME;
 
   let emailSent = false;
   if (project.clients.email) {

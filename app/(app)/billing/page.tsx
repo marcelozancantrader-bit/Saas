@@ -13,6 +13,7 @@ import {
 } from "@/components/features/billing/SubscriptionHistory";
 import { PlanComparisonTable } from "@/components/features/billing/PlanComparisonTable";
 import { resolveTrialState, TRIAL_PLAN, canStartTrial } from "@/lib/billing/trial";
+import { getGrandfatheringStatus, formatGrandfatheringDate } from "@/lib/plans/grandfathering";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +23,15 @@ export default async function BillingPage() {
 
   const { data: orgRow } = await supabase
     .from("organizations")
-    .select("plano, trial_started_at")
+    .select("plano, trial_started_at, meta")
     .eq("id", org.orgId)
-    .single<{ plano: PlanId; trial_started_at: string | null }>();
+    .single<{
+      plano: PlanId;
+      trial_started_at: string | null;
+      meta: { grandfathered_until?: string | null; legacy_price_cents?: number | null } | null;
+    }>();
   const currentPlan = orgRow?.plano ?? "free";
+  const grandfathering = getGrandfatheringStatus(orgRow?.meta);
   const usage = await getPlanUsage(org.orgId, currentPlan);
 
   const { data: subscriptionsRaw } = await supabase
@@ -77,6 +83,18 @@ export default async function BillingPage() {
       </div>
 
       {/* Banners de estado */}
+      {grandfathering.isGrandfathered && grandfathering.until ? (
+        <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-4 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/20">
+          <p className="font-medium text-emerald-900 dark:text-emerald-100">
+            🔒 Preço congelado por mais {grandfathering.daysLeft} dias
+          </p>
+          <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-200">
+            Você está em um plano legado — o valor cobrado pelo Asaas continua o mesmo até{" "}
+            <strong>{formatGrandfatheringDate(grandfathering.until)}</strong>. Após essa data,
+            migramos pra grade nova com aviso prévio.
+          </p>
+        </div>
+      ) : null}
       {showStartTrial ? <StartTrialCard /> : null}
 
       {trialActive ? (

@@ -8,6 +8,7 @@ import { sendEmail } from "@/lib/email/resend";
 import { env } from "@/lib/validators/env";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 import { denyForUpgrade, type ActionFailure } from "@/lib/billing/upgrade-gate";
+import { PRODUCT_NAME } from "@/lib/branding";
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email("E-mail inválido").max(255),
@@ -97,10 +98,10 @@ export async function inviteMemberAction(raw: z.infer<typeof schema>): Promise<I
   }
 
   const inviteUrl = `${env.NEXT_PUBLIC_APP_URL}/convite/${inserted.token}`;
-  const subject = `Convite pra entrar no workspace ${me.orgName} no Memorial.ai`;
+  const subject = `Convite pra entrar no workspace ${me.orgName} no ${PRODUCT_NAME}`;
 
   const text = [
-    `Você foi convidado(a) para entrar no workspace "${me.orgName}" no Memorial.ai.`,
+    `Você foi convidado(a) para entrar no workspace "${me.orgName}" no ${PRODUCT_NAME}.`,
     "",
     `Função: ${parsed.data.role === "admin" ? "Admin (gerencia membros e configurações)" : "Membro (acesso aos projetos)"}`,
     "",
@@ -118,7 +119,7 @@ export async function inviteMemberAction(raw: z.infer<typeof schema>): Promise<I
         Convite pra entrar em <strong>${escapeHtml(me.orgName)}</strong>
       </h2>
       <p style="font-size:14px;line-height:1.6;color:#3f3f46;">
-        Você foi convidado(a) pra entrar no workspace no Memorial.ai como
+        Você foi convidado(a) pra entrar no workspace no ${PRODUCT_NAME} como
         <strong>${parsed.data.role === "admin" ? "Admin" : "Membro"}</strong>.
       </p>
       <div style="margin:20px 0;">

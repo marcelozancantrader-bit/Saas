@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
+import { PRODUCT_NAME } from "@/lib/branding";
 
 const schema = z.object({
   template_id: z.string().uuid(),
@@ -72,7 +73,7 @@ export async function applyTemplateAction(raw: z.infer<typeof schema>): Promise<
     "projeto.nome": project.nome,
     "cliente.nome": project.clients?.nome ?? "[Cliente]",
     "cliente.cpf_cnpj": project.clients?.cpf_cnpj ?? "[CPF/CNPJ]",
-    "org.nome": org?.name ?? "Memorial.ai",
+    "org.nome": org?.name ?? PRODUCT_NAME,
     "org.profissional": org?.profissional_nome ?? "[Profissional]",
     "data.hoje": new Date().toLocaleDateString("pt-BR", {
       day: "2-digit",

@@ -7,7 +7,9 @@ import { env } from "@/lib/validators/env";
 
 const schema = z.object({
   user_id: z.string().uuid(),
-  reason: z.string().min(3).max(500),
+  // Min 10 chars — força admin a justificar (vai pro audit log permanente).
+  // Antes era min 3 (aceitava "ok" — sem rastreabilidade útil).
+  reason: z.string().min(10, "Justifique com pelo menos 10 caracteres").max(500),
 });
 
 /**
@@ -61,8 +63,14 @@ export async function impersonateUserAction(input: z.infer<typeof schema>) {
     return { ok: false as const, error: linkErr?.message ?? "Falha ao gerar magic link." };
   }
 
-  // 4. Audit log (ação iniciada)
+  // 4. Audit log (link gerado — não confirma uso ainda).
+  // Pra rastrear o USO do link (não só geração), o callback em /auth/callback
+  // detecta sessions vindas de magic link e grava `user.impersonate_used`.
   const h = await headers();
+  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const userAgent = h.get("user-agent") ?? null;
+  const generatedAt = new Date().toISOString();
+
   await supabase.from("audit_log").insert({
     org_id: null, // ação platform-wide
     actor_id: me.id,
@@ -74,9 +82,22 @@ export async function impersonateUserAction(input: z.infer<typeof schema>) {
       admin_email: me.email,
       target_email: target.email,
       reason,
+      generated_at: generatedAt,
     },
-    ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
-    user_agent: h.get("user-agent") ?? null,
+    ip,
+    user_agent: userAgent,
+  });
+
+  // Notification pro próprio admin — fica no histórico dele pra evidência.
+  // (também ajuda se conta admin for comprometida: admin real vê alerta).
+  await supabase.from("notifications").insert({
+    user_id: me.id,
+    org_id: null,
+    type: "admin.impersonate_generated",
+    title: `Você iniciou impersonate de ${target.email}`,
+    body: `Motivo: ${reason}`,
+    link_url: "/admin/audit",
+    meta: { target_user_id: user_id, target_email: target.email, generated_at: generatedAt },
   });
 
   return {
