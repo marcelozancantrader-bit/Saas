@@ -18,6 +18,7 @@ import { getLatestCubMesForUf } from "@/lib/budget/cub";
 import { CubStatusBadge } from "@/components/features/budgets/CubStatusBadge";
 import { DISCIPLINA_LABEL, type Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 import type { CubPadrao } from "@/lib/budget/cub";
+import { parseProjectMeta } from "@/lib/validators/project-meta.schema";
 
 export const dynamic = "force-dynamic";
 
@@ -120,16 +121,12 @@ export default async function BudgetDetailPage({ params }: Props) {
   ).sort((a, b) => b[1].comBdi.cmp(a[1].comBdi));
 
   // CUB check data
-  const projectAny = project as unknown as {
-    nome: string;
-    padrao_construtivo?: CubPadrao | null;
-    meta?: Record<string, unknown> | null;
-  } | null;
-  const extracao = projectAny?.meta?.extracao_planta as
-    | { area_total_m2?: number | null; padrao_construtivo?: CubPadrao | null }
-    | undefined;
+  const projectMeta = parseProjectMeta((project as { meta?: unknown } | null)?.meta);
+  const extracao = projectMeta.extracao_planta;
+  const padraoProject = (project as { padrao_construtivo?: CubPadrao | null } | null)
+    ?.padrao_construtivo;
   const cubPadrao: CubPadrao | null =
-    extracao?.padrao_construtivo ?? projectAny?.padrao_construtivo ?? null;
+    (extracao?.padrao_construtivo as CubPadrao | null | undefined) ?? padraoProject ?? null;
   const cubAreaM2 = extracao?.area_total_m2 ?? null;
   const cubTotalBruto = Number(budget.total_bruto);
 

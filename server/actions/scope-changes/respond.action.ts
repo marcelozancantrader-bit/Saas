@@ -7,7 +7,9 @@ import { createClient } from "@/lib/supabase/server";
 const schema = z.object({
   scope_change_id: z.string().uuid(),
   decisao: z.enum(["aceitar", "recusar"]),
-  valor_aditivo: z.number().nonnegative().nullable().optional(),
+  // multipleOf 0.01 rejeita valores com 3+ casas decimais (ex: 100.555) que
+  // causariam erro de arredondamento. R$ só aceita centavos.
+  valor_aditivo: z.number().nonnegative().multipleOf(0.01).nullable().optional(),
   prazo_adicional_dias: z.number().int().nonnegative().nullable().optional(),
   observacoes: z.string().max(2000).optional(),
 });

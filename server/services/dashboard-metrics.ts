@@ -1,5 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
+import Big from "big.js";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -75,15 +76,18 @@ async function _getDashboardMetricsUncached(orgId: string): Promise<DashboardMet
         .gte("created_at", since30.toISOString()),
     ]);
 
-  // dedup projects with multiple aprovado docs
+  // dedup projects with multiple aprovado docs.
+  // Big.js evita erro de arredondamento ao multiplicar floats por 100 (ex:
+  // 0.1 * 100 = 10.000000000000002 em JS puro).
   const projectsWithApproved = new Set<string>();
-  let approvedRevenueCents = 0;
+  let approvedRevenueCents = new Big(0);
   for (const row of projectsForRevenue.data ?? []) {
     const id = row.id as string;
     if (projectsWithApproved.has(id)) continue;
     projectsWithApproved.add(id);
-    const v = (row.valor_contrato as number | null) ?? 0;
-    approvedRevenueCents += Math.round(v * 100);
+    const v = row.valor_contrato;
+    if (v === null || v === undefined) continue;
+    approvedRevenueCents = approvedRevenueCents.plus(new Big(v).times(100).round(0));
   }
 
   // Average cycle: project.created_at → MIN(documents.aprovado_em) for that project
@@ -117,7 +121,7 @@ async function _getDashboardMetricsUncached(orgId: string): Promise<DashboardMet
     activeProjects: active.count ?? 0,
     pendingDocuments: pendingDocs.count ?? 0,
     pendingScopeChanges: pendingSc.count ?? 0,
-    approvedRevenueCents,
+    approvedRevenueCents: approvedRevenueCents.toNumber(),
     avgCycleDays,
     staleProjects: stale.count ?? 0,
     createdPerDay30d: buckets,

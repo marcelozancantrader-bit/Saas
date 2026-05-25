@@ -217,7 +217,9 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
                       {p.padrao_construtivo ?? "—"}
                     </td>
                     <td className="py-1.5 pr-2 text-right text-zinc-300 tabular-nums">
-                      {p.valor_contrato ? formatBrl(p.valor_contrato * 100) : "—"}
+                      {p.valor_contrato
+                        ? formatBrl(Math.round(Number(p.valor_contrato) * 100))
+                        : "—"}
                     </td>
                     <td className="py-1.5 pr-2 text-zinc-500">
                       {new Date(p.updated_at).toLocaleDateString("pt-BR")}

@@ -13,7 +13,7 @@ import type { STATUS_VALUES, TIPOLOGIA_VALUES } from "@/lib/validators/projects.
 import { env } from "@/lib/validators/env";
 import { getPlanInfo, type PlanId } from "@/lib/plans/limits";
 import { maskCpfOrCnpj, maskPhone } from "@/lib/utils/brazilian-formatters";
-import { formatBRL } from "@/lib/utils/money";
+import { formatBRL, sumMoney } from "@/lib/utils/money";
 
 export const dynamic = "force-dynamic";
 
@@ -167,10 +167,13 @@ export default async function ClienteDetailPage({ params }: Props) {
       .returns<ScopeChangeRow[]>(),
   ]);
 
-  const totalContratos = (projects ?? []).reduce(
-    (acc, p) => acc + (Number(p.valor_contrato) || 0),
-    0,
-  );
+  // Big.js evita erro de arredondamento ao somar floats decimais (valor_contrato
+  // vem como numeric do Postgres, mas em JS vira number — soma acumulada perde precisão).
+  const totalContratos = sumMoney(
+    (projects ?? [])
+      .map((p) => p.valor_contrato)
+      .filter((v): v is number => v !== null && v !== undefined),
+  ).toNumber();
   const projectsCount = projects?.length ?? 0;
   const docsAprovados = (documents ?? []).filter((d) => d.status === "aprovado").length;
   const docsAguardando = (documents ?? []).filter(

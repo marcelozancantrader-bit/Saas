@@ -42,6 +42,7 @@ import { ProjectProgress } from "@/components/features/projects/ProjectProgress"
 import { DisciplineExtractionsCard } from "@/components/features/extraction/DisciplineExtractionsCard";
 import { ProjectTabs, type TabKey } from "@/components/features/projects/ProjectTabs";
 import { DiaryFeed } from "@/components/features/diary/DiaryFeed";
+import { parseProjectMeta } from "@/lib/validators/project-meta.schema";
 import { loadDiaryEntries } from "@/server/services/diary";
 import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 
@@ -223,30 +224,21 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
     (f) => f.extracao_status === "pendente" || f.extracao_status === "processando",
   );
 
-  const extracoesDisciplinas =
-    ((project.meta as Record<string, unknown> | null)?.extracoes_disciplinas as
-      | Partial<Record<Disciplina, ExtracaoDisciplinaEntry>>
-      | undefined) ?? {};
+  const meta = parseProjectMeta(project.meta);
 
-  const zoneamentoCustom =
-    ((project.meta as Record<string, unknown> | null)?.zoneamento_custom as
-      | ZoneamentoCustomMeta
-      | undefined) ?? null;
+  const extracoesDisciplinas = (meta.extracoes_disciplinas ?? {}) as Partial<
+    Record<Disciplina, ExtracaoDisciplinaEntry>
+  >;
+
+  // zoneamento_custom no schema permissivo é parcial; o componente espera
+  // ZoneamentoRule completo. Cast OK porque é populado pelo próprio component.
+  const zoneamentoCustom = (meta.zoneamento_custom ?? null) as ZoneamentoCustomMeta | null;
   const zoneamentoCustomLabel = zoneamentoCustom
     ? `${zoneamentoCustom.cidade_nome ?? "?"}/${zoneamentoCustom.uf ?? "??"} · ${zoneamentoCustom.label}`
     : null;
 
   // Recuos medidos pelo profissional (de meta.recuos_medidos)
-  const recuosMedidos =
-    ((project.meta as Record<string, unknown> | null)?.recuos_medidos as
-      | {
-          frontal_m?: number | null;
-          lateral_direito_m?: number | null;
-          lateral_esquerdo_m?: number | null;
-          fundos_m?: number | null;
-          updated_at?: string | null;
-        }
-      | undefined) ?? null;
+  const recuosMedidos = meta.recuos_medidos ?? null;
 
   // Regra da zona pra comparar com recuos medidos no card
   const currentZonaRule =

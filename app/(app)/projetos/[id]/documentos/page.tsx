@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase/server";
 import { GenerateDocumentMenu } from "@/components/features/documents/GenerateDocumentMenu";
+import { parseProjectMeta } from "@/lib/validators/project-meta.schema";
 import {
   UseTemplateDialog,
   type OrgTemplate,
@@ -116,10 +117,8 @@ export default async function DocumentosPage({ params, searchParams }: Props) {
 
   const filtered = statusFilter ? documents.filter((d) => d.status === statusFilter) : documents;
 
-  const extracao = (project.meta as Record<string, unknown> | null)?.extracao_planta as
-    | { confirmed_by_user?: boolean }
-    | undefined;
-  const hasConfirmedExtraction = !!extracao?.confirmed_by_user;
+  const projectMeta = parseProjectMeta(project.meta);
+  const hasConfirmedExtraction = !!projectMeta.extracao_planta?.confirmed_by_user;
 
   return (
     <div className="space-y-6">

@@ -20,6 +20,17 @@ import { loadSinapiCatalog, resolveProjectUf } from "@/lib/budget/sinapi-options
 import { getLatestCubMesForUf } from "@/lib/budget/cub";
 import type { Disciplina } from "@/lib/ai/prompts/_shared-extraction-schema";
 import type { CubPadrao } from "@/lib/budget/cub";
+import { parseProjectMeta } from "@/lib/validators/project-meta.schema";
+
+type ProjectRow = {
+  id: string;
+  nome: string;
+  meta: unknown;
+  endereco_completo: string | null;
+  padrao_construtivo: CubPadrao | null;
+  cidade_codigo: string | null;
+  clients: { endereco_uf: string | null } | null;
+};
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +59,10 @@ export default async function OrcamentosPage({ params }: Props) {
       "id, nome, meta, endereco_completo, padrao_construtivo, cidade_codigo, clients ( endereco_uf )",
     )
     .eq("id", projectId)
-    .single();
+    .single<ProjectRow>();
   if (error || !project) notFound();
+
+  const meta = parseProjectMeta(project.meta);
 
   const { data: budgets } = await supabase
     .from("budgets")
@@ -60,29 +73,19 @@ export default async function OrcamentosPage({ params }: Props) {
     .order("versao", { ascending: false })
     .returns<BudgetRow[]>();
 
-  const extracao = (project.meta as Record<string, unknown> | null)?.extracao_planta as
-    | {
-        confirmed_by_user?: boolean;
-        area_total_m2?: number | null;
-        padrao_construtivo?: CubPadrao | null;
-      }
-    | undefined;
+  const extracao = meta.extracao_planta;
   const canGenerate = !!extracao?.confirmed_by_user && !!extracao.area_total_m2;
 
   // UF da obra — hierarquia: cidade_codigo curado > endereco_completo (regex) > cliente > SP
-  const projectAny = project as unknown as {
-    endereco_completo?: string | null;
-    padrao_construtivo?: CubPadrao | null;
-    cidade_codigo?: string | null;
-    clients?: { endereco_uf?: string | null } | null;
-  };
   const obraUf = resolveProjectUf({
-    cidade_codigo: projectAny.cidade_codigo,
-    endereco_completo: projectAny.endereco_completo,
-    client_uf: projectAny.clients?.endereco_uf,
+    cidade_codigo: project.cidade_codigo,
+    endereco_completo: project.endereco_completo,
+    client_uf: project.clients?.endereco_uf,
   });
   const cubPadrao: CubPadrao | null =
-    extracao?.padrao_construtivo ?? projectAny.padrao_construtivo ?? null;
+    (extracao?.padrao_construtivo as CubPadrao | null | undefined) ??
+    project.padrao_construtivo ??
+    null;
 
   // SINAPI catalog — UFs e meses disponíveis no banco pro dropdown do Regerar
   // e pra detectar mês mais recente da UF da obra (geração inicial).
@@ -104,8 +107,7 @@ export default async function OrcamentosPage({ params }: Props) {
         ? "needs_area"
         : "ready";
 
-  const extracoesDisciplinas = ((project.meta as Record<string, unknown> | null)
-    ?.extracoes_disciplinas ?? {}) as Partial<
+  const extracoesDisciplinas = (meta.extracoes_disciplinas ?? {}) as Partial<
     Record<Disciplina, { data?: Record<string, unknown>; confirmed_by_user?: boolean }>
   >;
 
