@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { ProjectForm } from "@/components/features/projects/ProjectForm";
+import { PortfolioToggleCard } from "@/components/features/projects/PortfolioToggleCard";
 import { FileUploader } from "@/components/features/files/FileUploader";
 import { FilesList, type ProjectFileRow } from "@/components/features/files/FilesList";
 import { DeleteButton } from "@/components/features/shell/DeleteButton";
@@ -63,6 +64,7 @@ type ProjectDetail = {
   cidade_codigo: string | null;
   zoneamento: string | null;
   area_terreno_m2: number | null;
+  portfolio_visible: boolean;
   clients: { id: string; nome: string; portal_token: string } | null;
   meta: Record<string, unknown> | null;
 };
@@ -121,7 +123,7 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
     supabase
       .from("projects")
       .select(
-        "id, nome, client_id, tipologia, area_prevista_m2, padrao_construtivo, endereco_cep, endereco_completo, status, cidade_codigo, zoneamento, area_terreno_m2, meta, clients ( id, nome, portal_token )",
+        "id, nome, client_id, tipologia, area_prevista_m2, padrao_construtivo, endereco_cep, endereco_completo, status, cidade_codigo, zoneamento, area_terreno_m2, meta, portfolio_visible, clients ( id, nome, portal_token )",
       )
       .eq("id", id)
       .single<ProjectDetail>(),
@@ -168,7 +170,7 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
     supabase
       .from("organizations")
       .select(
-        "name, cnpj, registro_cau, registro_crea, profissional_nome, profissional_cpf, profissional_endereco",
+        "name, cnpj, registro_cau, registro_crea, profissional_nome, profissional_cpf, profissional_endereco, portfolio_slug, portfolio_enabled",
       )
       .eq("id", org.orgId)
       .single<{
@@ -179,6 +181,8 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
         profissional_nome: string | null;
         profissional_cpf: string | null;
         profissional_endereco: string | null;
+        portfolio_slug: string | null;
+        portfolio_enabled: boolean;
       }>(),
     project?.client_id
       ? supabase
@@ -415,6 +419,14 @@ export default async function ProjetoDetailPage({ params, searchParams }: Props)
               />
             </CardContent>
           </Card>
+
+          <PortfolioToggleCard
+            projectId={project.id}
+            visible={project.portfolio_visible}
+            status={project.status}
+            orgPortfolioEnabled={orgFull?.portfolio_enabled ?? false}
+            orgPortfolioSlug={orgFull?.portfolio_slug ?? null}
+          />
         </section>
       ) : null}
 

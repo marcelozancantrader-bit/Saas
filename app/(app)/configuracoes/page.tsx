@@ -8,6 +8,7 @@ import {
   type WorkspaceInitial,
 } from "@/components/features/configuracoes/WorkspaceForm";
 import { AccountCard } from "@/components/features/configuracoes/AccountCard";
+import { PortfolioSettingsCard } from "@/components/features/configuracoes/PortfolioSettingsCard";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,6 +27,8 @@ type OrgRow = {
   profissional_nome: string | null;
   profissional_cpf: string | null;
   profissional_endereco: string | null;
+  portfolio_slug: string | null;
+  portfolio_enabled: boolean;
 };
 
 export default async function ConfiguracoesPage() {
@@ -36,7 +39,7 @@ export default async function ConfiguracoesPage() {
     supabase
       .from("organizations")
       .select(
-        "name, cnpj, registro_cau, registro_crea, logo_url, cor_primaria, cor_secundaria, bdi_padrao, dados_pix, profissional_nome, profissional_cpf, profissional_endereco",
+        "name, cnpj, registro_cau, registro_crea, logo_url, cor_primaria, cor_secundaria, bdi_padrao, dados_pix, profissional_nome, profissional_cpf, profissional_endereco, portfolio_slug, portfolio_enabled",
       )
       .eq("id", me.orgId)
       .single<OrgRow>(),
@@ -129,6 +132,13 @@ export default async function ConfiguracoesPage() {
           </Link>
         </CardContent>
       </Card>
+
+      <PortfolioSettingsCard
+        orgName={org?.name ?? ""}
+        initialSlug={org?.portfolio_slug ?? null}
+        initialEnabled={org?.portfolio_enabled ?? false}
+        canEdit={canEdit}
+      />
 
       <Card>
         <CardHeader>

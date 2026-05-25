@@ -1,6 +1,41 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-25 (P9) — **Quantitativo automático IA da planta (prompt v2 + UI editável + integração no orçamento).**
+**Última pausa:** 2026-05-25 (P10) — **Portfólio público do escritório (`/p/[slug]`) — diferencial competitivo + SEO/aquisição.**
+
+---
+
+## 🌐 P10 — Portfólio público (2026-05-25) — 1 commit
+
+Sugestão direta da análise de viabilidade. Cada escritório ganha rota pública `/p/<slug>` indexável pelo Google, com projetos concluídos como vitrine. Diferencial vs concorrentes BR (Construflow/Sienge/MetaEng) que não oferecem portfolio aberto.
+
+### Modelo opt-in em 2 camadas
+
+1. **Org liga** `portfolio_enabled` + escolhe slug único em `/configuracoes` (card "Portfólio público")
+2. **Por projeto**, owner/admin marca `portfolio_visible=true` em `/projetos/<id>?tab=visao` (card "Portfólio público")
+
+Só aparece no portfolio quando AMBOS estão ativos E o `status='concluido'`.
+
+### Arquivos
+
+- **Migration** [20260729000001_portfolio_publico.sql](supabase/migrations/20260729000001_portfolio_publico.sql) — `organizations.portfolio_slug` (unique parcial ci), `organizations.portfolio_enabled`, `projects.portfolio_visible` + index parcial.
+- **Loader** [server/services/portfolio-loader.ts](server/services/portfolio-loader.ts) — service-role, valida slug, carrega org + projetos visíveis. Thumbnail vem da última foto do diário de obra (`portal_visible=true`) via signed URL 7d.
+- **Rota pública** [app/p/[slug]/page.tsx](app/p/[slug]/page.tsx) — RSC, robots index, generateMetadata com OpenGraph dinâmico, grid 3-col responsivo com card por projeto (nome + tipologia + área + padrão + endereço + foto).
+- **Toggle por projeto** [components/features/projects/PortfolioToggleCard.tsx](components/features/projects/PortfolioToggleCard.tsx) — estados visuais (org desconfigurada / status != concluido / publicado / não publicado).
+- **Setting da org** [components/features/configuracoes/PortfolioSettingsCard.tsx](components/features/configuracoes/PortfolioSettingsCard.tsx) — input slug + toggle enabled + auto-suggest do nome via [lib/portfolio/slug.ts](lib/portfolio/slug.ts).
+- **Actions** [toggle-portfolio-visibility.action.ts](server/actions/projects/toggle-portfolio-visibility.action.ts) + [set-portfolio-config.action.ts](server/actions/organizations/set-portfolio-config.action.ts) — owner/admin only, validação de slug regex + unicidade.
+- **Sitemap** [app/sitemap.ts](app/sitemap.ts) — fetch dinâmico das orgs com portfolio enabled (revalidate 6h). Portfolios entram no sitemap automaticamente.
+
+### ⚠️ Migration pendente em prod
+
+- **`20260729000001_portfolio_publico.sql`** — sem aplicar, queries em `portfolio_slug` / `portfolio_visible` falham.
+
+### SEO
+
+`/p/<slug>` é robots-index. Metadata dinâmica usa nome do escritório no title/og. Conteúdo único por org (fotos de obra + responsável técnico + projetos entregues) — alimenta long-tail SEO ("arquiteto em Palmitinho", "obra residencial em Porto Alegre" etc).
+
+---
+
+**Última pausa anterior:** 2026-05-25 (P9) — **Quantitativo automático IA da planta (prompt v2 + UI editável + integração no orçamento).**
 
 ---
 
