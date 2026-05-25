@@ -15,6 +15,8 @@ import { generateDocumentAction } from "@/server/actions/documents/generate.acti
 import { DOCUMENT_LABELS, type DocumentTipo } from "@/lib/ai/generate-document";
 import { ContractTemplateDialog } from "./ContractTemplateDialog";
 import { toast } from "sonner";
+import { useUpgradeGate } from "@/lib/billing/use-upgrade-gate";
+import { UpgradeGateDialog } from "@/components/features/billing/UpgradeGateDialog";
 
 type Props = {
   projectId: string;
@@ -93,6 +95,7 @@ export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction, hasCli
   const [generating, setGenerating] = useState<DocumentTipo | null>(null);
   const [, startTransition] = useTransition();
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
+  const gate = useUpgradeGate();
 
   function onGenerate(tipo: DocumentTipo) {
     // Contrato abre dialog de escolha de template antes de gerar.
@@ -104,17 +107,15 @@ export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction, hasCli
     startTransition(async () => {
       const result = await generateDocumentAction({ project_id: projectId, tipo });
       setGenerating(null);
-      if (result.ok) {
-        toast.success(`${DOCUMENT_LABELS[tipo]} gerado pela IA`);
-        router.push(`/projetos/${projectId}/documentos/${result.document_id}`);
-      } else {
-        toast.error(result.error);
-      }
+      if (!gate.handle(result)) return;
+      toast.success(`${DOCUMENT_LABELS[tipo]} gerado pela IA`);
+      router.push(`/projetos/${projectId}/documentos/${result.document_id}`);
     });
   }
 
   return (
     <>
+      <UpgradeGateDialog open={gate.open} onClose={gate.onClose} requirement={gate.requirement} />
       <ContractTemplateDialog
         projectId={projectId}
         open={contractDialogOpen}

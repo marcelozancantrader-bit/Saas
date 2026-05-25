@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
+import { denyForUpgrade, type ActionFailure } from "@/lib/billing/upgrade-gate";
 
 const ALLOWED_TIPOS = [
   "memorial",
@@ -24,7 +25,7 @@ const schema = z.object({
   nome: z.string().trim().min(3).max(120),
 });
 
-export type SaveTemplateResult = { ok: true; template_id: string } | { ok: false; error: string };
+export type SaveTemplateResult = { ok: true; template_id: string } | ActionFailure;
 
 export async function saveDocumentAsTemplateAction(
   raw: z.infer<typeof schema>,
@@ -46,12 +47,13 @@ export async function saveDocumentAsTemplateAction(
     .select("plano")
     .eq("id", me.orgId)
     .single<{ plano: PlanId }>();
-  if (!getPlanLimits(orgRow?.plano ?? "free").bibliotecaTemplates) {
-    return {
-      ok: false,
-      error:
-        "Biblioteca de templates do escritório disponível a partir do plano Pro. Faça upgrade em /billing.",
-    };
+  const currentPlan = orgRow?.plano ?? "free";
+  if (!getPlanLimits(currentPlan).bibliotecaTemplates) {
+    return denyForUpgrade({
+      feature: "bibliotecaTemplates",
+      currentPlan,
+      requires: (l) => l.bibliotecaTemplates,
+    });
   }
 
   // Lê o documento fonte (RLS garante que é da org do usuário)

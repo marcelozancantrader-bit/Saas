@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
+import { denyForUpgrade, type ActionFailure } from "@/lib/billing/upgrade-gate";
 
 const MAX_PHOTOS = 6;
 const MAX_PHOTO_SIZE_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -27,7 +28,7 @@ const bodySchema = z.object({
     .optional(),
 });
 
-export type CreateDiaryEntryResult = { ok: true; entry_id: string } | { ok: false; error: string };
+export type CreateDiaryEntryResult = { ok: true; entry_id: string } | ActionFailure;
 
 export async function createDiaryEntryAction(formData: FormData): Promise<CreateDiaryEntryResult> {
   const rawFields = {
@@ -56,12 +57,15 @@ export async function createDiaryEntryAction(formData: FormData): Promise<Create
     .select("plano")
     .eq("id", me.orgId)
     .single<{ plano: PlanId }>();
-  if (!getPlanLimits(orgRow?.plano ?? "free").diarioObra) {
-    return {
-      ok: false,
-      error:
-        "Diário de obra disponível a partir do plano Pro. Faça upgrade em /billing para registrar marcos com fotos.",
-    };
+  const currentPlan = orgRow?.plano ?? "free";
+  if (!getPlanLimits(currentPlan).diarioObra) {
+    return denyForUpgrade({
+      feature: "diarioObra",
+      currentPlan,
+      requires: (l) => l.diarioObra,
+      message:
+        "Diário de obra disponível a partir do plano Pro. Registre marcos com fotos pra justificar aditivos e mostrar progresso ao cliente.",
+    });
   }
 
   // Confirma que o projeto é da org do usuário (defense in depth — RLS cobre também).

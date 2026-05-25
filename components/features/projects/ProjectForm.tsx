@@ -28,6 +28,8 @@ import {
 } from "@/lib/validators/projects.schema";
 import type { ViaCepAddress } from "@/lib/utils/viacep";
 import { toast } from "sonner";
+import { useUpgradeGate } from "@/lib/billing/use-upgrade-gate";
+import { UpgradeGateDialog } from "@/components/features/billing/UpgradeGateDialog";
 
 type ProjectFormValues = {
   id?: string;
@@ -55,6 +57,7 @@ export function ProjectForm({ initial, clients }: Props) {
   const [pending, startTransition] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [endereco, setEndereco] = useState(initial?.endereco_completo ?? "");
+  const gate = useUpgradeGate();
 
   // Cidade e UF capturados via ViaCEP — populam o ZoneamentoFields automaticamente
   const [cidadeNomeFromCep, setCidadeNomeFromCep] = useState<string>("");
@@ -92,191 +95,199 @@ export function ProjectForm({ initial, clients }: Props) {
       if ("fieldErrors" in result) {
         setFieldErrors(result.fieldErrors);
         toast.error("Verifique os campos destacados");
-      } else if ("error" in result) {
-        toast.error(result.error);
+        return;
       }
+      // result agora é ActionFailure (ok:false, error, upgrade?)
+      gate.handle(result);
     });
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6" noValidate>
-      <Section title="Dados do projeto">
-        <Field
-          label="Nome"
-          required
-          error={fieldErrors.nome?.[0]}
-          input={
-            <Input
-              id="nome"
-              name="nome"
-              required
-              maxLength={120}
-              defaultValue={initial?.nome ?? ""}
-              disabled={pending}
-              placeholder="Ex: Casa Família Silva — Curitiba"
-            />
-          }
-        />
-
-        <Field
-          label="Cliente"
-          input={
-            <Select name="client_id" defaultValue={initial?.client_id ?? ""}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="— Selecionar cliente —" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {clients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome}
-                    </SelectItem>
-                  ))}
-                  {clients.length === 0 ? (
-                    <div className="px-3 py-2 text-xs text-zinc-500">
-                      Nenhum cliente cadastrado. Crie um cliente primeiro.
-                    </div>
-                  ) : null}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          }
-        />
-
-        <div className="grid gap-3 sm:grid-cols-2">
+    <>
+      <UpgradeGateDialog open={gate.open} onClose={gate.onClose} requirement={gate.requirement} />
+      <form onSubmit={onSubmit} className="space-y-6" noValidate>
+        <Section title="Dados do projeto">
           <Field
-            label="Tipologia"
+            label="Nome"
             required
-            error={fieldErrors.tipologia?.[0]}
-            input={
-              <Select name="tipologia" defaultValue={initial?.tipologia ?? "residencial"} required>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {TIPOLOGIA_VALUES.map((v) => (
-                      <SelectItem key={v} value={v}>
-                        {TIPOLOGIA_LABEL[v]}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            }
-          />
-          <Field
-            label="Padrão construtivo"
-            input={
-              <Select name="padrao_construtivo" defaultValue={initial?.padrao_construtivo ?? ""}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="— Definir depois —" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {PADRAO_VALUES.map((v) => (
-                      <SelectItem key={v} value={v}>
-                        {PADRAO_LABEL[v]}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            }
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field
-            label="Área prevista (m²)"
-            error={fieldErrors.area_prevista_m2?.[0]}
+            error={fieldErrors.nome?.[0]}
             input={
               <Input
-                id="area_prevista_m2"
-                name="area_prevista_m2"
-                type="number"
-                step="0.01"
-                min="0"
-                defaultValue={initial?.area_prevista_m2 ?? ""}
+                id="nome"
+                name="nome"
+                required
+                maxLength={120}
+                defaultValue={initial?.nome ?? ""}
                 disabled={pending}
+                placeholder="Ex: Casa Família Silva — Curitiba"
+              />
+            }
+          />
+
+          <Field
+            label="Cliente"
+            input={
+              <Select name="client_id" defaultValue={initial?.client_id ?? ""}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="— Selecionar cliente —" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {clients.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome}
+                      </SelectItem>
+                    ))}
+                    {clients.length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-zinc-500">
+                        Nenhum cliente cadastrado. Crie um cliente primeiro.
+                      </div>
+                    ) : null}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            }
+          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              label="Tipologia"
+              required
+              error={fieldErrors.tipologia?.[0]}
+              input={
+                <Select
+                  name="tipologia"
+                  defaultValue={initial?.tipologia ?? "residencial"}
+                  required
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {TIPOLOGIA_VALUES.map((v) => (
+                        <SelectItem key={v} value={v}>
+                          {TIPOLOGIA_LABEL[v]}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              }
+            />
+            <Field
+              label="Padrão construtivo"
+              input={
+                <Select name="padrao_construtivo" defaultValue={initial?.padrao_construtivo ?? ""}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="— Definir depois —" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {PADRAO_VALUES.map((v) => (
+                        <SelectItem key={v} value={v}>
+                          {PADRAO_LABEL[v]}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              }
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              label="Área prevista (m²)"
+              error={fieldErrors.area_prevista_m2?.[0]}
+              input={
+                <Input
+                  id="area_prevista_m2"
+                  name="area_prevista_m2"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={initial?.area_prevista_m2 ?? ""}
+                  disabled={pending}
+                />
+              }
+            />
+            <Field
+              label="Status"
+              input={
+                <Select name="status" defaultValue={initial?.status ?? "rascunho"}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {STATUS_VALUES.map((v) => (
+                        <SelectItem key={v} value={v}>
+                          {STATUS_LABEL[v]}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              }
+            />
+          </div>
+        </Section>
+
+        <Section title="Localização">
+          <Field
+            label="CEP do imóvel"
+            error={fieldErrors.endereco_cep?.[0]}
+            input={
+              <CepInput
+                id="endereco_cep"
+                name="endereco_cep"
+                defaultValue={initial?.endereco_cep}
+                disabled={pending}
+                onAddressFound={onAddressFound}
               />
             }
           />
           <Field
-            label="Status"
+            label="Endereço completo"
             input={
-              <Select name="status" defaultValue={initial?.status ?? "rascunho"}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {STATUS_VALUES.map((v) => (
-                      <SelectItem key={v} value={v}>
-                        {STATUS_LABEL[v]}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <Textarea
+                id="endereco_completo"
+                name="endereco_completo"
+                rows={2}
+                value={endereco}
+                onChange={(e) => setEndereco(e.target.value)}
+                disabled={pending}
+                placeholder="Rua, número, bairro, cidade/UF"
+              />
             }
           />
+        </Section>
+
+        <Section title="Plano diretor da cidade (opcional — habilita validação de zoneamento)">
+          <ZoneamentoFields
+            initialCidade={initial?.cidade_codigo ?? null}
+            initialZona={initial?.zoneamento ?? null}
+            initialAreaTerreno={initial?.area_terreno_m2 ?? null}
+            disabled={pending}
+            projectId={initial?.id}
+            customLabel={initial?.zoneamento_custom_label ?? null}
+            /* Vindo do ViaCEP — auto-popula quando user digita o CEP */
+            hintCidadeNome={cidadeNomeFromCep || undefined}
+            hintUf={ufFromCep || undefined}
+          />
+        </Section>
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => router.back()} disabled={pending}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Salvando…" : initial?.id ? "Salvar alterações" : "Criar projeto"}
+          </Button>
         </div>
-      </Section>
-
-      <Section title="Localização">
-        <Field
-          label="CEP do imóvel"
-          error={fieldErrors.endereco_cep?.[0]}
-          input={
-            <CepInput
-              id="endereco_cep"
-              name="endereco_cep"
-              defaultValue={initial?.endereco_cep}
-              disabled={pending}
-              onAddressFound={onAddressFound}
-            />
-          }
-        />
-        <Field
-          label="Endereço completo"
-          input={
-            <Textarea
-              id="endereco_completo"
-              name="endereco_completo"
-              rows={2}
-              value={endereco}
-              onChange={(e) => setEndereco(e.target.value)}
-              disabled={pending}
-              placeholder="Rua, número, bairro, cidade/UF"
-            />
-          }
-        />
-      </Section>
-
-      <Section title="Plano diretor da cidade (opcional — habilita validação de zoneamento)">
-        <ZoneamentoFields
-          initialCidade={initial?.cidade_codigo ?? null}
-          initialZona={initial?.zoneamento ?? null}
-          initialAreaTerreno={initial?.area_terreno_m2 ?? null}
-          disabled={pending}
-          projectId={initial?.id}
-          customLabel={initial?.zoneamento_custom_label ?? null}
-          /* Vindo do ViaCEP — auto-popula quando user digita o CEP */
-          hintCidadeNome={cidadeNomeFromCep || undefined}
-          hintUf={ufFromCep || undefined}
-        />
-      </Section>
-
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => router.back()} disabled={pending}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Salvando…" : initial?.id ? "Salvar alterações" : "Criar projeto"}
-        </Button>
-      </div>
-    </form>
+      </form>
+    </>
   );
 }
 

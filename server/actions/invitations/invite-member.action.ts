@@ -7,6 +7,7 @@ import { getCurrentOrg } from "@/server/services/current-org";
 import { sendEmail } from "@/lib/email/resend";
 import { env } from "@/lib/validators/env";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
+import { denyForUpgrade, type ActionFailure } from "@/lib/billing/upgrade-gate";
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email("E-mail inválido").max(255),
@@ -15,7 +16,7 @@ const schema = z.object({
 
 export type InviteMemberResult =
   | { ok: true; invitation_id: string; token: string; email_sent: boolean }
-  | { ok: false; error: string };
+  | ActionFailure;
 
 export async function inviteMemberAction(raw: z.infer<typeof schema>): Promise<InviteMemberResult> {
   const parsed = schema.safeParse(raw);
@@ -39,7 +40,8 @@ export async function inviteMemberAction(raw: z.infer<typeof schema>): Promise<I
     .select("plano")
     .eq("id", me.orgId)
     .single<{ plano: PlanId }>();
-  const planLimits = getPlanLimits(orgRow?.plano ?? "free");
+  const currentPlan = orgRow?.plano ?? "free";
+  const planLimits = getPlanLimits(currentPlan);
 
   if (planLimits.maxUsers !== null) {
     // Conta membros atuais + convites pendentes (que ainda podem virar membros).
@@ -57,11 +59,16 @@ export async function inviteMemberAction(raw: z.infer<typeof schema>): Promise<I
     ]);
 
     const totalPotencial = (memberCount ?? 0) + (pendingInvitesCount ?? 0);
-    if (totalPotencial >= planLimits.maxUsers) {
-      return {
-        ok: false,
-        error: `Limite do plano atingido: ${planLimits.maxUsers} ${planLimits.maxUsers === 1 ? "usuário" : "usuários"} (incluindo convites pendentes). Faça upgrade para convidar mais.`,
-      };
+    const maxUsers = planLimits.maxUsers;
+    if (totalPotencial >= maxUsers) {
+      const word = maxUsers === 1 ? "usuário" : "usuários";
+      return denyForUpgrade({
+        feature: "maxUsers",
+        currentPlan,
+        requires: (l) => l.maxUsers === null || l.maxUsers > maxUsers,
+        message: `Limite do plano atingido: ${maxUsers} ${word} (incluindo convites pendentes). Faça upgrade pra convidar mais.`,
+        limit: { used: totalPotencial, limit: maxUsers, unit: "usuários" },
+      });
     }
   }
 

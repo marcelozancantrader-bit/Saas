@@ -5,6 +5,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { sendDocumentToPortalAction } from "@/server/actions/documents/send-to-portal.action";
+import { useUpgradeGate } from "@/lib/billing/use-upgrade-gate";
+import { UpgradeGateDialog } from "@/components/features/billing/UpgradeGateDialog";
 
 type Props = {
   documentId: string;
@@ -17,15 +19,13 @@ export function SendToPortalButton({ documentId, envioMeta, projectId, hasClient
   const [sending, setSending] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const alreadySent = !!envioMeta;
+  const gate = useUpgradeGate();
 
   async function send() {
     setSending(true);
     try {
       const r = await sendDocumentToPortalAction({ document_id: documentId });
-      if (!r.ok) {
-        toast.error(r.error);
-        return;
-      }
+      if (!gate.handle(r)) return;
       const url = `${window.location.origin}/portal/${r.portal_token}`;
       setLink(url);
       await navigator.clipboard.writeText(url).catch(() => {});
@@ -41,6 +41,10 @@ export function SendToPortalButton({ documentId, envioMeta, projectId, hasClient
       setSending(false);
     }
   }
+
+  const upgradeDialog = (
+    <UpgradeGateDialog open={gate.open} onClose={gate.onClose} requirement={gate.requirement} />
+  );
 
   if (!hasClient) {
     return (
@@ -66,14 +70,18 @@ export function SendToPortalButton({ documentId, envioMeta, projectId, hasClient
   if (alreadySent && !link) {
     const enviadoEm = new Date(envioMeta!.enviado_em).toLocaleString("pt-BR");
     return (
-      <Button variant="outline" size="sm" onClick={send} disabled={sending}>
-        {sending ? "Reenviando…" : `Reenviar ao cliente (último: ${enviadoEm})`}
-      </Button>
+      <>
+        {upgradeDialog}
+        <Button variant="outline" size="sm" onClick={send} disabled={sending}>
+          {sending ? "Reenviando…" : `Reenviar ao cliente (último: ${enviadoEm})`}
+        </Button>
+      </>
     );
   }
 
   return (
     <div className="flex flex-col items-end gap-1">
+      {upgradeDialog}
       <Button onClick={send} disabled={sending} size="sm">
         {sending ? "Enviando…" : "Enviar ao cliente"}
       </Button>

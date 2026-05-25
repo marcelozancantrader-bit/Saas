@@ -5,13 +5,14 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
+import { denyForUpgrade, type ActionFailure } from "@/lib/billing/upgrade-gate";
 
 const schema = z.object({
   document_id: z.string().uuid(),
   comentario: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
-export type RequestInternalReviewResult = { ok: true } | { ok: false; error: string };
+export type RequestInternalReviewResult = { ok: true } | ActionFailure;
 
 /**
  * Member (ou owner/admin) solicita revisão interna do documento antes
@@ -35,11 +36,13 @@ export async function requestInternalReviewAction(
     .select("plano")
     .eq("id", me.orgId)
     .single<{ plano: PlanId }>();
-  if (!getPlanLimits(orgRow?.plano ?? "free").revisaoHierarquica) {
-    return {
-      ok: false,
-      error: "Revisão hierárquica multi-user disponível no plano Studio. Faça upgrade em /billing.",
-    };
+  const currentPlan = orgRow?.plano ?? "free";
+  if (!getPlanLimits(currentPlan).revisaoHierarquica) {
+    return denyForUpgrade({
+      feature: "revisaoHierarquica",
+      currentPlan,
+      requires: (l) => l.revisaoHierarquica,
+    });
   }
 
   // Lê doc pra validar status atual (deve estar em rascunho)

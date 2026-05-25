@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Bookmark } from "lucide-react";
 import { saveDocumentAsTemplateAction } from "@/server/actions/templates/save-template.action";
+import { useUpgradeGate } from "@/lib/billing/use-upgrade-gate";
+import { UpgradeGateDialog } from "@/components/features/billing/UpgradeGateDialog";
 
 type Props = {
   documentId: string;
@@ -27,6 +29,7 @@ export function SaveAsTemplateButton({ documentId, defaultName }: Props) {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState(defaultName);
   const [pending, startTransition] = useTransition();
+  const gate = useUpgradeGate();
 
   function doSave() {
     if (nome.trim().length < 3) {
@@ -38,10 +41,7 @@ export function SaveAsTemplateButton({ documentId, defaultName }: Props) {
         source_document_id: documentId,
         nome: nome.trim(),
       });
-      if (!r.ok) {
-        toast.error(r.error);
-        return;
-      }
+      if (!gate.handle(r)) return;
       toast.success(`Template "${nome}" salvo no escritório`);
       setOpen(false);
       router.refresh();
@@ -50,6 +50,7 @@ export function SaveAsTemplateButton({ documentId, defaultName }: Props) {
 
   return (
     <>
+      <UpgradeGateDialog open={gate.open} onClose={gate.onClose} requirement={gate.requirement} />
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
         <Bookmark className="mr-1.5 h-3.5 w-3.5" />
         Salvar como template

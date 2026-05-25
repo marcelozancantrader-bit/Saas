@@ -16,6 +16,8 @@ import {
 import { Eye, ThumbsUp, ThumbsDown, Send } from "lucide-react";
 import { requestInternalReviewAction } from "@/server/actions/documents/request-internal-review.action";
 import { decideInternalReviewAction } from "@/server/actions/documents/decide-internal-review.action";
+import { useUpgradeGate } from "@/lib/billing/use-upgrade-gate";
+import { UpgradeGateDialog } from "@/components/features/billing/UpgradeGateDialog";
 
 export type ReviewMeta = {
   solicitada_por?: string;
@@ -48,6 +50,7 @@ export function InternalReviewPanel({
   const [decideDialogOpen, setDecideDialogOpen] = useState<"aprovada" | "recusada" | null>(null);
   const [comentario, setComentario] = useState("");
   const [pending, startTransition] = useTransition();
+  const gate = useUpgradeGate();
 
   const canDecide = userRole === "owner" || userRole === "admin";
   const isAwaiting = status === "aguardando_revisao_interna";
@@ -62,10 +65,7 @@ export function InternalReviewPanel({
         document_id: documentId,
         comentario: comentario.trim() || undefined,
       });
-      if (!r.ok) {
-        toast.error(r.error);
-        return;
-      }
+      if (!gate.handle(r)) return;
       toast.success("Revisão interna solicitada. Owner/admin do workspace foi notificado.");
       setRequestDialogOpen(false);
       setComentario("");
@@ -95,61 +95,68 @@ export function InternalReviewPanel({
     });
   }
 
+  const upgradeDialog = (
+    <UpgradeGateDialog open={gate.open} onClose={gate.onClose} requirement={gate.requirement} />
+  );
+
   // ESTADO: aguardando revisão — banner amber
   if (isAwaiting) {
     return (
-      <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
-        <div className="flex items-start gap-3">
-          <Eye className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-              Aguardando revisão interna
-            </p>
-            {reviewMeta?.comentario_solicitacao ? (
-              <p className="mt-1 text-xs text-zinc-700 italic dark:text-zinc-300">
-                &quot;{reviewMeta.comentario_solicitacao}&quot;
+      <>
+        {upgradeDialog}
+        <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
+          <div className="flex items-start gap-3">
+            <Eye className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                Aguardando revisão interna
               </p>
-            ) : null}
-            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-              {canDecide
-                ? "Você pode aprovar (libera envio ao cliente) ou recusar com comentário."
-                : "Owner ou admin precisa aprovar antes de enviar ao cliente. Você será notificado quando decidirem."}
-            </p>
-            {canDecide ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => setDecideDialogOpen("aprovada")}
-                  disabled={pending}
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                >
-                  <ThumbsUp className="mr-1.5 h-3.5 w-3.5" />
-                  Aprovar revisão
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setDecideDialogOpen("recusada")}
-                  disabled={pending}
-                  className="border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-900/40 dark:text-rose-400 dark:hover:bg-rose-950/20"
-                >
-                  <ThumbsDown className="mr-1.5 h-3.5 w-3.5" />
-                  Pedir ajustes
-                </Button>
-              </div>
-            ) : null}
+              {reviewMeta?.comentario_solicitacao ? (
+                <p className="mt-1 text-xs text-zinc-700 italic dark:text-zinc-300">
+                  &quot;{reviewMeta.comentario_solicitacao}&quot;
+                </p>
+              ) : null}
+              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                {canDecide
+                  ? "Você pode aprovar (libera envio ao cliente) ou recusar com comentário."
+                  : "Owner ou admin precisa aprovar antes de enviar ao cliente. Você será notificado quando decidirem."}
+              </p>
+              {canDecide ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => setDecideDialogOpen("aprovada")}
+                    disabled={pending}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <ThumbsUp className="mr-1.5 h-3.5 w-3.5" />
+                    Aprovar revisão
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setDecideDialogOpen("recusada")}
+                    disabled={pending}
+                    className="border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-900/40 dark:text-rose-400 dark:hover:bg-rose-950/20"
+                  >
+                    <ThumbsDown className="mr-1.5 h-3.5 w-3.5" />
+                    Pedir ajustes
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           </div>
-        </div>
 
-        <DecideDialog
-          open={decideDialogOpen}
-          onClose={() => setDecideDialogOpen(null)}
-          onConfirm={(d) => doDecide(d)}
-          pending={pending}
-          comentario={comentario}
-          setComentario={setComentario}
-        />
-      </div>
+          <DecideDialog
+            open={decideDialogOpen}
+            onClose={() => setDecideDialogOpen(null)}
+            onConfirm={(d) => doDecide(d)}
+            pending={pending}
+            comentario={comentario}
+            setComentario={setComentario}
+          />
+        </div>
+      </>
     );
   }
 
@@ -164,44 +171,47 @@ export function InternalReviewPanel({
         ? "text-emerald-900 dark:text-emerald-100"
         : "text-rose-900 dark:text-rose-100";
     return (
-      <div className={`rounded-lg border p-3 text-sm ${tone}`}>
-        <p className={`font-medium ${textTone}`}>
-          {lastDecision === "aprovada"
-            ? "✓ Revisão interna aprovada — pode enviar ao cliente"
-            : "✗ Revisão recusada — ajuste e solicite nova revisão"}
-        </p>
-        {reviewMeta?.comentario_revisao ? (
-          <p className="mt-1 text-xs text-zinc-700 italic dark:text-zinc-300">
-            &quot;{reviewMeta.comentario_revisao}&quot;
+      <>
+        {upgradeDialog}
+        <div className={`rounded-lg border p-3 text-sm ${tone}`}>
+          <p className={`font-medium ${textTone}`}>
+            {lastDecision === "aprovada"
+              ? "✓ Revisão interna aprovada — pode enviar ao cliente"
+              : "✗ Revisão recusada — ajuste e solicite nova revisão"}
           </p>
-        ) : null}
-        {reviewMeta?.decidida_em ? (
-          <p className="mt-1 text-[11px] text-zinc-500">
-            decidido em {new Date(reviewMeta.decidida_em).toLocaleString("pt-BR")}
-          </p>
-        ) : null}
-        {hasMultipleMembers && lastDecision === "recusada" ? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-2"
-            onClick={() => setRequestDialogOpen(true)}
-            disabled={pending}
-          >
-            <Send className="mr-1.5 h-3.5 w-3.5" />
-            Solicitar nova revisão
-          </Button>
-        ) : null}
+          {reviewMeta?.comentario_revisao ? (
+            <p className="mt-1 text-xs text-zinc-700 italic dark:text-zinc-300">
+              &quot;{reviewMeta.comentario_revisao}&quot;
+            </p>
+          ) : null}
+          {reviewMeta?.decidida_em ? (
+            <p className="mt-1 text-[11px] text-zinc-500">
+              decidido em {new Date(reviewMeta.decidida_em).toLocaleString("pt-BR")}
+            </p>
+          ) : null}
+          {hasMultipleMembers && lastDecision === "recusada" ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-2"
+              onClick={() => setRequestDialogOpen(true)}
+              disabled={pending}
+            >
+              <Send className="mr-1.5 h-3.5 w-3.5" />
+              Solicitar nova revisão
+            </Button>
+          ) : null}
 
-        <RequestDialog
-          open={requestDialogOpen}
-          onClose={() => setRequestDialogOpen(false)}
-          onConfirm={doRequest}
-          pending={pending}
-          comentario={comentario}
-          setComentario={setComentario}
-        />
-      </div>
+          <RequestDialog
+            open={requestDialogOpen}
+            onClose={() => setRequestDialogOpen(false)}
+            onConfirm={doRequest}
+            pending={pending}
+            comentario={comentario}
+            setComentario={setComentario}
+          />
+        </div>
+      </>
     );
   }
 
@@ -209,6 +219,7 @@ export function InternalReviewPanel({
   if (status === "rascunho") {
     return (
       <>
+        {upgradeDialog}
         <Button
           variant="outline"
           size="sm"

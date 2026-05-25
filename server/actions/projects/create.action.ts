@@ -5,10 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { projectSchema } from "@/lib/validators/projects.schema";
 import { captureServer } from "@/lib/observability/posthog";
+import { canCreateActiveProject, getPlanUsage } from "@/server/services/plan-usage";
+import { denyForUpgrade, type ActionFailure } from "@/lib/billing/upgrade-gate";
+import { type PlanId } from "@/lib/plans/limits";
 
 export type CreateProjectResult =
   | { ok: true; id: string }
-  | { ok: false; error: string }
+  | ActionFailure
   | { ok: false; fieldErrors: Record<string, string[]> };
 
 export async function createProjectAction(formData: FormData): Promise<CreateProjectResult> {
@@ -32,6 +35,26 @@ export async function createProjectAction(formData: FormData): Promise<CreatePro
 
   const { orgId, userId } = await getCurrentOrg();
   const supabase = await createClient();
+
+  // Plan gate: limite de projetos ativos.
+  // BUG fix: criado em P12 mas faltou aplicar aqui — Free podia criar ∞ projetos.
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("plano")
+    .eq("id", orgId)
+    .single<{ plano: PlanId }>();
+  const currentPlan = orgRow?.plano ?? "free";
+  const usage = await getPlanUsage(orgId, currentPlan);
+  const limitCheck = canCreateActiveProject(usage);
+  if (!limitCheck.ok) {
+    return denyForUpgrade({
+      feature: "maxActiveProjects",
+      currentPlan,
+      requires: (l) => l.maxActiveProjects === null || l.maxActiveProjects > limitCheck.limit,
+      message: `${limitCheck.reason} Faça upgrade pra criar mais projetos ou arquive algum existente.`,
+      limit: { used: limitCheck.used, limit: limitCheck.limit, unit: "projetos ativos" },
+    });
+  }
 
   const { data, error } = await supabase
     .from("projects")

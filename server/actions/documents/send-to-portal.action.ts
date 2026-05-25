@@ -11,6 +11,7 @@ import { renderDocumentSentWhatsapp } from "@/lib/whatsapp/templates";
 import { captureServer } from "@/lib/observability/posthog";
 import { env } from "@/lib/validators/env";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
+import { denyForUpgrade, type ActionFailure } from "@/lib/billing/upgrade-gate";
 
 const schema = z.object({
   document_id: z.string().uuid(),
@@ -19,7 +20,7 @@ const schema = z.object({
 export type SendToPortalInput = z.infer<typeof schema>;
 export type SendToPortalResult =
   | { ok: true; portal_token: string; email_sent: boolean; whatsapp_sent: boolean }
-  | { ok: false; error: string };
+  | ActionFailure;
 
 export async function sendDocumentToPortalAction(
   raw: SendToPortalInput,
@@ -82,12 +83,15 @@ export async function sendDocumentToPortalAction(
     .select("plano")
     .eq("id", project.org_id)
     .single<{ plano: PlanId }>();
-  if (!getPlanLimits(orgRow?.plano ?? "free").portalClienteEnabled) {
-    return {
-      ok: false,
-      error:
-        "Portal do cliente está disponível a partir do plano Pro. Faça upgrade em /billing para liberar.",
-    };
+  const currentPlan = orgRow?.plano ?? "free";
+  if (!getPlanLimits(currentPlan).portalClienteEnabled) {
+    return denyForUpgrade({
+      feature: "portalClienteEnabled",
+      currentPlan,
+      requires: (l) => l.portalClienteEnabled,
+      message:
+        "Portal do cliente está disponível a partir do plano Solo. Libere envio de documentos com aprovação digital pra cliente.",
+    });
   }
 
   const hash = createHash("sha256").update(JSON.stringify(doc.conteudo_tiptap)).digest("hex");

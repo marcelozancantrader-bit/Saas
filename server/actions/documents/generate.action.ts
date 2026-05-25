@@ -11,6 +11,7 @@ import { checkRateLimit, rateLimitError } from "@/lib/ratelimit/check";
 import { getContractTemplate } from "@/lib/contract-templates/templates";
 import { captureServer } from "@/lib/observability/posthog";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
+import { denyForUpgrade, type ActionFailure } from "@/lib/billing/upgrade-gate";
 
 const inputSchema = z.object({
   project_id: z.string().uuid(),
@@ -32,9 +33,7 @@ const inputSchema = z.object({
 
 export type GenerateDocumentActionInput = z.infer<typeof inputSchema>;
 
-export type GenerateDocumentActionResult =
-  | { ok: true; document_id: string }
-  | { ok: false; error: string };
+export type GenerateDocumentActionResult = { ok: true; document_id: string } | ActionFailure;
 
 export async function generateDocumentAction(
   raw: GenerateDocumentActionInput,
@@ -63,7 +62,8 @@ export async function generateDocumentAction(
       .select("plano")
       .eq("id", me0.orgId)
       .single<{ plano: PlanId }>();
-    const tplMax = getPlanLimits(orgRow0?.plano ?? "free").templatesContratoMax;
+    const currentPlan0 = orgRow0?.plano ?? "free";
+    const tplMax = getPlanLimits(currentPlan0).templatesContratoMax;
     if (tplMax !== null) {
       const TEMPLATE_ORDER = [
         "residencial_pf",
@@ -75,10 +75,14 @@ export async function generateDocumentAction(
       ];
       const idx = TEMPLATE_ORDER.indexOf(contractTemplate.id);
       if (idx >= tplMax) {
-        return {
-          ok: false,
-          error: `Este template está disponível em planos superiores. Seu plano libera os primeiros ${tplMax} ${tplMax === 1 ? "template" : "templates"}. Faça upgrade em /billing.`,
-        };
+        const tplWord = tplMax === 1 ? "template" : "templates";
+        return denyForUpgrade({
+          feature: "templatesContratoMax",
+          currentPlan: currentPlan0,
+          requires: (l) => l.templatesContratoMax === null || l.templatesContratoMax > tplMax,
+          message: `Este template está disponível em planos superiores. Seu plano libera os primeiros ${tplMax} ${tplWord} de contrato (CAU/CREA).`,
+          limit: { used: idx + 1, limit: tplMax, unit: "templates de contrato" },
+        });
       }
     }
   }
@@ -122,13 +126,18 @@ export async function generateDocumentAction(
     .select("plano")
     .eq("id", me.orgId)
     .single<{ plano: PlanId }>();
-  const usage = await getPlanUsage(me.orgId, orgRow?.plano ?? "free");
+  const currentPlan = orgRow?.plano ?? "free";
+  const usage = await getPlanUsage(me.orgId, currentPlan);
   const limitCheck = canGenerateAiDoc(usage);
   if (!limitCheck.ok) {
-    return {
-      ok: false,
-      error: `${limitCheck.reason} Faça upgrade do plano em /billing para gerar mais documentos.`,
-    };
+    const currentMonthly = getPlanLimits(currentPlan).monthlyAiDocs ?? 0;
+    return denyForUpgrade({
+      feature: "monthlyAiDocs",
+      currentPlan,
+      requires: (l) => l.monthlyAiDocs === null || l.monthlyAiDocs > currentMonthly,
+      message: `${limitCheck.reason} Faça upgrade pra gerar mais documentos neste mês.`,
+      limit: { used: limitCheck.used, limit: limitCheck.limit, unit: "documentos IA neste mês" },
+    });
   }
 
   const extracao =
