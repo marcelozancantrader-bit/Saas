@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertPortalAccess } from "@/server/services/portal-loader";
 import { notify } from "@/server/services/notifications";
+import { checkRateLimit, rateLimitError } from "@/lib/ratelimit/check";
 
 const schema = z.object({
   token: z.string().uuid(),
@@ -32,6 +33,15 @@ export async function requestScopeChangeAction(
 
   const access = await assertPortalAccess(parsed.data.token, parsed.data.project_id);
   if (!access.ok) return { ok: false, error: "Acesso negado ao portal." };
+
+  // Rate limit: cliente pode disparar até 5 scope-changes por hora.
+  // Sem isso, token comprometido pode poluir o escritório com centenas de pedidos.
+  const rl = await checkRateLimit({
+    key: `portal-scope:${parsed.data.token}`,
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rl.ok) return { ok: false, error: rateLimitError(rl.retryAfterSeconds) };
 
   const admin = createAdminClient();
   const { data, error } = await admin

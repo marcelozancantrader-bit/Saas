@@ -18,6 +18,7 @@ import { generateDocumentAction } from "@/server/actions/documents/generate.acti
 import { CONTRACT_TEMPLATES, type ContractTemplateId } from "@/lib/contract-templates/templates";
 import { useUpgradeGate } from "@/lib/billing/use-upgrade-gate";
 import { UpgradeGateDialog } from "@/components/features/billing/UpgradeGateDialog";
+import { GeneratingDocumentOverlay } from "./GeneratingDocumentOverlay";
 
 type Props = {
   projectId: string;
@@ -58,6 +59,7 @@ export function ContractTemplateDialog({ projectId, open, onClose }: Props) {
   return (
     <>
       <UpgradeGateDialog open={gate.open} onClose={gate.onClose} requirement={gate.requirement} />
+      <GeneratingDocumentOverlay tipoLabel={generating ? "Contrato" : null} />
       <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>

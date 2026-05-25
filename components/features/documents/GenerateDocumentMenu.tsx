@@ -17,6 +17,7 @@ import { ContractTemplateDialog } from "./ContractTemplateDialog";
 import { toast } from "sonner";
 import { useUpgradeGate } from "@/lib/billing/use-upgrade-gate";
 import { UpgradeGateDialog } from "@/components/features/billing/UpgradeGateDialog";
+import { GeneratingDocumentOverlay } from "./GeneratingDocumentOverlay";
 
 type Props = {
   projectId: string;
@@ -116,6 +117,7 @@ export function GenerateDocumentMenu({ projectId, hasConfirmedExtraction, hasCli
   return (
     <>
       <UpgradeGateDialog open={gate.open} onClose={gate.onClose} requirement={gate.requirement} />
+      <GeneratingDocumentOverlay tipoLabel={generating ? DOCUMENT_LABELS[generating] : null} />
       <ContractTemplateDialog
         projectId={projectId}
         open={contractDialogOpen}
