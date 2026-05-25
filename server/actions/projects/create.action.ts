@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { projectSchema } from "@/lib/validators/projects.schema";
@@ -79,5 +79,7 @@ export async function createProjectAction(formData: FormData): Promise<CreatePro
   });
 
   revalidatePath("/projetos");
+  updateTag("plan-usage");
+  updateTag("dashboard-metrics");
   return { ok: true, id: data.id };
 }

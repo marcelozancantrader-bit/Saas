@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateDocument, DOCUMENT_LABELS } from "@/lib/ai/generate-document";
@@ -270,6 +270,8 @@ export async function generateDocumentAction(
 
   revalidatePath(`/projetos/${project_id}`);
   revalidatePath(`/projetos/${project_id}/documentos`);
+  updateTag("plan-usage");
+  updateTag("dashboard-metrics");
 
   void captureServer({
     event: "document.generated",

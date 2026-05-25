@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export type DeleteProjectResult = { ok: true } | { ok: false; error: string };
@@ -14,5 +14,7 @@ export async function deleteProjectAction(projectId: string): Promise<DeleteProj
   }
 
   revalidatePath("/projetos");
+  updateTag("plan-usage");
+  updateTag("dashboard-metrics");
   return { ok: true };
 }

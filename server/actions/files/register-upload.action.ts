@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/server/services/current-org";
 import { inngest } from "@/lib/inngest/client";
 import { DISCIPLINAS } from "@/lib/ai/prompts/_shared-extraction-schema";
+import { checkStorageQuota } from "@/server/services/storage-quota";
+import { getPlanLimits, formatBytes, type PlanId } from "@/lib/plans/limits";
+import { denyForUpgrade, type ActionFailure } from "@/lib/billing/upgrade-gate";
 
 const registerSchema = z.object({
   project_id: z.string().uuid(),
@@ -20,7 +23,7 @@ const registerSchema = z.object({
 
 export type RegisterUploadInput = z.infer<typeof registerSchema>;
 
-export type RegisterUploadResult = { ok: true; id: string } | { ok: false; error: string };
+export type RegisterUploadResult = { ok: true; id: string } | ActionFailure;
 
 export async function registerUploadAction(
   raw: RegisterUploadInput,
@@ -30,10 +33,44 @@ export async function registerUploadAction(
     return { ok: false, error: "Dados de upload inválidos." };
   }
 
+  // Plan gate: storage quota. Antes deste check, Free podia subir TB de arquivos
+  // (limite só existia em PlanLimits.storageBytes mas não era enforçado).
+  const me = await getCurrentOrg();
+  const supabase = await createClient();
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("plano")
+    .eq("id", me.orgId)
+    .single<{ plano: PlanId }>();
+  const currentPlan = orgRow?.plano ?? "free";
+  const limits = getPlanLimits(currentPlan);
+  const quotaCheck = await checkStorageQuota(
+    me.orgId,
+    parsed.data.tamanho_bytes,
+    limits.storageBytes,
+  );
+  if (!quotaCheck.ok) {
+    return denyForUpgrade({
+      feature: "storageBytes",
+      currentPlan,
+      requires: (l) =>
+        l.storageBytes === null || l.storageBytes > quotaCheck.usedBytes + quotaCheck.bytesToAdd,
+      message: `Limite de armazenamento atingido: ${formatBytes(
+        quotaCheck.usedBytes,
+      )} de ${formatBytes(quotaCheck.limitBytes)}. Esse arquivo (${formatBytes(
+        quotaCheck.bytesToAdd,
+      )}) não cabe — apague algum existente ou faça upgrade.`,
+      limit: {
+        used: Math.round(quotaCheck.usedBytes / (1024 * 1024)),
+        limit: Math.round(quotaCheck.limitBytes / (1024 * 1024)),
+        unit: "MB",
+      },
+    });
+  }
+
   // Initial status: only PDFs go through AI extraction.
   const initialStatus = parsed.data.tipo === "planta_pdf" ? "pendente" : null;
 
-  const supabase = await createClient();
   const { data, error } = await supabase
     .from("project_files")
     .insert({ ...parsed.data, extracao_status: initialStatus })
@@ -47,13 +84,12 @@ export async function registerUploadAction(
   // Fire Inngest event for async extraction. Swallow errors — file is registered either way.
   if (parsed.data.tipo === "planta_pdf") {
     try {
-      const org = await getCurrentOrg();
       await inngest.send({
         name: "project_file.uploaded",
         data: {
           project_file_id: data.id,
           project_id: parsed.data.project_id,
-          org_id: org.orgId,
+          org_id: me.orgId,
           storage_path: parsed.data.storage_path,
           mime_type: parsed.data.mime_type,
           tipo: parsed.data.tipo,

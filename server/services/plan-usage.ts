@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   checkActiveProjectLimit,
@@ -27,7 +28,7 @@ function startOfMonthUtc(): string {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
 }
 
-export async function getPlanUsage(orgId: string, planId: PlanId): Promise<PlanUsage> {
+async function _getPlanUsageUncached(orgId: string, planId: PlanId): Promise<PlanUsage> {
   const admin = createAdminClient();
   const limits = getPlanLimits(planId);
 
@@ -56,6 +57,18 @@ export async function getPlanUsage(orgId: string, planId: PlanId): Promise<PlanU
     users: { used: users.count ?? 0, limit: limits.maxUsers },
   };
 }
+
+/**
+ * 3 queries paralelas por chamada. RSC do dashboard chama 2x (uma direto, outra
+ * via canCreateActiveProject). Cache 60s reduz drasticamente o tráfego ao Postgres.
+ *
+ * Pra invalidar antes (após criar projeto, gerar doc, convidar membro), chame
+ * `revalidateTag("plan-usage")` na action correspondente.
+ */
+export const getPlanUsage = unstable_cache(_getPlanUsageUncached, ["plan-usage"], {
+  revalidate: 60,
+  tags: ["plan-usage"],
+});
 
 /** Re-exporta com mesmas assinaturas pra não quebrar callers existentes. */
 export type LimitCheck = PlanLimitCheck;

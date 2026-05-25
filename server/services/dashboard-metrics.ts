@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -24,7 +25,7 @@ export type DashboardMetrics = {
 
 const STALE_DAYS = 14;
 
-export async function getDashboardMetrics(orgId: string): Promise<DashboardMetrics> {
+async function _getDashboardMetricsUncached(orgId: string): Promise<DashboardMetrics> {
   const admin = createAdminClient();
   const staleThreshold = new Date();
   staleThreshold.setUTCDate(staleThreshold.getUTCDate() - STALE_DAYS);
@@ -123,3 +124,16 @@ export async function getDashboardMetrics(orgId: string): Promise<DashboardMetri
     createdLast30d,
   };
 }
+
+/**
+ * 8 queries paralelas ao Supabase por chamada. Sem cache, cada page load do
+ * dashboard custava 8 hits — virou 8 hits a cada 60s por org.
+ *
+ * Pra invalidar mais cedo (após criar projeto / aprovar doc), chame
+ * `revalidateTag(\`org-metrics:\${orgId}\`)` na action correspondente.
+ */
+export const getDashboardMetrics = unstable_cache(
+  _getDashboardMetricsUncached,
+  ["dashboard-metrics"],
+  { revalidate: 60, tags: ["dashboard-metrics"] },
+);
