@@ -1,13 +1,13 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-26 (P18, fim de dia) — **Builder v3 em prod. Migration aplicada. 0 pendências de DB.**
+**Última pausa:** 2026-05-26 (P19) — **Builder v3 evoluído: +6 métricas (BRL/MRR/conversão), loops/iteração com `for_each`. 0 pendências de DB.**
 
 > **Marca decidida**: `Prumai` (research em [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md))
 > **Domínio**: ainda em `memorial-ai-mu.vercel.app` — registrar `prumai.com.br` é a próxima ação externa
 > **Plano executivo de migração**: [MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)
 > **Pricing**: v2 em prod ([PRICING_PROPOSAL.md](PRICING_PROPOSAL.md))
-> **0 migrations pendentes** em prod (P18 aplicada em 2026-05-26)
-> **Último commit pushed:** `afab100` (P18 Builder v3)
+> **0 migrations pendentes** em prod
+> **Último commit pushed:** P19 (loops + métricas BRL)
 
 ---
 
@@ -26,7 +26,7 @@ cat NEXT_SESSION.md                                # este doc
 - Builder de automações: `/admin/automacoes` (precisa platform_admin)
 - 4 migrations aplicadas em 2026-05-26: pricing v2, suspend enforcement, performance indexes, admin_automations
 
-**Onde parei**: builder v3 entregue end-to-end + migration aplicada. 10 trigger types (9 antigos + metric.threshold), 9 métricas, histórico de versões com restore, error.captured server-side via Inngest HTTP. Próximo passo: Marcelo testar ao vivo OU atacar próximo batch do backlog.
+**Onde parei**: P19 estende o builder com 15 métricas (era 9) — incluindo MRR BRL estimado, receita em risco past_due, conversão trial→paid 30d, storage bytes, usuários totais. Engine ganhou `for_each` com handles "loop" (subgrafo por item) e "done" (continuação). Variáveis `{{item}}` e `{{index}}` disponíveis em templates. Cap 500 iter por loop. Sem migration.
 
 ---
 
@@ -65,6 +65,7 @@ cat NEXT_SESSION.md                                # este doc
 - ✅ **Trial cancel self-service** — botão em /billing pra cancelar trial antes do prazo (P17-G3)
 - ✅ **3 migrations aplicadas em prod (2026-05-26)** — suspend enforcement, performance indexes, admin_automations
 - ✅ **Builder v3 (P18)** — metric.threshold trigger (cron 15 min, 9 métricas), histórico de versões (snapshot ao salvar + restore), error.captured server-side via HTTP direto pra Inngest, 2 recipes novas (alerta custo IA + erro server)
+- ✅ **Builder v3.1 (P19)** — +6 métricas (MRR R$, receita em risco, conversão trial→paid 30d, storage bytes, users count, extracts failed). `for_each` action no engine (subgrafo por item, cap 500, `{{item}}`/`{{index}}` em templates). 1 recipe nova (loop demo)
 
 **Próxima ação externa (Marcelo executa)**:
 
@@ -79,15 +80,15 @@ cat NEXT_SESSION.md                                # este doc
 
 **Backlog priorizado pra próxima sessão (ordem de impacto)**:
 
-| Item                                      | Esforço                            | Bloqueio            | Descrição                                                                                                                          |
-| ----------------------------------------- | ---------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Testar builder ao vivo end-to-end**     | 10 min                             | nenhum              | Marcelo: criar recipe "Custo IA > US$ 5" → forçar geração de doc → ver run; restaurar versão anterior; ver email no error.captured |
-| **Métricas BRL / signups por plano**      | 1-2h                               | nenhum              | Mais 5 métricas (revenue mensal estimado, MRR, conversão trial→pago, ...) — só adicionar entries em METRIC_CATALOG                 |
-| **Builder pro cliente final** (workspace) | sprint                             | decisão de gate     | Pro+ ou Studio+? Mesmo engine, escopo por org                                                                                      |
-| **Rebrand Memorial → Prumai**             | 3-4h                               | domínio             | Refactor copy ~40 arquivos UI, troca de assets                                                                                     |
-| **Loops/iteração no engine**              | ~3h                                | nenhum              | for-each sobre array no payload, com max-iter pra evitar loop infinito                                                             |
-| **App mobile Capacitor**                  | 1-2 semanas                        | decisão estratégica | $99/ano Apple + $25 Google + sprint dedicado                                                                                       |
-| **Publicar OAuth Google**                 | ~30 min trabalho dev + 3-5d Google | domínio             | Sair do modo teste — verificação Google                                                                                            |
+| Item                                      | Esforço                            | Bloqueio            | Descrição                                                                                          |
+| ----------------------------------------- | ---------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------- |
+| **Testar builder ao vivo end-to-end**     | 15 min                             | nenhum              | Marcelo: testar recipe loop com payload mock; testar metric.threshold MRR; restaurar versão antiga |
+| **Builder pro cliente final** (workspace) | sprint                             | decisão de gate     | Pro+ ou Studio+? Mesmo engine, escopo por org                                                      |
+| **Audit diff visual entre versões**       | ~3h                                | nenhum              | jsondiffpatch ou similar pra mostrar o que mudou entre v#                                          |
+| **Rebrand Memorial → Prumai**             | 3-4h                               | domínio             | Refactor copy ~40 arquivos UI, troca de assets                                                     |
+| **Métricas Asaas API (revenue 30d)**      | ~2h                                | API key             | Soma de pagamentos confirmados via Asaas (não tem tabela payments interna)                         |
+| **App mobile Capacitor**                  | 1-2 semanas                        | decisão estratégica | $99/ano Apple + $25 Google + sprint dedicado                                                       |
+| **Publicar OAuth Google**                 | ~30 min trabalho dev + 3-5d Google | domínio             | Sair do modo teste — verificação Google                                                            |
 
 **Pendências externas (Marcelo)**:
 
@@ -119,6 +120,118 @@ cat BRANDING_RESEARCH.md                           # naming research
 | [PRICING_PROPOSAL.md](PRICING_PROPOSAL.md)       | Proposta consolidada de pricing v2, aprovada pelo fundador. Estado original pré-implementação.                                                   |
 | [NEXT_SESSION.md](NEXT_SESSION.md)               | Este documento — histórico de todas as sessões P1-P15.                                                                                           |
 | [CLAUDE.md](CLAUDE.md) + [AGENTS.md](AGENTS.md)  | Regras inegociáveis do projeto, stack, anti-padrões.                                                                                             |
+
+---
+
+## 🔁 P19 — Métricas BRL + loops/iteração (2026-05-26) — 1 commit
+
+Continuação direta do P18. Bateu nos 2 batches unblocked do backlog:
+**+6 métricas (incluindo BRL) + `for_each` no engine**.
+
+### Batch L — Mais métricas
+
+[lib/automations/metrics.ts](lib/automations/metrics.ts) +
+[metrics-catalog.ts](lib/automations/metrics-catalog.ts) — 6 entries novas:
+
+| ID                                    | Unit    | Categoria | O que mede                                                        |
+| ------------------------------------- | ------- | --------- | ----------------------------------------------------------------- |
+| `revenue.brl_mrr_now`                 | BRL     | Receita   | MRR normalizado (anual aplica -20%, PIX anual -25%). Big.js.      |
+| `revenue.brl_at_risk_overdue_now`     | BRL     | Receita   | MRR equivalente das subs `past_due` — receita prestes a evaporar  |
+| `documents.failed_count_24h`          | count   | Operação  | `project_files.extracao_status='erro'` nas últimas 24h            |
+| `storage.used_bytes_now`              | bytes   | Operação  | Soma `storage.objects.metadata.size` em todos buckets             |
+| `users.count_active_now`              | count   | Atividade | Linhas em `organization_members`                                  |
+| `conversion.trial_to_active_rate_30d` | percent | Receita   | Das orgs com trial nos últimos 30d, % que tem subscription active |
+
+`MetricUnit` ganhou `"percent"` e `formatMetricValue` formata com sufixo `%`.
+
+### Batch M — Loops/iteração no engine
+
+Novo action `for_each` ([lib/automations/types.ts](lib/automations/types.ts)
+`forEachConfigSchema`):
+
+```ts
+{
+  items_path: "payload.items" | "lastStep.rows" | "steps.<id>.x",
+  max_iterations: 1..500  // cap, default 50
+}
+```
+
+**Engine refatorado** ([lib/automations/engine.ts](lib/automations/engine.ts)):
+
+- Extraído `runSubGraph()` reusável (BFS com `excludeFromVisit` + `nodeIdPrefix`).
+- `for_each` é tratado em `runForEach()` — não tem handler em
+  [actions/index.ts](lib/automations/actions/index.ts) (HANDLERS agora é
+  `Partial<Record<ActionType, ActionHandler>>`).
+- Body do loop = subgrafo reachable pela handle `"loop"`, computado via
+  `collectReachable()` que para antes de cruzar pra handle `"done"`.
+- Pra cada item (até max_iterations):
+  - Sub-BFS com `nodeIdPrefix = ${forEachId}[${i}].` → steps no histórico
+    aparecem como `audit-loop[0]`, `audit-loop[1]`, etc.
+  - `ActionContext` recebe `item` e `index` setados.
+  - `lastStep` e `steps` são compartilhados entre iterações (sequencial).
+- Step do for_each próprio é emitido com output `{ items_count, iterations,
+capped }` pra visibilidade no histórico.
+- Após o loop, marca todos os body nodes como visited no BFS-pai e segue
+  via handle `"done"`.
+
+**ActionContext** ([lib/automations/actions/index.ts](lib/automations/actions/index.ts)):
+
+- Novos campos `item?: unknown` e `index?: number`.
+- `resolveTemplate`/`resolvePath` resolvem `{{item}}`, `{{item.foo}}`,
+  `{{index}}`.
+
+**UI**:
+
+- `LoopNode` ([NodeCards.tsx](components/features/admin/automations/NodeCards.tsx))
+  — card fuchsia com 2 handles à direita (`"loop"` magenta, `"done"` cinza).
+- `nodeKindSchema` ganhou `"loop"`. `AutomationEditor.tsx` registra `loop:
+LoopNode` em nodeTypes e `addNode` cria com `kind: "loop"`.
+- `NodeConfigPanel`: `max_iterations` entrou em NUMERIC_KEYS — renderiza
+  como input number.
+
+**Catalog**: `isControlAction` inclui `for_each` agora. Novo helper
+`isLoopAction`. Categoria `"Controle"`.
+
+### Recipe nova
+
+🔁 **Loop: cada item do payload → audit** (categoria Operação) — demo de uso.
+Trigger schedule.daily → for_each em payload.items → create_audit_entry com
+{{item}} no entity_id_path; ramo "done" → audit do fim do loop.
+
+### Resumo numérico P19
+
+- 1 commit
+- 0 arquivos novos (só edição)
+- ~9 arquivos modificados:
+  - `lib/automations/metrics.ts` + `metrics-catalog.ts` (6 métricas novas)
+  - `lib/automations/types.ts` (for_each, NodeKind=loop)
+  - `lib/automations/catalog.ts` (for_each entry, isLoopAction)
+  - `lib/automations/engine.ts` (refactor pra subgraph + for_each)
+  - `lib/automations/actions/index.ts` (item/index no ctx, HANDLERS Partial)
+  - `lib/automations/recipes.ts` (recipe loop)
+  - `components/features/admin/automations/NodeCards.tsx` (LoopNode)
+  - `components/features/admin/automations/NodeConfigPanel.tsx` (max_iterations)
+  - `components/features/admin/automations/AutomationEditor.tsx` (loop nodeType)
+- 0 migrations
+- 0 envs novas
+
+### Verificação ponta-a-ponta (sem migration nova)
+
+1. `/admin/automacoes/nova` → tab "Receitas" → "Loop: cada item do payload"
+2. Editor abre com 4 nodes: trigger → for_each → (audit loop) + (audit done)
+3. Click no for_each → confirma `items_path = payload.items`, `max_iterations = 50`
+4. "Testar" → payload mock `{ items: [{id:1}, {id:2}, {id:3}] }`
+5. Histórico mostra: trigger; for_each (output items_count=3); audit-loop[0],
+   audit-loop[1], audit-loop[2]; audit-done.
+
+### Fora de escopo (sprint futuro)
+
+- Loop body com if_condition dentro (precisa testar mais).
+- Recursive nested for_each (engine suporta em teoria — não testado).
+- Conditional break dentro do loop (exit early).
+- Builder pro cliente final (workspace).
+
+### 0 migration pendente
 
 ---
 

@@ -19,6 +19,7 @@ import {
   createAuditEntryConfigSchema,
   waitDelayConfigSchema,
   ifConditionConfigSchema,
+  forEachConfigSchema,
 } from "./types";
 import type { ZodTypeAny } from "zod";
 
@@ -278,6 +279,18 @@ export const ACTION_CATALOG: Record<ActionType, ActionCatalogEntry> = {
       value: "studio",
     },
   },
+  for_each: {
+    id: "for_each",
+    label: "Pra cada item (loop)",
+    description:
+      "Itera sobre um array do payload. Executa o subgrafo conectado em 'loop' uma vez por item (cap 500). Depois segue por 'done'. Use {{item}} e {{index}} nos templates.",
+    category: "Controle",
+    configSchema: forEachConfigSchema,
+    configPlaceholder: {
+      items_path: "payload.items",
+      max_iterations: "50",
+    },
+  },
 };
 
 export const ACTIONS_BY_CATEGORY = ACTION_TYPES.reduce(
@@ -298,6 +311,10 @@ export function isConditionAction(actionType: string): boolean {
   return actionType === "if_condition";
 }
 
+export function isLoopAction(actionType: string): boolean {
+  return actionType === "for_each";
+}
+
 export function isControlAction(actionType: string): boolean {
-  return actionType === "if_condition" || actionType === "wait_delay";
+  return actionType === "if_condition" || actionType === "wait_delay" || actionType === "for_each";
 }

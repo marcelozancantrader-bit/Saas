@@ -23,7 +23,7 @@ import { Play } from "lucide-react";
 import { ACTION_CATALOG, TRIGGER_CATALOG, ACTIONS_BY_CATEGORY } from "@/lib/automations/catalog";
 import { updateAutomationAction } from "@/server/actions/admin/automations/update.action";
 import type { AdminAutomation, AutomationGraph } from "@/lib/automations/types";
-import { TriggerNode, ActionNode, ConditionNode } from "./NodeCards";
+import { TriggerNode, ActionNode, ConditionNode, LoopNode } from "./NodeCards";
 import { NodeConfigPanel } from "./NodeConfigPanel";
 import { TestRunDialog } from "./TestRunDialog";
 
@@ -31,6 +31,7 @@ const nodeTypes: NodeTypes = {
   trigger: TriggerNode,
   action: ActionNode,
   condition: ConditionNode,
+  loop: LoopNode,
 };
 
 export function AutomationEditor({ automation }: { automation: AdminAutomation }) {
@@ -109,14 +110,21 @@ function EditorInner({ automation }: { automation: AdminAutomation }) {
   const addNode = useCallback(
     (actionType: string) => {
       const isCondition = actionType === "if_condition";
+      const isLoop = actionType === "for_each";
       const entry = ACTION_CATALOG[actionType as keyof typeof ACTION_CATALOG];
       const id = `${actionType}-${crypto.randomUUID().slice(0, 8)}`;
+      const kind: "condition" | "loop" | "action" = isCondition
+        ? "condition"
+        : isLoop
+          ? "loop"
+          : "action";
+      const nodeType: "condition" | "loop" | "action" = kind;
       const newNode: Node = {
         id,
-        type: isCondition ? "condition" : "action",
+        type: nodeType,
         position: { x: 320, y: 80 + nodes.length * 110 },
         data: {
-          kind: isCondition ? "condition" : "action",
+          kind,
           actionType,
           label: entry?.label ?? actionType,
           config: { ...entry.configPlaceholder } as Record<string, unknown>,

@@ -308,6 +308,74 @@ export const RECIPES: Recipe[] = [
     },
   },
   {
+    id: "loop-payload-items-audit",
+    name: "Loop: cada item do payload → audit",
+    description:
+      "Exemplo de iteração — pra cada item em payload.items, registra audit_log com {{item}} e {{index}}. Use como base pra processar arrays vindos de webhook.",
+    category: "Operação",
+    icon: "🔁",
+    trigger: { type: "schedule.daily", config: {} },
+    graph: {
+      nodes: [
+        {
+          id: n("trigger-1"),
+          type: "trigger",
+          position: { x: 80, y: 80 },
+          data: {
+            kind: "trigger",
+            actionType: "schedule.daily",
+            label: "Diário 9h",
+            config: {},
+          },
+        },
+        {
+          id: n("loop-1"),
+          type: "loop",
+          position: { x: 340, y: 80 },
+          data: {
+            kind: "loop",
+            actionType: "for_each",
+            label: "Pra cada item",
+            config: { items_path: "payload.items", max_iterations: 50 },
+          },
+        },
+        {
+          id: n("audit-loop"),
+          type: "action",
+          position: { x: 620, y: 30 },
+          data: {
+            kind: "action",
+            actionType: "create_audit_entry",
+            label: "Audit item",
+            config: {
+              action: "system.iteration",
+              entity_type: "loop_item",
+            },
+          },
+        },
+        {
+          id: n("audit-done"),
+          type: "action",
+          position: { x: 620, y: 180 },
+          data: {
+            kind: "action",
+            actionType: "create_audit_entry",
+            label: "Audit fim do loop",
+            config: {
+              action: "system.loop_completed",
+              entity_type: "system",
+            },
+          },
+        },
+      ],
+      edges: [
+        { id: "e-1", source: n("trigger-1"), target: n("loop-1") },
+        { id: "e-2", source: n("loop-1"), target: n("audit-loop"), sourceHandle: "loop" },
+        { id: "e-3", source: n("loop-1"), target: n("audit-done"), sourceHandle: "done" },
+      ],
+    },
+  },
+  {
     id: "daily-summary-audit",
     name: "Audit diário 9h",
     description:

@@ -31,7 +31,7 @@ type Props = {
   onClose: () => void;
 };
 
-const NUMERIC_KEYS = new Set(["seconds"]);
+const NUMERIC_KEYS = new Set(["seconds", "max_iterations"]);
 const TEXTAREA_KEYS = new Set(["body", "body_template", "text"]);
 const OP_KEYS = new Set(["op"]);
 

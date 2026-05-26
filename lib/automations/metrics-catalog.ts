@@ -5,7 +5,7 @@
  * listar as métricas pro usuário escolher — sem precisar executá-las no browser.
  */
 
-export type MetricUnit = "BRL" | "USD" | "count" | "bytes";
+export type MetricUnit = "BRL" | "USD" | "count" | "bytes" | "percent";
 
 export type MetricCatalogEntry = {
   id: string;
@@ -79,6 +79,51 @@ export const METRIC_CATALOG: Record<string, MetricCatalogEntry> = {
     unit: "count",
     category: "Operação",
   },
+  "revenue.brl_mrr_now": {
+    id: "revenue.brl_mrr_now",
+    label: "MRR estimado (R$)",
+    description:
+      "Soma normalizada mensal das subscriptions active. Anual aplica -20%, PIX anual aplica -25% no preço base.",
+    unit: "BRL",
+    category: "Receita",
+  },
+  "revenue.brl_at_risk_overdue_now": {
+    id: "revenue.brl_at_risk_overdue_now",
+    label: "Receita em risco (R$) — past_due",
+    description:
+      "MRR equivalente das subscriptions com status='past_due'. Quanto pode evaporar se cobrança continuar falhando.",
+    unit: "BRL",
+    category: "Receita",
+  },
+  "documents.failed_count_24h": {
+    id: "documents.failed_count_24h",
+    label: "Extrações de planta falhadas (24h)",
+    description: "project_files com extracao_status='erro' nas últimas 24h.",
+    unit: "count",
+    category: "Operação",
+  },
+  "storage.used_bytes_now": {
+    id: "storage.used_bytes_now",
+    label: "Storage total usado",
+    description: "Soma de storage.objects.metadata.size em todos buckets.",
+    unit: "bytes",
+    category: "Operação",
+  },
+  "users.count_active_now": {
+    id: "users.count_active_now",
+    label: "Usuários totais",
+    description: "Contagem de linhas em organization_members.",
+    unit: "count",
+    category: "Atividade",
+  },
+  "conversion.trial_to_active_rate_30d": {
+    id: "conversion.trial_to_active_rate_30d",
+    label: "Conversão trial→pago (%) — 30d",
+    description:
+      "Das orgs que iniciaram trial nos últimos 30 dias, % que tem subscription active agora.",
+    unit: "percent",
+    category: "Receita",
+  },
 };
 
 export const METRICS_BY_CATEGORY: Record<string, MetricCatalogEntry[]> = Object.values(
@@ -103,6 +148,8 @@ export function formatMetricValue(value: number, unit: MetricUnit): string {
       if (value >= 1024 ** 2) return `${(value / 1024 ** 2).toFixed(2)} MB`;
       if (value >= 1024) return `${(value / 1024).toFixed(2)} KB`;
       return `${value} B`;
+    case "percent":
+      return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(value)}%`;
     case "count":
     default:
       return new Intl.NumberFormat("pt-BR").format(value);

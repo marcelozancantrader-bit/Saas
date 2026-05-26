@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Zap, Cog, GitBranch } from "lucide-react";
+import { Zap, Cog, GitBranch, Repeat } from "lucide-react";
 import { ACTION_CATALOG, TRIGGER_CATALOG } from "@/lib/automations/catalog";
 import { formatMetricCondition } from "@/lib/automations/metrics-catalog";
 import type { ActionType, TriggerType } from "@/lib/automations/types";
@@ -90,6 +90,41 @@ export function ConditionNode(props: NodeProps) {
         position={Position.Right}
         id="false"
         className="!h-2 !w-2 !bg-rose-500"
+        style={{ top: "85%" }}
+      />
+    </div>
+  );
+}
+
+export function LoopNode(props: NodeProps) {
+  const data = props.data as NodeData;
+  const itemsPath = String(data.config.items_path ?? "");
+  const maxIter = data.config.max_iterations ?? 50;
+  return (
+    <div className="min-w-[200px] rounded-md border-2 border-fuchsia-400 bg-fuchsia-50 px-3 py-2 shadow-sm dark:border-fuchsia-500 dark:bg-fuchsia-950/50">
+      <Handle type="target" position={Position.Left} className="!h-2 !w-2 !bg-fuchsia-500" />
+      <div className="flex items-center gap-1.5">
+        <Repeat className="h-3.5 w-3.5 text-fuchsia-700 dark:text-fuchsia-300" />
+        <p className="text-[10px] font-semibold tracking-wider text-fuchsia-700 uppercase dark:text-fuchsia-300">
+          Loop
+        </p>
+      </div>
+      <p className="mt-1 text-sm font-medium text-zinc-900 dark:text-zinc-100">Pra cada item</p>
+      <p className="mt-0.5 text-[10px] text-zinc-600 dark:text-zinc-400">
+        em <code>{itemsPath || "(escolha)"}</code> · cap {String(maxIter)}
+      </p>
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="loop"
+        className="!h-2 !w-2 !bg-fuchsia-500"
+        style={{ top: "60%" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="done"
+        className="!h-2 !w-2 !bg-zinc-400"
         style={{ top: "85%" }}
       />
     </div>

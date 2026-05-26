@@ -27,6 +27,10 @@ export type ActionContext = {
   steps?: Record<string, unknown>;
   /** Output do step que acabou de rodar — azucar pra `{{lastStep.x}}`. */
   lastStep?: unknown;
+  /** Item corrente dentro de um loop for_each. */
+  item?: unknown;
+  /** Índice 0-based corrente dentro de um loop for_each. */
+  index?: number;
 };
 
 /**
@@ -45,7 +49,11 @@ export type ActionHandler = (
   ctx: ActionContext,
 ) => Promise<ActionResult>;
 
-const HANDLERS: Record<ActionType, ActionHandler> = {
+/**
+ * `for_each` é tratado direto no engine — não tem handler aqui.
+ * Por isso o Record é parcial.
+ */
+const HANDLERS: Partial<Record<ActionType, ActionHandler>> = {
   send_email_admin: runSendEmailAdmin,
   send_slack: runSendSlack,
   send_telegram: runSendTelegram,
@@ -99,6 +107,13 @@ function resolvePath(
   payload: Record<string, unknown>,
   ctx: ActionContext | null,
 ): unknown {
+  // Variáveis de loop: item / index
+  if (ctx && path === "index") return ctx.index;
+  if (ctx && (path === "item" || path.startsWith("item."))) {
+    const rest = path === "item" ? [] : path.slice("item.".length).split(".");
+    return walkObject(ctx.item, rest);
+  }
+
   // Variáveis encadeadas: steps.<node_id>.<...> e lastStep.<...>
   if (ctx && path.startsWith("lastStep")) {
     const rest = path === "lastStep" ? [] : path.slice("lastStep.".length).split(".");

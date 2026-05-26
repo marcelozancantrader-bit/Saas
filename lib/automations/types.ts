@@ -47,6 +47,7 @@ export const ACTION_TYPES = [
   "create_audit_entry",
   "wait_delay",
   "if_condition",
+  "for_each",
 ] as const;
 
 export type ActionType = (typeof ACTION_TYPES)[number];
@@ -96,6 +97,13 @@ export const ifConditionConfigSchema = z.object({
   value: z.string(),
 });
 
+export const forEachConfigSchema = z.object({
+  /** Path do array no payload/lastStep/steps (ex: "payload.items", "lastStep.rows"). */
+  items_path: z.string().min(1),
+  /** Cap pra evitar loop com 10k items derrubando o runner. */
+  max_iterations: z.number().int().min(1).max(500).default(50),
+});
+
 // =============================================================================
 // TRIGGER CONFIGS — schemas específicos por tipo de trigger
 // =============================================================================
@@ -115,7 +123,7 @@ export type MetricThresholdConfig = z.infer<typeof metricThresholdConfigSchema>;
 // AUTOMATION GRAPH (React Flow)
 // =============================================================================
 
-export const nodeKindSchema = z.enum(["trigger", "action", "condition"]);
+export const nodeKindSchema = z.enum(["trigger", "action", "condition", "loop"]);
 export type NodeKind = z.infer<typeof nodeKindSchema>;
 
 export const automationNodeSchema = z.object({
