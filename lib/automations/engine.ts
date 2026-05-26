@@ -55,6 +55,9 @@ export async function runAutomation(
   const queue: string[] = [triggerNode.id];
   const visited = new Set<string>();
   let anyFailed = false;
+  // Acumula outputs pra usar em `{{steps.node_id.x}}` e `{{lastStep.x}}`
+  const stepOutputs: Record<string, unknown> = {};
+  let lastStepOutput: unknown = undefined;
 
   while (queue.length > 0) {
     const nodeId = queue.shift()!;
@@ -88,6 +91,8 @@ export async function runAutomation(
     const actionCtx: ActionContext = {
       admin: ctx.admin,
       payload: ctx.payload,
+      steps: stepOutputs,
+      lastStep: lastStepOutput,
       ...(ctx.step ? { step: ctx.step } : {}),
     };
     let result;
@@ -109,6 +114,10 @@ export async function runAutomation(
         output: result.output,
         duration_ms,
       });
+
+      // Acumula output pra encadeamento de variáveis
+      stepOutputs[nodeId] = result.output;
+      lastStepOutput = result.output;
 
       // Decide próximas arestas
       const outgoing = outgoingEdges(graph, nodeId);

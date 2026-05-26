@@ -23,6 +23,10 @@ export type ActionContext = {
   step?: {
     sleep: (id: string, duration: string) => Promise<void>;
   };
+  /** Outputs acumulados de steps anteriores — chave = node_id. */
+  steps?: Record<string, unknown>;
+  /** Output do step que acabou de rodar — azucar pra `{{lastStep.x}}`. */
+  lastStep?: unknown;
 };
 
 /**
@@ -57,33 +61,65 @@ export function getActionHandler(actionType: string): ActionHandler | null {
 }
 
 /**
- * Resolve placeholders {{payload.xxx}} ou {{$.event}} em strings.
- *
- * Suporta:
- *   - {{payload.org.name}}  → payload.org.name
- *   - {{$.event}}            → event name (precisa ser passado em payload._event)
- *   - {{$.timestamp}}        → payload._timestamp
+ * Resolve placeholders em strings. Suportados:
+ *   - {{payload.org.name}}    → ctx.payload.org.name (trigger original)
+ *   - {{$.event}}              → atalho pra payload (sinônimo de {{payload.x}})
+ *   - {{steps.node_id.x}}      → output do step `node_id` (após ele rodar)
+ *   - {{lastStep.x}}           → output do step que acabou de rodar
  *
  * Se path não resolve, deixa o {{...}} literal (visível pro admin notar bug).
+ *
+ * Versão simplificada (sem ctx) ainda funciona pra backward compat — só
+ * resolve {{payload.x}}.
  */
-export function resolveTemplate(template: string, payload: Record<string, unknown>): string {
+export function resolveTemplate(
+  template: string,
+  payloadOrCtx: Record<string, unknown> | ActionContext,
+): string {
+  // Detecta se é ActionContext ou payload puro
+  const isCtx =
+    payloadOrCtx &&
+    typeof payloadOrCtx === "object" &&
+    "payload" in payloadOrCtx &&
+    "admin" in payloadOrCtx;
+  const ctx = isCtx ? (payloadOrCtx as ActionContext) : null;
+  const payload = isCtx ? ctx!.payload : (payloadOrCtx as Record<string, unknown>);
+
   return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
     const trimmed = String(path).trim();
-    const value = resolvePath(payload, trimmed);
+    const value = resolvePath(trimmed, payload, ctx);
     if (value === undefined || value === null) return match;
     if (typeof value === "object") return JSON.stringify(value);
     return String(value);
   });
 }
 
-function resolvePath(obj: Record<string, unknown>, path: string): unknown {
-  // Suporta "payload.x.y" e "$.event" (sinônimos)
+function resolvePath(
+  path: string,
+  payload: Record<string, unknown>,
+  ctx: ActionContext | null,
+): unknown {
+  // Variáveis encadeadas: steps.<node_id>.<...> e lastStep.<...>
+  if (ctx && path.startsWith("lastStep")) {
+    const rest = path === "lastStep" ? [] : path.slice("lastStep.".length).split(".");
+    return walkObject(ctx.lastStep, rest);
+  }
+  if (ctx && path.startsWith("steps.")) {
+    const rest = path.slice("steps.".length).split(".");
+    return walkObject(ctx.steps ?? {}, rest);
+  }
+
+  // Atalhos do payload original ($.x ou payload.x ou x direto)
   const cleaned = path.startsWith("$.")
     ? path.slice(2)
     : path.startsWith("payload.")
       ? path.slice(8)
       : path;
-  const parts = cleaned.split(".");
+  return walkObject(payload, cleaned.split("."));
+}
+
+function walkObject(obj: unknown, parts: string[]): unknown {
+  if (parts.length === 0) return obj;
   let cur: unknown = obj;
   for (const part of parts) {
     if (cur === null || cur === undefined || typeof cur !== "object") return undefined;

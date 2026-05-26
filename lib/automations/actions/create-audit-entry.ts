@@ -16,9 +16,9 @@ export async function runCreateAuditEntry(
   }
 
   const entityId = parsed.data.entity_id_path
-    ? resolveTemplate(`{{payload.${parsed.data.entity_id_path}}}`, ctx.payload)
+    ? resolveTemplate(`{{payload.${parsed.data.entity_id_path}}}`, ctx)
     : null;
-  const orgId = resolveTemplate(`{{payload.org_id}}`, ctx.payload);
+  const orgId = resolveTemplate(`{{payload.org_id}}`, ctx);
   const orgIdValid = /^[0-9a-f-]{36}$/i.test(orgId) ? orgId : null;
 
   const { error } = await ctx.admin.from("audit_log").insert({

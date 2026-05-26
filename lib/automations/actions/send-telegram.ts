@@ -26,7 +26,7 @@ export async function runSendTelegram(
     };
   }
 
-  const text = resolveTemplate(parsed.data.text, ctx.payload);
+  const text = resolveTemplate(parsed.data.text, ctx);
 
   try {
     const r = await fetch(

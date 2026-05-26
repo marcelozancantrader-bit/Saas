@@ -17,14 +17,14 @@ export async function runMarkOrgMeta(
     return { ok: false, error: `Config inválida: ${parsed.error.issues[0]?.message ?? "?"}` };
   }
 
-  const orgId = resolveTemplate(`{{payload.${parsed.data.org_id_path}}}`, ctx.payload);
+  const orgId = resolveTemplate(`{{payload.${parsed.data.org_id_path}}}`, ctx);
   if (!orgId || !/^[0-9a-f-]{36}$/i.test(orgId)) {
     return {
       ok: false,
       error: `org_id_path "${parsed.data.org_id_path}" não resolve pra UUID válido`,
     };
   }
-  const valueResolved = resolveTemplate(parsed.data.value, ctx.payload);
+  const valueResolved = resolveTemplate(parsed.data.value, ctx);
 
   // Parse JSON se valor parece serializado; senão deixa string.
   let valueParsed: unknown = valueResolved;

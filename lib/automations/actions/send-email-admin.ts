@@ -13,8 +13,8 @@ export async function runSendEmailAdmin(
     return { ok: false, error: `Config inválida: ${parsed.error.issues[0]?.message ?? "?"}` };
   }
 
-  const subject = resolveTemplate(parsed.data.subject, ctx.payload);
-  const body = resolveTemplate(parsed.data.body, ctx.payload);
+  const subject = resolveTemplate(parsed.data.subject, ctx);
+  const body = resolveTemplate(parsed.data.body, ctx);
 
   const html = `
     <div style="font-family:-apple-system,sans-serif;max-width:560px;padding:24px;color:#18181b;">

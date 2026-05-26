@@ -8,6 +8,7 @@ import { ArrowLeft, History } from "lucide-react";
 import { AutomationEditor } from "@/components/features/admin/automations/AutomationEditor";
 import { DeleteAutomationButton } from "@/components/features/admin/automations/DeleteAutomationButton";
 import { AutomationToggle } from "@/components/features/admin/automations/AutomationToggle";
+import { ExportAutomationButton } from "@/components/features/admin/automations/ExportAutomationButton";
 import {
   automationGraphSchema,
   triggerSchema,
@@ -70,6 +71,7 @@ export default async function AutomationEditorPage({ params }: Props) {
             <History className="mr-1.5 h-3.5 w-3.5" />
             Histórico ({automation.run_count})
           </Link>
+          <ExportAutomationButton automation={automation} />
           <DeleteAutomationButton id={automation.id} />
         </div>
       </div>

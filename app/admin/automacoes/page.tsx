@@ -8,6 +8,7 @@ import { Plus, Workflow } from "lucide-react";
 import { TRIGGER_CATALOG } from "@/lib/automations/catalog";
 import type { AdminAutomation, TriggerType } from "@/lib/automations/types";
 import { AutomationToggle } from "@/components/features/admin/automations/AutomationToggle";
+import { ImportAutomationButton } from "@/components/features/admin/automations/ImportAutomationButton";
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +34,16 @@ export default async function AutomationsListPage() {
             audit log.
           </p>
         </div>
-        <Link href="/admin/automacoes/nova" className={cn(buttonVariants({ variant: "default" }))}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Nova automação
-        </Link>
+        <div className="flex items-center gap-2">
+          <ImportAutomationButton />
+          <Link
+            href="/admin/automacoes/nova"
+            className={cn(buttonVariants({ variant: "default" }))}
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Nova automação
+          </Link>
+        </div>
       </div>
 
       {automations.length === 0 ? (

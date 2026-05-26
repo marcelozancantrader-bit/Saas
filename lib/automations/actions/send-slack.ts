@@ -21,7 +21,7 @@ export async function runSendSlack(
     return { ok: false, error: "ADMIN_SLACK_WEBHOOK_URL não configurada" };
   }
 
-  const text = resolveTemplate(parsed.data.text, ctx.payload);
+  const text = resolveTemplate(parsed.data.text, ctx);
 
   try {
     const r = await fetch(env.ADMIN_SLACK_WEBHOOK_URL, {

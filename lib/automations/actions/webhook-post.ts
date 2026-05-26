@@ -15,7 +15,7 @@ export async function runWebhookPost(
     return { ok: false, error: `Config inválida: ${parsed.error.issues[0]?.message ?? "?"}` };
   }
 
-  const body = resolveTemplate(parsed.data.body_template, ctx.payload);
+  const body = resolveTemplate(parsed.data.body_template, ctx);
 
   // Tenta parsear como JSON, senão envia como text/plain
   let bodyToSend: string = body;
