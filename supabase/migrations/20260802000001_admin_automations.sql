@@ -50,6 +50,12 @@ create index if not exists idx_automation_runs_status
 alter table public.admin_automations enable row level security;
 alter table public.admin_automation_runs enable row level security;
 
+-- Drop antes de criar pra ser rerun-safe (Postgres não suporta
+-- CREATE POLICY IF NOT EXISTS).
+drop policy if exists "admin_automations_select_admins" on public.admin_automations;
+drop policy if exists "admin_automations_write_admins" on public.admin_automations;
+drop policy if exists "admin_automation_runs_select_admins" on public.admin_automation_runs;
+
 create policy "admin_automations_select_admins"
   on public.admin_automations for select
   to authenticated
