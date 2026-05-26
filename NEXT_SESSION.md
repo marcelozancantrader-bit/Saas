@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-25 (P16) — **Builder visual de automações admin (`/admin/automacoes`) com React Flow + engine Inngest.**
+**Última pausa:** 2026-05-26 (P17) — **Quick wins de perf/UX (next/image, RSC, cancel trial) + builder v2 (recipes, variáveis encadeadas, export/import).**
 
 > **Marca decidida**: `Prumai` (research em [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md))
 > **Domínio**: ainda em `memorial-ai-mu.vercel.app` — registrar `prumai.com.br` é a próxima ação externa
@@ -81,6 +81,109 @@ cat BRANDING_RESEARCH.md                           # naming research
 | [PRICING_PROPOSAL.md](PRICING_PROPOSAL.md)       | Proposta consolidada de pricing v2, aprovada pelo fundador. Estado original pré-implementação.                                                   |
 | [NEXT_SESSION.md](NEXT_SESSION.md)               | Este documento — histórico de todas as sessões P1-P15.                                                                                           |
 | [CLAUDE.md](CLAUDE.md) + [AGENTS.md](AGENTS.md)  | Regras inegociáveis do projeto, stack, anti-padrões.                                                                                             |
+
+---
+
+## 🚀 P17 — Perf/UX quick wins + Builder v2 (2026-05-26) — 2 commits
+
+Continuação direta do P16. Marcelo pediu batches G + H. Foram entregues
+6 sub-batches em 2 commits.
+
+### Batch G — Quick wins (commit `c0cdb15`)
+
+**G.1 — next/image em 5 lugares**:
+
+- `next.config.ts`: `remotePatterns` pra Supabase + formats AVIF/WebP.
+- DiaryEntryCard + PortalDiarySection: fotos com `fill` + `sizes` responsivo.
+- `app/p/[slug]` (portfolio público): logo + thumbnails de obra com priority.
+- `app/portal/[token]`: logo da org com priority.
+- WorkspaceForm: preview de logo (unoptimized se blob).
+- NewDiaryEntryDialog: preview upload (unoptimized pra blob URL).
+
+Antes: `<img>` sem otimização. Agora: AVIF/WebP automático, lazy loading
+nativo, zero layout shift.
+
+**G.2 — 3 components RSC migration**:
+
+- `PasswordStrength`: removido useMemo (cálculo trivial), virou RSC puro.
+- `BudgetDisciplinasCard`: 100% apresentacional, virou RSC.
+- `PlanComparisonTable`: trocou useState por `<details>` HTML nativo —
+  browser controla expand/collapse sem JS no client. Virou RSC.
+- Bonus: AdminSidebar ganhou link pra `/admin/automacoes` (esqueci no P16).
+
+**G.3 — Trial cancel self-service**:
+
+- [server/actions/billing/cancel-trial.action.ts](server/actions/billing/cancel-trial.action.ts) (owner/admin only).
+- CancelTrialButton com confirm dialog mostra dias restantes + aviso "anti-abuse".
+- Mantém `trial_started_at` setado → user não pode reiniciar trial.
+- Audit log + notification.
+
+Antes: trial só expirava sozinho (gap UX identificado na auditoria P15).
+
+### Batch H — Builder v2 (commit `0f7042e`)
+
+**H.1 — Recipes/templates pré-prontos** ([lib/automations/recipes.ts](lib/automations/recipes.ts)):
+
+- 5 receitas em 4 categorias:
+  - 📩 **Email a cada signup** (Conversão)
+  - 💰 **Pagamento confirmado → Slack** (Receita)
+  - ⚠️ **Pagamento atrasado → alerta email** (Suporte)
+  - 🚀 **Studio assinado → Slack + email** (com `if_condition`) (Receita)
+  - 📅 **Audit diário 9h** (Operação)
+- `/admin/automacoes/nova` ganhou tabs: "Usar receita pronta" (default) vs
+  "Começar do zero".
+- `createAutomationAction` aceita `recipe_id` como alternativa a `trigger_type`
+  — instancia graph completo com IDs renomeados via `instantiateRecipeGraph`.
+
+**H.2 — Variáveis encadeadas entre steps**:
+
+- `resolveTemplate` aceita `{{steps.node_id.x}}` e `{{lastStep.x}}` além
+  de `{{payload.x}}`.
+- Engine acumula `stepOutputs` + `lastStepOutput` durante BFS e passa no
+  `ActionContext`.
+- 8 action handlers atualizados pra passar `ctx` (com steps + lastStep)
+  em vez de só `ctx.payload`.
+- Backward-compat: callers antigos que passam só `payload` continuam funcionando.
+- Exemplo de uso: enviar email com `{{lastStep.email_id}}` da action anterior
+  pra criar audit entry referencial.
+
+**H.3 — Export/import JSON**:
+
+- [server/actions/admin/automations/import.action.ts](server/actions/admin/automations/import.action.ts):
+  zod valida shape, renomeia IDs do graph com sufixo único, cria pausada
+  por padrão (revisão antes de ativar).
+- ExportAutomationButton no editor: gera download de JSON com metadata.
+- ImportAutomationButton na lista: file picker `.json` até 200KB.
+- Use case: backup/compartilhar automações entre ambientes ou contas.
+
+### Não foi feito (escopo intencional)
+
+- Triggers de metric threshold ("custo IA > X em 24h") — exige cron de
+  agregação + comparação histórica. v3.
+- Histórico de versões do graph (audit de mudanças). v3.
+- Loops/iteração. v3.
+- Builder pro cliente final (workspace). Sprint dedicado.
+
+### Resumo numérico P17
+
+- 2 commits (`c0cdb15`, `0f7042e`)
+- 31 arquivos modificados, 5 novos:
+  - lib/automations/recipes.ts
+  - server/actions/admin/automations/import.action.ts
+  - server/actions/billing/cancel-trial.action.ts
+  - components/features/admin/automations/ExportAutomationButton.tsx
+  - components/features/admin/automations/ImportAutomationButton.tsx
+  - components/features/billing/CancelTrialButton.tsx
+- 0 migrations
+- 0 envs novas
+
+### Pendências em prod ainda
+
+As 3 migrations do P15-P16 continuam pendentes (aplicar no Supabase Dashboard):
+
+- `20260801000001_suspend_enforcement_and_webhook_events.sql`
+- `20260801000002_performance_indexes.sql`
+- `20260802000001_admin_automations.sql`
 
 ---
 
