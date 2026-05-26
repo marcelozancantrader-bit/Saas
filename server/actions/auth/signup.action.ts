@@ -7,6 +7,7 @@ import { env } from "@/lib/validators/env";
 import { checkRateLimit, rateLimitError } from "@/lib/ratelimit/check";
 import { getRequestIp } from "@/lib/ratelimit/ip";
 import { verifyTurnstile } from "@/lib/captcha/turnstile";
+import { publishAdminEvent } from "@/lib/automations/publish";
 
 export type SignupActionResult = { error: string } | { fieldErrors: Record<string, string[]> };
 
@@ -55,6 +56,13 @@ export async function signupAction(formData: FormData): Promise<SignupActionResu
     }
     return { error: "Não foi possível concluir o cadastro. Tente novamente." };
   }
+
+  // Publica evento pro builder de automações admin (fire-and-forget).
+  await publishAdminEvent("signup.created", {
+    email: parsed.data.email,
+    full_name: parsed.data.nome_completo,
+    org_name: parsed.data.nome_escritorio,
+  });
 
   redirect("/login?confirm=1");
 }

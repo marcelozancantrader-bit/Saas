@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { env } from "@/lib/validators/env";
 import { PLANS, type PlanId } from "@/lib/plans/limits";
+import { publishAdminEvent } from "@/lib/automations/publish";
 
 /**
  * Webhook Asaas.
@@ -143,15 +144,34 @@ export async function POST(req: NextRequest) {
       body: "Sua assinatura está ativa. Bom trabalho!",
       link_url: "/billing",
     });
+    // Publica pro builder de automações admin
+    await publishAdminEvent("payment.received", {
+      org_id: sub.org_id,
+      subscription_id: sub.id,
+      plano: sub.plano,
+      amount_cents: body.payment.value ? Math.round(body.payment.value * 100) : null,
+    });
     return NextResponse.json({ ok: true, event });
   }
 
   // ====== PAYMENT_OVERDUE — cliente atrasou ======
   if (event === "PAYMENT_OVERDUE" && body.payment?.subscription) {
+    const { data: sub } = await admin
+      .from("subscriptions")
+      .select("id, org_id, plano")
+      .eq("provider_subscription_id", body.payment.subscription)
+      .maybeSingle();
     await admin
       .from("subscriptions")
       .update({ status: "past_due", updated_at: now.toISOString() })
       .eq("provider_subscription_id", body.payment.subscription);
+    if (sub) {
+      await publishAdminEvent("payment.overdue", {
+        org_id: sub.org_id,
+        subscription_id: sub.id,
+        plano: sub.plano,
+      });
+    }
     return NextResponse.json({ ok: true, event });
   }
 
@@ -160,7 +180,7 @@ export async function POST(req: NextRequest) {
     const subId = body.payment.subscription;
     const { data: sub } = await admin
       .from("subscriptions")
-      .select("id, org_id")
+      .select("id, org_id, plano")
       .eq("provider_subscription_id", subId)
       .maybeSingle();
     if (sub) {
@@ -178,6 +198,11 @@ export async function POST(req: NextRequest) {
         title: "Pagamento estornado — voltando para Free",
         body: "Sua organização voltou ao plano Free. Você pode re-assinar a qualquer momento.",
         link_url: "/billing",
+      });
+      await publishAdminEvent("payment.refunded", {
+        org_id: sub.org_id,
+        subscription_id: sub.id,
+        previous_plano: sub.plano,
       });
     }
     return NextResponse.json({ ok: true, event });

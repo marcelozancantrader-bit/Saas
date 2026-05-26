@@ -19,6 +19,7 @@ import {
   type PlanId,
   type BillingCycle,
 } from "@/lib/plans/limits";
+import { publishAdminEvent } from "@/lib/automations/publish";
 
 const schema = z.object({
   target_plan: z.enum(["free", "solo", "pro", "studio", "agency"]),
@@ -136,6 +137,15 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
 
   // Upgrade manual (sem Asaas): atualiza plano direto + cria subscription manual.
   const admin = createAdminClient();
+
+  // Lê plano antigo pra publicar evento corretamente.
+  const { data: orgRowManual } = await admin
+    .from("organizations")
+    .select("plano")
+    .eq("id", me.orgId)
+    .single<{ plano: PlanId }>();
+  const oldPlano = orgRowManual?.plano ?? "free";
+
   const { error: orgErr } = await admin
     .from("organizations")
     .update({ plano: targetPlan, updated_at: new Date().toISOString() })
@@ -184,5 +194,24 @@ export async function upgradePlanAction(raw: UpgradePlanInput): Promise<UpgradeP
 
   revalidatePath("/");
   revalidatePath("/billing");
+
+  // Publica pro builder de automações admin (somente quando upgrade pra pago)
+  if (targetPlan !== "free") {
+    await publishAdminEvent("subscription.upgraded", {
+      org_id: me.orgId,
+      org_name: me.orgName,
+      new_plano: targetPlan,
+      old_plano: oldPlano,
+      cycle: targetCycle,
+    });
+  } else {
+    await publishAdminEvent("subscription.canceled", {
+      org_id: me.orgId,
+      org_name: me.orgName,
+      previous_plano: oldPlano,
+      reason: "user_initiated",
+    });
+  }
+
   return { ok: true, mode: "manual", new_plan: targetPlan };
 }

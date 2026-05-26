@@ -12,6 +12,7 @@ import { getContractTemplate } from "@/lib/contract-templates/templates";
 import { captureServer } from "@/lib/observability/posthog";
 import { getPlanLimits, type PlanId } from "@/lib/plans/limits";
 import { denyForUpgrade, type ActionFailure } from "@/lib/billing/upgrade-gate";
+import { publishAdminEvent } from "@/lib/automations/publish";
 
 const inputSchema = z.object({
   project_id: z.string().uuid(),
@@ -286,6 +287,16 @@ export async function generateDocumentAction(
       usd_cost: result.usage.usd_cost ?? null,
       prompt_versao: promptVersaoFinal,
     },
+  });
+
+  // Publica pro builder de automações admin
+  await publishAdminEvent("document.generated", {
+    org_id: me.orgId,
+    project_id,
+    document_id: inserted.id,
+    tipo,
+    versao: nextVersao,
+    usd_cost: result.usage.usd_cost ?? null,
   });
 
   return { ok: true, document_id: inserted.id };

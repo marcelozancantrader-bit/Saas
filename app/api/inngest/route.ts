@@ -7,6 +7,8 @@ import { expiredCancellationsCron } from "@/server/jobs/expired-cancellations-cr
 import { expiredTrialsCron } from "@/server/jobs/expired-trials-cron";
 import { trialReminderCron } from "@/server/jobs/trial-reminder-cron";
 import { trialReminderD3Cron } from "@/server/jobs/trial-reminder-d3-cron";
+import { adminAutomationRunner } from "@/server/jobs/admin-automation-runner";
+import { adminScheduleDailyCron } from "@/server/jobs/admin-schedule-daily-cron";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -18,5 +20,7 @@ export const { GET, POST, PUT } = serve({
     expiredTrialsCron,
     trialReminderCron,
     trialReminderD3Cron,
+    adminAutomationRunner,
+    adminScheduleDailyCron,
   ],
 });

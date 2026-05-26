@@ -16,6 +16,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
+  Workflow,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,7 @@ const SECTIONS = [
   { href: "/admin/subscriptions", title: "Assinaturas", icon: CreditCard },
   { href: "/admin/revenue", title: "Receita", icon: TrendingUp },
   { href: "/admin/audit", title: "Auditoria", icon: ScrollText },
+  { href: "/admin/automacoes", title: "Automações", icon: Workflow },
   { href: "/admin/feature-flags", title: "Feature flags", icon: Flag },
   { href: "/admin/announcements", title: "Anúncios", icon: Megaphone },
   { href: "/admin/health", title: "Health", icon: Activity },

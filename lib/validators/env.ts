@@ -55,6 +55,14 @@ const envSchema = z.object({
   // Meta Cloud (stub, V2)
   META_WA_ACCESS_TOKEN: z.string().optional(),
   META_WA_PHONE_NUMBER_ID: z.string().optional(),
+
+  // Admin notifications — usado pelo builder de automações (P16).
+  // Slack: criar Incoming Webhook em api.slack.com/apps; cole URL aqui.
+  ADMIN_SLACK_WEBHOOK_URL: z.string().url().optional(),
+  // Telegram: /newbot no @BotFather pra criar bot; copiar token.
+  ADMIN_TELEGRAM_BOT_TOKEN: z.string().optional(),
+  // Chat ID: enviar /start ao bot e ler em https://api.telegram.org/bot<TOKEN>/getUpdates
+  ADMIN_TELEGRAM_CHAT_ID: z.string().optional(),
 });
 
 type Env = z.infer<typeof envSchema>;
@@ -98,6 +106,9 @@ function parseEnv(): Env {
     ZAPI_CLIENT_TOKEN: process.env.ZAPI_CLIENT_TOKEN,
     META_WA_ACCESS_TOKEN: process.env.META_WA_ACCESS_TOKEN,
     META_WA_PHONE_NUMBER_ID: process.env.META_WA_PHONE_NUMBER_ID,
+    ADMIN_SLACK_WEBHOOK_URL: process.env.ADMIN_SLACK_WEBHOOK_URL,
+    ADMIN_TELEGRAM_BOT_TOKEN: process.env.ADMIN_TELEGRAM_BOT_TOKEN,
+    ADMIN_TELEGRAM_CHAT_ID: process.env.ADMIN_TELEGRAM_CHAT_ID,
   });
   if (!parsed.success) {
     const issues = parsed.error.issues
