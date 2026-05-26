@@ -1,6 +1,6 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-25 (P15) — **Auditoria profunda + 9 batches de fix (storage, cache, IA, types, UX, polish, hardening, perf+indices, a11y, conversão).**
+**Última pausa:** 2026-05-25 (P16) — **Builder visual de automações admin (`/admin/automacoes`) com React Flow + engine Inngest.**
 
 > **Marca decidida**: `Prumai` (research em [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md))
 > **Domínio**: ainda em `memorial-ai-mu.vercel.app` — registrar `prumai.com.br` é a próxima ação externa
@@ -81,6 +81,131 @@ cat BRANDING_RESEARCH.md                           # naming research
 | [PRICING_PROPOSAL.md](PRICING_PROPOSAL.md)       | Proposta consolidada de pricing v2, aprovada pelo fundador. Estado original pré-implementação.                                                   |
 | [NEXT_SESSION.md](NEXT_SESSION.md)               | Este documento — histórico de todas as sessões P1-P15.                                                                                           |
 | [CLAUDE.md](CLAUDE.md) + [AGENTS.md](AGENTS.md)  | Regras inegociáveis do projeto, stack, anti-padrões.                                                                                             |
+
+---
+
+## 🤖 P16 — Builder visual de automações admin (2026-05-25) — 1 commit
+
+Marcelo pediu "tipo o typebot, pra eu saber o que está acontecendo no SaaS e
+implantar agentes". Refinado em 2 perguntas: builder pra **admin** (não cliente
+final) + **editor visual** desde o começo (React Flow). Rebrand Memorial→Prumai
+foi cancelado intencionalmente.
+
+### Como funciona
+
+```
+Hooks no app (signup, payment, doc.generated, schedule.daily)
+    ↓ publishAdminEvent("signup.created", payload)
+inngest.send({ name: "admin/event.fired", data })
+    ↓
+adminAutomationRunner (Inngest function)
+    ↓ query automations enabled=true matching trigger.type
+Engine BFS percorre graph → executa handlers → persiste em admin_automation_runs
+```
+
+### Arquivos novos (24)
+
+**Backend / dados**:
+
+- [supabase/migrations/20260802000001_admin_automations.sql](supabase/migrations/20260802000001_admin_automations.sql)
+  — `admin_automations` + `admin_automation_runs` com RLS platform_admin.
+- [lib/automations/types.ts](lib/automations/types.ts) — TriggerType, ActionType,
+  AutomationGraph (zod), RunStep.
+- [lib/automations/catalog.ts](lib/automations/catalog.ts) — 9 triggers + 6 actions
+  - 1 condition com metadata (label, description, configSchema, examplePayload).
+- [lib/automations/publish.ts](lib/automations/publish.ts) — `publishAdminEvent`
+  fire-and-forget pros pontos de mutação.
+- [lib/automations/actions/](lib/automations/actions/) — 8 handlers: send_email_admin,
+  send_slack, send_telegram, mark_org_meta, webhook_post, create_audit_entry,
+  wait_delay, if_condition. Suporte a templates `{{payload.x.y}}` via `resolveTemplate`.
+- [lib/automations/engine.ts](lib/automations/engine.ts) — `runAutomation` faz BFS no
+  graph, respeita branches if/else (sourceHandle="true"|"false"), captura
+  output/error/duration_ms por step.
+- [server/jobs/admin-automation-runner.ts](server/jobs/admin-automation-runner.ts)
+  — Inngest function trigger `admin/event.fired` (concurrency 20, retries 2).
+- [server/jobs/admin-schedule-daily-cron.ts](server/jobs/admin-schedule-daily-cron.ts)
+  — cron 9h BRT que publica evento `schedule.daily`.
+
+**Server actions** (5): create, update (auto-save com debounce), toggle, delete,
+test-run (executa com payload mock sem persistir).
+
+**UI** (8 components + 4 páginas):
+
+- `/admin/automacoes` — lista com toggle on/off, badges, link pra histórico.
+- `/admin/automacoes/nova` — wizard: escolhe trigger (cards) → nome → cria + redirect.
+- `/admin/automacoes/[id]` — editor React Flow fullscreen com palette lateral
+  (drag-drop), config panel direito (form gerado de zod), botão Testar, auto-save 1s.
+- `/admin/automacoes/[id]/runs` — histórico expandível, mostra steps + erros + outputs.
+
+Custom nodes: TriggerNode (violeta), ActionNode (azul), ConditionNode (âmbar com
+2 handles `true`/`false`).
+
+### Hooks de eventos publicados
+
+- `signup.created` → [server/actions/auth/signup.action.ts](server/actions/auth/signup.action.ts)
+- `subscription.upgraded` / `subscription.canceled` →
+  [server/actions/billing/upgrade-plan.action.ts](server/actions/billing/upgrade-plan.action.ts)
+- `payment.received` / `payment.overdue` / `payment.refunded` →
+  [app/api/webhooks/asaas/route.ts](app/api/webhooks/asaas/route.ts)
+- `document.generated` → [server/actions/documents/generate.action.ts](server/actions/documents/generate.action.ts)
+- `schedule.daily` → cron 9h BRT
+- `error.captured` → planejado (precisa Sentry refactor server-only) — fora desse MVP
+
+### Envs novas opcionais
+
+```
+ADMIN_SLACK_WEBHOOK_URL=https://hooks.slack.com/...
+ADMIN_TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
+ADMIN_TELEGRAM_CHAT_ID=-1001234567890
+```
+
+Sem essas, actions degradam graciosamente (retornam erro só naquele step).
+
+### Templates de payload
+
+Campos `subject`, `body`, `text`, `body_template`, `value` aceitam placeholders:
+
+- `{{payload.org_name}}` → resolve do payload do trigger
+- `{{$.event}}` → nome do evento
+- `{{payload.amount_cents}}` → numérico
+
+Operadores do `if_condition`: `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `contains`
+(numérico via Big.js pra evitar float).
+
+### Verificação ponta-a-ponta (após aplicar migration)
+
+1. Login como platform_admin → `/admin/automacoes/nova`
+2. Escolhe trigger "Novo signup" → nome "Notificar email a cada signup" → criar
+3. Editor abre. Arrasta "Email pra admin" da palette. Conecta trigger → action.
+4. Click no node action: subject `Novo signup: {{payload.org_name}}`, body
+   `Email: {{payload.email}}`.
+5. Toggle Ativar.
+6. Em outra aba: faz signup novo (`/signup`).
+7. Volta em `/admin/automacoes/[id]/runs` → run com status `success`, step
+   `send_email_admin` com `output: { email_id, to }`.
+8. Email chega no inbox (se RESEND_API_KEY + SUPPORT_EMAIL).
+
+### Migration pendente em prod
+
+- `20260802000001_admin_automations.sql`
+
+### Fora de escopo (sprint futuro)
+
+- Cliente final (workspace) ter o próprio builder
+- Triggers de metric threshold ("custo IA > X em 24h")
+- Templates/recipes pré-prontos
+- Variáveis encadeadas entre steps (`{{$lastStep.output.x}}`)
+- Histórico de versões do graph
+- Loops/iteração
+- Export/import JSON de automação
+
+### Resumo numérico
+
+- 1 commit (`6d23a42`)
+- 24 arquivos novos + 5 modificados (hooks)
+- 1 migration nova pendente
+- 1 dep nova: `@xyflow/react@12.10.2` (~80KB gzipped)
+- 3 envs opcionais novas
 
 ---
 
