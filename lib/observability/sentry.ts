@@ -99,4 +99,58 @@ export async function captureException(
     // Don't let observability failure mask real errors.
     console.warn("[sentry] failed to ship event:", postErr);
   }
+
+  // Server-only: também publica `error.captured` no engine de automações admin
+  // via Inngest HTTP ingest (P18). Sem chain de import server-only — vai
+  // direto pra HTTP. Em client typeof window != "undefined" → early return.
+  await publishErrorCapturedEvent(err, context).catch(() => {});
+}
+
+/**
+ * Posta evento `error.captured` no Inngest via HTTP direto.
+ * Isomorphic-safe: early-return em client; em server faz fetch puro.
+ * Não passa por @/lib/automations/publish (que é server-only) pra evitar
+ * bundlar publish.ts no client (sentry.ts é importado por client components
+ * via DOCUMENT_LABELS no lib/ai/generate-document.ts).
+ */
+async function publishErrorCapturedEvent(
+  err: unknown,
+  context?: { tags?: Record<string, string>; extra?: Record<string, unknown> },
+): Promise<void> {
+  if (typeof window !== "undefined") return;
+  const eventKey = process.env.INNGEST_EVENT_KEY;
+  if (!eventKey) return;
+
+  const message = err instanceof Error ? err.message : String(err);
+  const errorName = err instanceof Error ? err.name : "UnknownError";
+  const area = context?.tags?.area ?? "unknown";
+
+  const payload = {
+    area,
+    message,
+    error_name: errorName,
+    ...(context?.tags?.org_id ? { org_id: context.tags.org_id } : {}),
+    ...(context?.extra ?? {}),
+    tags: context?.tags,
+  };
+
+  try {
+    // Inngest SDK manda payloads como array (componentes/Inngest.js:514).
+    await fetch(`https://inn.gs/e/${eventKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([
+        {
+          name: "admin/event.fired",
+          data: {
+            event: "error.captured",
+            payload,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      ]),
+    });
+  } catch {
+    // Não loga — recursão potencial se algo der errado aqui.
+  }
 }

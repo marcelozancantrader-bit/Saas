@@ -17,7 +17,7 @@ export type Recipe = {
   /** Descrição de 1-2 frases mostrando o valor. */
   description: string;
   /** Categoria pra agrupar no UI. */
-  category: "Conversão" | "Operação" | "Receita" | "Suporte";
+  category: "Conversão" | "Operação" | "Receita" | "Suporte" | "Métricas" | "Confiabilidade";
   /** Emoji ou Lucide icon name (renderizado como prefix). */
   icon: string;
   trigger: Trigger;
@@ -215,6 +215,96 @@ export const RECIPES: Recipe[] = [
         { id: "e-2", source: n("if-1"), target: n("slack-1"), sourceHandle: "true" },
         { id: "e-3", source: n("if-1"), target: n("email-1"), sourceHandle: "true" },
       ],
+    },
+  },
+  {
+    id: "ai-cost-alert",
+    name: "Custo IA > US$ 5 em 24h",
+    description:
+      "Cron a cada 15 min agrega custo de IA das últimas 24h. Se passar US$ 5, alerta no Slack (com cooldown 6h pra não spammar).",
+    category: "Métricas",
+    icon: "💸",
+    trigger: {
+      type: "metric.threshold",
+      config: {
+        metric: "ai.cost_usd_24h",
+        op: "gt",
+        threshold: 5,
+        cooldown_minutes: 360,
+      },
+    },
+    graph: {
+      nodes: [
+        {
+          id: n("trigger-1"),
+          type: "trigger",
+          position: { x: 80, y: 80 },
+          data: {
+            kind: "trigger",
+            actionType: "metric.threshold",
+            label: "Custo IA 24h > US$ 5",
+            config: {
+              metric: "ai.cost_usd_24h",
+              op: "gt",
+              threshold: 5,
+              cooldown_minutes: 360,
+            },
+          },
+        },
+        {
+          id: n("slack-1"),
+          type: "action",
+          position: { x: 360, y: 80 },
+          data: {
+            kind: "action",
+            actionType: "send_slack",
+            label: "Slack alerta",
+            config: {
+              text: ":fire: Custo IA passou US$ {{payload.threshold}}: agora em US$ {{payload.value}} nas últimas 24h.",
+            },
+          },
+        },
+      ],
+      edges: [{ id: "e-1", source: n("trigger-1"), target: n("slack-1") }],
+    },
+  },
+  {
+    id: "error-spike-alert",
+    name: "Erro server-side → alerta",
+    description:
+      "Qualquer captureException no server publica `error.captured`. Esta receita captura e manda email com area + mensagem pra triagem rápida.",
+    category: "Confiabilidade",
+    icon: "🚨",
+    trigger: { type: "error.captured", config: {} },
+    graph: {
+      nodes: [
+        {
+          id: n("trigger-1"),
+          type: "trigger",
+          position: { x: 80, y: 80 },
+          data: {
+            kind: "trigger",
+            actionType: "error.captured",
+            label: "Erro capturado",
+            config: {},
+          },
+        },
+        {
+          id: n("email-1"),
+          type: "action",
+          position: { x: 360, y: 80 },
+          data: {
+            kind: "action",
+            actionType: "send_email_admin",
+            label: "Email pra admin",
+            config: {
+              subject: "🚨 Erro: {{payload.area}}",
+              body: "Area: {{payload.area}}\nErro: {{payload.error_name}}\nMensagem: {{payload.message}}\nOrg: {{payload.org_id}}\n\nConfira o Sentry pra stack completa.",
+            },
+          },
+        },
+      ],
+      edges: [{ id: "e-1", source: n("trigger-1"), target: n("email-1") }],
     },
   },
   {

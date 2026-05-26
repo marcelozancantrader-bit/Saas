@@ -1,13 +1,13 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-26 (P17, fim de dia) — **3 migrations P15-P16 aplicadas em prod. Builder de automações 100% funcional. Sem pendências de DB.**
+**Última pausa:** 2026-05-26 (P18) — **Builder v3 entregue: triggers de métrica (cron 15 min), histórico de versões + restore, error.captured server-side via fetch HTTP. 1 migration pendente em prod.**
 
 > **Marca decidida**: `Prumai` (research em [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md))
 > **Domínio**: ainda em `memorial-ai-mu.vercel.app` — registrar `prumai.com.br` é a próxima ação externa
 > **Plano executivo de migração**: [MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)
 > **Pricing**: v2 em prod ([PRICING_PROPOSAL.md](PRICING_PROPOSAL.md))
-> **0 migrations pendentes** em prod (todas aplicadas em 2026-05-26)
-> **Último commit pushed:** `f99a9bf` (todos os P14-P17 em prod)
+> **1 migration pendente** em prod (`20260803000001_admin_automations_v3.sql`)
+> **Último commit pushed:** P18 (Builder v3)
 
 ---
 
@@ -26,13 +26,13 @@ cat NEXT_SESSION.md                                # este doc
 - Builder de automações: `/admin/automacoes` (precisa platform_admin)
 - 4 migrations aplicadas em 2026-05-26: pricing v2, suspend enforcement, performance indexes, admin_automations
 
-**Onde parei**: usuário rodou as 3 migrations P15-P16 no Supabase Dashboard, builder ativo. Próximo passo é o usuário decidir: testar builder ao vivo, atacar próximo batch do backlog, ou esperar registro do domínio pra rebrand.
+**Onde parei**: builder v3 entregue end-to-end. Marcelo precisa aplicar `20260803000001_admin_automations_v3.sql` no Supabase Dashboard (cria `admin_automation_versions` + coluna `meta` em `admin_automations`). Depois disso, 9 métricas + 9 trigger types disponíveis no editor.
 
 ---
 
 ## 🎯 Como retomar (próxima sessão)
 
-**Estado em 2026-05-26 fim de dia:**
+**Estado em 2026-05-26 fim de dia (P18):**
 
 - ✅ Pricing v2 em prod (4 planos + Agência, ciclos mensal/anual/PIX, gates de todas features)
 - ✅ Trial 7d Pro pré-pago funcionando + reminders D-1 + cleanup conversão
@@ -64,6 +64,7 @@ cat NEXT_SESSION.md                                # este doc
 - ✅ **3 components RSC migration** — PasswordStrength, BudgetDisciplinasCard, PlanComparisonTable (<details> nativo) (P17-G2)
 - ✅ **Trial cancel self-service** — botão em /billing pra cancelar trial antes do prazo (P17-G3)
 - ✅ **3 migrations aplicadas em prod (2026-05-26)** — suspend enforcement, performance indexes, admin_automations
+- ✅ **Builder v3 (P18)** — metric.threshold trigger (cron 15 min, 9 métricas), histórico de versões (snapshot ao salvar + restore), error.captured server-side via HTTP direto pra Inngest, 2 recipes novas (alerta custo IA + erro server)
 
 **Próxima ação externa (Marcelo executa)**:
 
@@ -78,16 +79,16 @@ cat NEXT_SESSION.md                                # este doc
 
 **Backlog priorizado pra próxima sessão (ordem de impacto)**:
 
-| Item                                      | Esforço                            | Bloqueio            | Descrição                                                                                                 |
-| ----------------------------------------- | ---------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Testar builder de automações ao vivo**  | 5 min                              | nenhum              | Marcelo: criar recipe "Email a cada signup" → fazer signup teste → ver run em /admin/automacoes/[id]/runs |
-| **Triggers metric threshold**             | 2-3h                               | nenhum              | "custo IA > R$X em 24h", "error count > N em 1h" — cron de agregação + comparação histórica               |
-| **Histórico de versões do graph**         | ~2h                                | nenhum              | audit de mudanças no editor (snapshot ao salvar)                                                          |
-| **Builder pro cliente final** (workspace) | sprint                             | decisão de gate     | Pro+ ou Studio+? Mesmo engine, escopo por org                                                             |
-| **Rebrand Memorial → Prumai**             | 3-4h                               | domínio             | Refactor copy ~40 arquivos UI, troca de assets                                                            |
-| **Trigger error.captured**                | ~1h                                | refactor Sentry     | Hoje Sentry é isomorphic; pra publicar evento precisa ser server-only                                     |
-| **App mobile Capacitor**                  | 1-2 semanas                        | decisão estratégica | $99/ano Apple + $25 Google + sprint dedicado                                                              |
-| **Publicar OAuth Google**                 | ~30 min trabalho dev + 3-5d Google | domínio             | Sair do modo teste — verificação Google                                                                   |
+| Item                                      | Esforço                            | Bloqueio            | Descrição                                                                                                                 |
+| ----------------------------------------- | ---------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Aplicar migration P18 em prod**         | 1 min                              | acesso Supabase     | Marcelo: rodar `20260803000001_admin_automations_v3.sql` no SQL Editor                                                    |
+| **Testar builder ao vivo end-to-end**     | 10 min                             | migration P18       | Criar recipe "Custo IA > US$ 5" → forçar geração de doc → ver run; restaurar versão anterior; ver email no error.captured |
+| **Métricas BRL / signups por plano**      | 1-2h                               | nenhum              | Mais 5 métricas (revenue mensal estimado, MRR, conversão trial→pago, ...) — só adicionar entries em METRIC_CATALOG        |
+| **Builder pro cliente final** (workspace) | sprint                             | decisão de gate     | Pro+ ou Studio+? Mesmo engine, escopo por org                                                                             |
+| **Rebrand Memorial → Prumai**             | 3-4h                               | domínio             | Refactor copy ~40 arquivos UI, troca de assets                                                                            |
+| **Loops/iteração no engine**              | ~3h                                | nenhum              | for-each sobre array no payload, com max-iter pra evitar loop infinito                                                    |
+| **App mobile Capacitor**                  | 1-2 semanas                        | decisão estratégica | $99/ano Apple + $25 Google + sprint dedicado                                                                              |
+| **Publicar OAuth Google**                 | ~30 min trabalho dev + 3-5d Google | domínio             | Sair do modo teste — verificação Google                                                                                   |
 
 **Pendências externas (Marcelo)**:
 
@@ -119,6 +120,172 @@ cat BRANDING_RESEARCH.md                           # naming research
 | [PRICING_PROPOSAL.md](PRICING_PROPOSAL.md)       | Proposta consolidada de pricing v2, aprovada pelo fundador. Estado original pré-implementação.                                                   |
 | [NEXT_SESSION.md](NEXT_SESSION.md)               | Este documento — histórico de todas as sessões P1-P15.                                                                                           |
 | [CLAUDE.md](CLAUDE.md) + [AGENTS.md](AGENTS.md)  | Regras inegociáveis do projeto, stack, anti-padrões.                                                                                             |
+
+---
+
+## 🤖 P18 — Builder v3 (2026-05-26) — 1 commit
+
+Continuação direta do P17. Bateu nos 3 itens unblocked do backlog:
+**triggers metric.threshold + histórico de versões + error.captured**.
+
+### Batch I — Metric threshold triggers
+
+Permite criar automação "quando custo IA passa US$ 5 em 24h, alerta no Slack"
+sem mexer no código.
+
+**Catálogo de métricas** ([lib/automations/metrics-catalog.ts](lib/automations/metrics-catalog.ts) — client-safe + [metrics.ts](lib/automations/metrics.ts) — server-only compute):
+
+- `ai.cost_usd_24h` / `ai.cost_usd_1h` (soma `documents.custo_tokens.cost_usd`)
+- `signups.count_24h` / `signups.count_1h`
+- `payments.overdue_count_now` / `subscriptions.active_count_now` / `trials.active_count_now`
+- `documents.generated_count_24h`
+- `automations.failed_count_24h`
+
+Total: 9 métricas em 4 categorias (Receita / Custo / Atividade / Operação).
+Split client/server porque o UI precisa renderizar o picker sem ter acesso
+ao Supabase client.
+
+**Trigger config** ([lib/automations/types.ts](lib/automations/types.ts) `metricThresholdConfigSchema`):
+
+```ts
+{
+  metric: "ai.cost_usd_24h",
+  op: "gt" | "gte" | "lt" | "lte" | "eq",
+  threshold: 5,
+  cooldown_minutes: 60  // anti-spam (default 60)
+}
+```
+
+**Cron** ([server/jobs/metric-threshold-cron.ts](server/jobs/metric-threshold-cron.ts)):
+
+- Roda a cada 15 min (`*/15 * * * *`).
+- Pega automations enabled=true + trigger.type='metric.threshold'.
+- Agrega cada métrica usada uma vez (cache em-Map por execução).
+- Compara contra threshold; se passa AND cooldown expirou → publishAdminEvent.
+- Atualiza `admin_automations.meta` com `last_metric_value`, `last_checked_at`,
+  `last_fired_at` (visibilidade + cooldown state).
+
+**UI** ([NodeConfigPanel.tsx](components/features/admin/automations/NodeConfigPanel.tsx)):
+
+- Click no node Trigger quando é `metric.threshold` → form rico com select
+  agrupado por categoria, operador, threshold com unit-aware formatting,
+  cooldown em minutos.
+- TriggerNode card mostra inline a condição configurada (ex: "Custo IA (US$)
+  > $5,00").
+
+**Sync trigger.config ↔ graph** ([update.action.ts](server/actions/admin/automations/update.action.ts)):
+
+- Editor só envia `graph`. Action detecta mudança no node trigger e propaga
+  pra `admin_automations.trigger.config` automaticamente. Runner usa
+  `trigger->>type` (filtro) + `trigger->config` (avaliação no cron).
+
+### Batch J — Histórico de versões do graph
+
+Snapshot automático ao salvar permite auditoria + restore. Resolve o medo
+de "mexi no editor e perdi o que tinha".
+
+**Migration** ([20260803000001_admin_automations_v3.sql](supabase/migrations/20260803000001_admin_automations_v3.sql)):
+
+- Coluna `meta jsonb` em `admin_automations` (state mutável: cooldown, last_value).
+- Tabela `admin_automation_versions(id, automation_id, version_number, name,
+description, trigger, graph, change_summary, created_by, created_at)`.
+- Unique(automation_id, version_number) — sequência por automation.
+- RLS platform_admin select/write.
+
+**Serviço de snapshot** ([server/services/automation-versions.ts](server/services/automation-versions.ts)):
+
+- `snapshotAutomationVersion()` chamado em toda chamada de `updateAutomationAction`.
+- **Material change detection**: compara name/description/trigger/graph
+  canonical (graph normalizado sem position pra não snapshotar drag-and-drop puro).
+- **Coalesce 5 min**: se última versão é do mesmo usuário e foi criada nos
+  últimos 5 min, atualiza o snapshot existente em vez de criar nova. Auto-save
+  dispara a cada 1s — sem isso, 1h de edição vira 3600 versões.
+- **changeSummary**: gera string descritiva ("+2 nós; trigger reconfigurado").
+
+**Restore** ([restore-version.action.ts](server/actions/admin/automations/restore-version.action.ts)):
+
+- Snapshotta o estado ATUAL antes de sobrescrever (rollback do rollback).
+- Não restaura `enabled` ou `meta` — preserva estado operacional.
+
+**UI** ([VersionList.tsx](components/features/admin/automations/VersionList.tsx) + [/versoes/page.tsx](app/admin/automacoes/[id]/versoes/page.tsx)):
+
+- Lista expansível: v#, change summary, autor, timestamp, nós/conexões.
+- Botão "Restaurar" com confirmação dialog.
+- Link "Versões" no header do editor.
+
+### Batch K — Trigger error.captured server-side
+
+Resolve o gap "Sentry é isomorphic, não pode publicar evento server-only".
+
+**Solução** ([lib/observability/sentry.ts](lib/observability/sentry.ts)):
+
+- `captureException()` (isomorphic) agora também posta `error.captured` em
+  Inngest via fetch HTTP direto pra `https://inn.gs/e/<EVENT_KEY>`.
+- Early return em `typeof window !== "undefined"` ou ausência de
+  `process.env.INNGEST_EVENT_KEY` (que não tem prefixo NEXT_PUBLIC) →
+  client never publishes.
+- Sem chain de `import "server-only"` (que quebraria o bundle do client
+  porque `lib/ai/generate-document.ts` importa sentry.ts e é puxado por
+  client components via `DOCUMENT_LABELS`).
+- Body no formato esperado pelo SDK Inngest (array `[{ name, data }]`,
+  confirmado em `node_modules/inngest/components/Inngest.js:514`).
+
+**Payload publicado**:
+
+```js
+{
+  area: "ai.generate-document",
+  message: "Anthropic 529",
+  error_name: "AnthropicError",
+  org_id?: "uuid",
+  tags: { ... }
+}
+```
+
+**2 recipes novas**:
+
+- 📈 **Custo IA > US$ 5 em 24h → Slack** (categoria Métricas, cooldown 6h).
+- 🚨 **Erro server-side → email pra admin** (categoria Confiabilidade).
+
+### Resumo numérico P18
+
+- 1 commit
+- 11 arquivos novos:
+  - `supabase/migrations/20260803000001_admin_automations_v3.sql`
+  - `lib/automations/metrics.ts`
+  - `lib/automations/metrics-catalog.ts`
+  - `server/jobs/metric-threshold-cron.ts`
+  - `server/services/automation-versions.ts`
+  - `server/actions/admin/automations/restore-version.action.ts`
+  - `app/admin/automacoes/[id]/versoes/page.tsx`
+  - `components/features/admin/automations/VersionList.tsx`
+- ~10 arquivos modificados (types, catalog, recipes, editor UI, sentry, action update, inngest route, header)
+- 1 migration pendente em prod
+- 0 envs novas (reutiliza INNGEST_EVENT_KEY existente)
+- 0 deps novas
+
+### Verificação ponta-a-ponta (após migration)
+
+1. Login como platform_admin → `/admin/automacoes/nova`
+2. Tab "Usar receita pronta" → escolhe "Custo IA > US$ 5 em 24h"
+3. Editor abre, trigger configurado (config visível no node card)
+4. Clica trigger node → painel mostra metric/op/threshold/cooldown editáveis
+5. Edita threshold pra 0.01 → auto-save dispara, versão #2 aparece em /versoes
+6. Toggle ativar
+7. Em 15 min, cron roda → publishAdminEvent → run em /admin/automacoes/[id]/runs
+8. Em /versoes: "Restaurar" v1 → confirma → estado volta + nova versão #3 do estado v2 antes de sobrescrever
+
+### Fora de escopo (sprint futuro)
+
+- Loops/iteração (for-each em arrays do payload).
+- Trigger error.captured no client (precisa NEXT_PUBLIC env + CORS na Inngest).
+- Métricas BRL (revenue/MRR via Asaas API) — requer auth.
+- Builder de automações pro cliente final (workspace) — sprint dedicado.
+- Audit diff visual entre versões (jsondiffpatch ou similar).
+
+### Migration pendente em prod
+
+- `20260803000001_admin_automations_v3.sql` (cria `admin_automation_versions` + coluna `meta`)
 
 ---
 

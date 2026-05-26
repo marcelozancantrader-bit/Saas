@@ -21,6 +21,7 @@ export const TRIGGER_TYPES = [
   "payment.refunded",
   "error.captured",
   "schedule.daily",
+  "metric.threshold",
 ] as const;
 
 export type TriggerType = (typeof TRIGGER_TYPES)[number];
@@ -96,6 +97,21 @@ export const ifConditionConfigSchema = z.object({
 });
 
 // =============================================================================
+// TRIGGER CONFIGS — schemas específicos por tipo de trigger
+// =============================================================================
+
+export const metricThresholdConfigSchema = z.object({
+  /** Chave em METRIC_CATALOG (lib/automations/metrics.ts). */
+  metric: z.string().min(1).max(80),
+  op: z.enum(["gt", "gte", "lt", "lte", "eq"]),
+  threshold: z.number(),
+  /** Tempo mínimo entre disparos consecutivos (anti-spam). Default 60. */
+  cooldown_minutes: z.number().int().min(0).max(1440).default(60),
+});
+
+export type MetricThresholdConfig = z.infer<typeof metricThresholdConfigSchema>;
+
+// =============================================================================
 // AUTOMATION GRAPH (React Flow)
 // =============================================================================
 
@@ -162,6 +178,8 @@ export type AdminAutomation = {
   trigger: Trigger;
   graph: AutomationGraph;
   enabled: boolean;
+  /** Estado mutável (last_fired_at/cooldown, last_metric_value, ...). */
+  meta: Record<string, unknown> | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

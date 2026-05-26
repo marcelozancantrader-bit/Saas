@@ -9,6 +9,7 @@ import { trialReminderCron } from "@/server/jobs/trial-reminder-cron";
 import { trialReminderD3Cron } from "@/server/jobs/trial-reminder-d3-cron";
 import { adminAutomationRunner } from "@/server/jobs/admin-automation-runner";
 import { adminScheduleDailyCron } from "@/server/jobs/admin-schedule-daily-cron";
+import { metricThresholdCron } from "@/server/jobs/metric-threshold-cron";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -22,5 +23,6 @@ export const { GET, POST, PUT } = serve({
     trialReminderD3Cron,
     adminAutomationRunner,
     adminScheduleDailyCron,
+    metricThresholdCron,
   ],
 });

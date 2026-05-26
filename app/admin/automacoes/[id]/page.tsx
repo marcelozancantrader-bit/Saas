@@ -4,7 +4,7 @@ import { requirePlatformAdmin } from "@/lib/auth/platform-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, History } from "lucide-react";
+import { ArrowLeft, History, GitBranch } from "lucide-react";
 import { AutomationEditor } from "@/components/features/admin/automations/AutomationEditor";
 import { DeleteAutomationButton } from "@/components/features/admin/automations/DeleteAutomationButton";
 import { AutomationToggle } from "@/components/features/admin/automations/AutomationToggle";
@@ -69,7 +69,14 @@ export default async function AutomationEditorPage({ params }: Props) {
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
             <History className="mr-1.5 h-3.5 w-3.5" />
-            Histórico ({automation.run_count})
+            Runs ({automation.run_count})
+          </Link>
+          <Link
+            href={`/admin/automacoes/${automation.id}/versoes`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <GitBranch className="mr-1.5 h-3.5 w-3.5" />
+            Versões
           </Link>
           <ExportAutomationButton automation={automation} />
           <DeleteAutomationButton id={automation.id} />

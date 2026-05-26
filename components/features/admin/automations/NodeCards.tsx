@@ -3,6 +3,7 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Zap, Cog, GitBranch } from "lucide-react";
 import { ACTION_CATALOG, TRIGGER_CATALOG } from "@/lib/automations/catalog";
+import { formatMetricCondition } from "@/lib/automations/metrics-catalog";
 import type { ActionType, TriggerType } from "@/lib/automations/types";
 
 type NodeData = {
@@ -15,8 +16,9 @@ type NodeData = {
 export function TriggerNode(props: NodeProps) {
   const data = props.data as NodeData;
   const entry = TRIGGER_CATALOG[data.actionType as TriggerType];
+  const isMetric = data.actionType === "metric.threshold";
   return (
-    <div className="min-w-[180px] rounded-md border-2 border-violet-400 bg-violet-50 px-3 py-2 shadow-sm dark:border-violet-500 dark:bg-violet-950/50">
+    <div className="min-w-[200px] rounded-md border-2 border-violet-400 bg-violet-50 px-3 py-2 shadow-sm dark:border-violet-500 dark:bg-violet-950/50">
       <div className="flex items-center gap-1.5">
         <Zap className="h-3.5 w-3.5 text-violet-700 dark:text-violet-300" />
         <p className="text-[10px] font-semibold tracking-wider text-violet-700 uppercase dark:text-violet-300">
@@ -26,6 +28,15 @@ export function TriggerNode(props: NodeProps) {
       <p className="mt-1 text-sm font-medium text-zinc-900 dark:text-zinc-100">
         {entry?.label ?? data.actionType}
       </p>
+      {isMetric && typeof data.config.metric === "string" && data.config.metric ? (
+        <p className="mt-0.5 text-[10px] text-zinc-600 dark:text-zinc-400">
+          {formatMetricCondition(
+            data.config.metric as string,
+            (data.config.op as string) ?? "gt",
+            typeof data.config.threshold === "number" ? data.config.threshold : 0,
+          )}
+        </p>
+      ) : null}
       <Handle type="source" position={Position.Right} className="!h-2 !w-2 !bg-violet-500" />
     </div>
   );

@@ -31,7 +31,7 @@ export type TriggerCatalogEntry = {
   label: string;
   description: string;
   /** Categoria pra agrupar no editor. */
-  category: "Eventos do app" | "Pagamento" | "Sistema" | "Tempo";
+  category: "Eventos do app" | "Pagamento" | "Sistema" | "Tempo" | "Métricas";
   /** Exemplo de shape do payload que vai chegar (pra o admin saber o que tem disponível). */
   examplePayload: Record<string, unknown>;
 };
@@ -126,12 +126,15 @@ export const TRIGGER_CATALOG: Record<TriggerType, TriggerCatalogEntry> = {
   "error.captured": {
     id: "error.captured",
     label: "Erro capturado (Sentry)",
-    description: "Qualquer captureException do app dispara este evento.",
+    description:
+      "Qualquer captureException server-side do app dispara este evento. Útil pra alertas em tempo real (Slack/Telegram).",
     category: "Sistema",
     examplePayload: {
       area: "ai.generate-document",
       message: "Anthropic API retornou 529",
+      error_name: "AnthropicError",
       org_id: "uuid (se disponível)",
+      tags: { area: "ai.generate-document", model: "claude-sonnet-4" },
     },
   },
   "schedule.daily": {
@@ -142,6 +145,22 @@ export const TRIGGER_CATALOG: Record<TriggerType, TriggerCatalogEntry> = {
     examplePayload: {
       date: "2026-05-25",
       timestamp: "2026-05-25T12:00:00Z",
+    },
+  },
+  "metric.threshold": {
+    id: "metric.threshold",
+    label: "Métrica passa um threshold",
+    description:
+      "Cron a cada 15 min avalia a métrica configurada e dispara quando o valor cruza o limite (com cooldown anti-spam).",
+    category: "Métricas",
+    examplePayload: {
+      metric: "ai.cost_usd_24h",
+      metric_label: "Custo IA (US$) nas últimas 24h",
+      unit: "USD",
+      op: "gt",
+      threshold: 5,
+      value: 7.23,
+      checked_at: "2026-05-26T15:00:00Z",
     },
   },
 };
