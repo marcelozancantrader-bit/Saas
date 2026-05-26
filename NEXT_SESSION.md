@@ -1,18 +1,38 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-26 (P17) — **Quick wins de perf/UX (next/image, RSC, cancel trial) + builder v2 (recipes, variáveis encadeadas, export/import).**
+**Última pausa:** 2026-05-26 (P17, fim de dia) — **3 migrations P15-P16 aplicadas em prod. Builder de automações 100% funcional. Sem pendências de DB.**
 
 > **Marca decidida**: `Prumai` (research em [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md))
 > **Domínio**: ainda em `memorial-ai-mu.vercel.app` — registrar `prumai.com.br` é a próxima ação externa
 > **Plano executivo de migração**: [MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)
 > **Pricing**: v2 em prod ([PRICING_PROPOSAL.md](PRICING_PROPOSAL.md))
-> **0 migrations pendentes** em prod
+> **0 migrations pendentes** em prod (todas aplicadas em 2026-05-26)
+> **Último commit pushed:** `f99a9bf` (todos os P14-P17 em prod)
+
+---
+
+## ⚡ Como começar a próxima sessão
+
+```bash
+cd C:\dev\memorial-ai
+git pull
+git log --oneline -20                              # ver P14-P17
+cat NEXT_SESSION.md                                # este doc
+```
+
+**Estado de prod**:
+
+- App: https://memorial-ai-mu.vercel.app
+- Builder de automações: `/admin/automacoes` (precisa platform_admin)
+- 4 migrations aplicadas em 2026-05-26: pricing v2, suspend enforcement, performance indexes, admin_automations
+
+**Onde parei**: usuário rodou as 3 migrations P15-P16 no Supabase Dashboard, builder ativo. Próximo passo é o usuário decidir: testar builder ao vivo, atacar próximo batch do backlog, ou esperar registro do domínio pra rebrand.
 
 ---
 
 ## 🎯 Como retomar (próxima sessão)
 
-**Estado em 2026-05-25 fim de dia:**
+**Estado em 2026-05-26 fim de dia:**
 
 - ✅ Pricing v2 em prod (4 planos + Agência, ciclos mensal/anual/PIX, gates de todas features)
 - ✅ Trial 7d Pro pré-pago funcionando + reminders D-1 + cleanup conversão
@@ -39,6 +59,11 @@
 - ✅ **Cache CDN** — `revalidate = 86400` em /sobre, /ferramentas/\*, /blog (P15-BD)
 - ✅ **Trial reminder D-3** — cron 9:25 BRT complementa D-1; +10-20% conversão (P15-BF)
 - ✅ **Script notify pricing v2** — one-shot pra avisar clientes existentes (P15-BF)
+- ✅ **Builder visual de automações admin** — `/admin/automacoes` com React Flow editor + engine Inngest + 5 recipes prontas + variáveis encadeadas {{steps/lastStep}} + export/import JSON (P16-P17)
+- ✅ **next/image** em logos/fotos do diário/portfolio (AVIF/WebP automático) (P17-G1)
+- ✅ **3 components RSC migration** — PasswordStrength, BudgetDisciplinasCard, PlanComparisonTable (<details> nativo) (P17-G2)
+- ✅ **Trial cancel self-service** — botão em /billing pra cancelar trial antes do prazo (P17-G3)
+- ✅ **3 migrations aplicadas em prod (2026-05-26)** — suspend enforcement, performance indexes, admin_automations
 
 **Próxima ação externa (Marcelo executa)**:
 
@@ -51,12 +76,25 @@
 - Fase 3-7 do MIGRATION_CHECKLIST: DNS Vercel, env vars (`NEXT_PUBLIC_APP_URL=https://prumai.com.br`), Supabase Auth URL config, Resend DKIM, Asaas webhook URL
 - Fase 8: refactor copy Memorial.ai → Prumai (~40 arquivos UI listados no checklist)
 
-**Backlog que sobrou (sem prioridade definida)**:
+**Backlog priorizado pra próxima sessão (ordem de impacto)**:
 
-- App mobile Capacitor (~1-2 semanas, $99/ano Apple + $25 Google)
-- Publicar OAuth Google (sair do modo teste — precisa domínio + privacidade + verificação 3-5d)
-- Email template "Plano atualizado" pra notificar clientes sobre pricing v2
-- Trial reminder D-3 (hoje só tem D-1)
+| Item                                      | Esforço                            | Bloqueio            | Descrição                                                                                                 |
+| ----------------------------------------- | ---------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Testar builder de automações ao vivo**  | 5 min                              | nenhum              | Marcelo: criar recipe "Email a cada signup" → fazer signup teste → ver run em /admin/automacoes/[id]/runs |
+| **Triggers metric threshold**             | 2-3h                               | nenhum              | "custo IA > R$X em 24h", "error count > N em 1h" — cron de agregação + comparação histórica               |
+| **Histórico de versões do graph**         | ~2h                                | nenhum              | audit de mudanças no editor (snapshot ao salvar)                                                          |
+| **Builder pro cliente final** (workspace) | sprint                             | decisão de gate     | Pro+ ou Studio+? Mesmo engine, escopo por org                                                             |
+| **Rebrand Memorial → Prumai**             | 3-4h                               | domínio             | Refactor copy ~40 arquivos UI, troca de assets                                                            |
+| **Trigger error.captured**                | ~1h                                | refactor Sentry     | Hoje Sentry é isomorphic; pra publicar evento precisa ser server-only                                     |
+| **App mobile Capacitor**                  | 1-2 semanas                        | decisão estratégica | $99/ano Apple + $25 Google + sprint dedicado                                                              |
+| **Publicar OAuth Google**                 | ~30 min trabalho dev + 3-5d Google | domínio             | Sair do modo teste — verificação Google                                                                   |
+
+**Pendências externas (Marcelo)**:
+
+- Registrar `prumai.com.br` no registro.br (R$ 40/ano)
+- Handles `@prumai` em Instagram + LinkedIn
+- INPI classe 42
+- Slack/Telegram webhook URLs (opcional pro builder funcionar com notificações além de email)
 
 **Comandos pra retomar contexto**:
 
