@@ -1,13 +1,13 @@
 # Memorial.ai — Estado da sessão
 
-**Última pausa:** 2026-05-26 (P18) — **Builder v3 entregue: triggers de métrica (cron 15 min), histórico de versões + restore, error.captured server-side via fetch HTTP. 1 migration pendente em prod.**
+**Última pausa:** 2026-05-26 (P18, fim de dia) — **Builder v3 em prod. Migration aplicada. 0 pendências de DB.**
 
 > **Marca decidida**: `Prumai` (research em [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md))
 > **Domínio**: ainda em `memorial-ai-mu.vercel.app` — registrar `prumai.com.br` é a próxima ação externa
 > **Plano executivo de migração**: [MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)
 > **Pricing**: v2 em prod ([PRICING_PROPOSAL.md](PRICING_PROPOSAL.md))
-> **1 migration pendente** em prod (`20260803000001_admin_automations_v3.sql`)
-> **Último commit pushed:** P18 (Builder v3)
+> **0 migrations pendentes** em prod (P18 aplicada em 2026-05-26)
+> **Último commit pushed:** `afab100` (P18 Builder v3)
 
 ---
 
@@ -26,7 +26,7 @@ cat NEXT_SESSION.md                                # este doc
 - Builder de automações: `/admin/automacoes` (precisa platform_admin)
 - 4 migrations aplicadas em 2026-05-26: pricing v2, suspend enforcement, performance indexes, admin_automations
 
-**Onde parei**: builder v3 entregue end-to-end. Marcelo precisa aplicar `20260803000001_admin_automations_v3.sql` no Supabase Dashboard (cria `admin_automation_versions` + coluna `meta` em `admin_automations`). Depois disso, 9 métricas + 9 trigger types disponíveis no editor.
+**Onde parei**: builder v3 entregue end-to-end + migration aplicada. 10 trigger types (9 antigos + metric.threshold), 9 métricas, histórico de versões com restore, error.captured server-side via Inngest HTTP. Próximo passo: Marcelo testar ao vivo OU atacar próximo batch do backlog.
 
 ---
 
@@ -79,16 +79,15 @@ cat NEXT_SESSION.md                                # este doc
 
 **Backlog priorizado pra próxima sessão (ordem de impacto)**:
 
-| Item                                      | Esforço                            | Bloqueio            | Descrição                                                                                                                 |
-| ----------------------------------------- | ---------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **Aplicar migration P18 em prod**         | 1 min                              | acesso Supabase     | Marcelo: rodar `20260803000001_admin_automations_v3.sql` no SQL Editor                                                    |
-| **Testar builder ao vivo end-to-end**     | 10 min                             | migration P18       | Criar recipe "Custo IA > US$ 5" → forçar geração de doc → ver run; restaurar versão anterior; ver email no error.captured |
-| **Métricas BRL / signups por plano**      | 1-2h                               | nenhum              | Mais 5 métricas (revenue mensal estimado, MRR, conversão trial→pago, ...) — só adicionar entries em METRIC_CATALOG        |
-| **Builder pro cliente final** (workspace) | sprint                             | decisão de gate     | Pro+ ou Studio+? Mesmo engine, escopo por org                                                                             |
-| **Rebrand Memorial → Prumai**             | 3-4h                               | domínio             | Refactor copy ~40 arquivos UI, troca de assets                                                                            |
-| **Loops/iteração no engine**              | ~3h                                | nenhum              | for-each sobre array no payload, com max-iter pra evitar loop infinito                                                    |
-| **App mobile Capacitor**                  | 1-2 semanas                        | decisão estratégica | $99/ano Apple + $25 Google + sprint dedicado                                                                              |
-| **Publicar OAuth Google**                 | ~30 min trabalho dev + 3-5d Google | domínio             | Sair do modo teste — verificação Google                                                                                   |
+| Item                                      | Esforço                            | Bloqueio            | Descrição                                                                                                                          |
+| ----------------------------------------- | ---------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Testar builder ao vivo end-to-end**     | 10 min                             | nenhum              | Marcelo: criar recipe "Custo IA > US$ 5" → forçar geração de doc → ver run; restaurar versão anterior; ver email no error.captured |
+| **Métricas BRL / signups por plano**      | 1-2h                               | nenhum              | Mais 5 métricas (revenue mensal estimado, MRR, conversão trial→pago, ...) — só adicionar entries em METRIC_CATALOG                 |
+| **Builder pro cliente final** (workspace) | sprint                             | decisão de gate     | Pro+ ou Studio+? Mesmo engine, escopo por org                                                                                      |
+| **Rebrand Memorial → Prumai**             | 3-4h                               | domínio             | Refactor copy ~40 arquivos UI, troca de assets                                                                                     |
+| **Loops/iteração no engine**              | ~3h                                | nenhum              | for-each sobre array no payload, com max-iter pra evitar loop infinito                                                             |
+| **App mobile Capacitor**                  | 1-2 semanas                        | decisão estratégica | $99/ano Apple + $25 Google + sprint dedicado                                                                                       |
+| **Publicar OAuth Google**                 | ~30 min trabalho dev + 3-5d Google | domínio             | Sair do modo teste — verificação Google                                                                                            |
 
 **Pendências externas (Marcelo)**:
 
@@ -283,9 +282,9 @@ Resolve o gap "Sentry é isomorphic, não pode publicar evento server-only".
 - Builder de automações pro cliente final (workspace) — sprint dedicado.
 - Audit diff visual entre versões (jsondiffpatch ou similar).
 
-### Migration pendente em prod
+### Migration aplicada em prod
 
-- `20260803000001_admin_automations_v3.sql` (cria `admin_automation_versions` + coluna `meta`)
+- `20260803000001_admin_automations_v3.sql` ✅ aplicada em 2026-05-26 (cria `admin_automation_versions` + coluna `meta`)
 
 ---
 
