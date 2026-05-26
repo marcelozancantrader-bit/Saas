@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Database,
   Ruler,
+  Workflow,
 } from "lucide-react";
 
 type NavItem = {
@@ -33,6 +34,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/sinapi", label: "SINAPI", icon: Database },
   { href: "/admin/cub", label: "CUB estadual", icon: Ruler },
   { href: "/admin/audit", label: "Auditoria", icon: ScrollText },
+  { href: "/admin/automacoes", label: "Automações", icon: Workflow },
   { href: "/admin/feature-flags", label: "Feature flags", icon: Flag },
   { href: "/admin/announcements", label: "Anúncios", icon: Megaphone },
   { href: "/admin/health", label: "Health", icon: Activity },

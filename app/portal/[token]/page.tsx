@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -54,10 +55,12 @@ export default async function PortalPage({ params }: Props) {
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:py-14">
       <header className="mb-8 flex items-start gap-4">
         {hasLogo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={organization.logo_url!}
             alt={organization.nome}
+            width={56}
+            height={56}
+            priority
             className="h-14 w-14 shrink-0 rounded-md border border-zinc-200 bg-white object-contain p-1 dark:border-zinc-700"
           />
         ) : null}

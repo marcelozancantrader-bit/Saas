@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,10 +149,12 @@ export function NewDiaryEntryDialog({ projectId }: Props) {
                     key={`${file.name}-${idx}`}
                     className="relative h-20 w-20 overflow-hidden rounded-md border border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={URL.createObjectURL(file)}
                       alt={file.name}
+                      width={80}
+                      height={80}
+                      unoptimized
                       className="h-full w-full object-cover"
                     />
                     <button

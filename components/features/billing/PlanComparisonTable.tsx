@@ -1,7 +1,5 @@
-"use client";
-
-import { Fragment, useState } from "react";
-import { ChevronDown, ChevronUp, Check, X } from "lucide-react";
+import { Fragment } from "react";
+import { ChevronDown, Check, X } from "lucide-react";
 import { PLANS, PLAN_ORDER, formatBytes } from "@/lib/plans/limits";
 
 /**
@@ -94,73 +92,65 @@ function renderCell(value: unknown, type: FeatureRow["type"]) {
 }
 
 export function PlanComparisonTable() {
-  const [expanded, setExpanded] = useState(false);
-
+  // <details> nativo controla expand/collapse no browser, sem JS no client.
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-900/40"
-      >
-        <span>{expanded ? "Ocultar" : "Ver"} comparativo detalhado dos planos</span>
-        {expanded ? (
-          <ChevronUp className="h-4 w-4" aria-hidden />
-        ) : (
-          <ChevronDown className="h-4 w-4" aria-hidden />
-        )}
-      </button>
+    <details className="group rounded-lg border border-zinc-200 dark:border-zinc-800">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-900/40">
+        <span>
+          <span className="group-open:hidden">Ver</span>
+          <span className="hidden group-open:inline">Ocultar</span> comparativo detalhado dos planos
+        </span>
+        <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
+      </summary>
 
-      {expanded ? (
-        <div className="overflow-x-auto border-t border-zinc-200 dark:border-zinc-800">
-          <table className="w-full text-xs">
-            <thead className="bg-zinc-50 dark:bg-zinc-900/60">
-              <tr>
-                <th className="sticky left-0 z-10 bg-zinc-50 px-4 py-2 text-left text-[10px] font-semibold tracking-wide text-zinc-500 uppercase dark:bg-zinc-900/60">
-                  Funcionalidade
+      <div className="overflow-x-auto border-t border-zinc-200 dark:border-zinc-800">
+        <table className="w-full text-xs">
+          <thead className="bg-zinc-50 dark:bg-zinc-900/60">
+            <tr>
+              <th className="sticky left-0 z-10 bg-zinc-50 px-4 py-2 text-left text-[10px] font-semibold tracking-wide text-zinc-500 uppercase dark:bg-zinc-900/60">
+                Funcionalidade
+              </th>
+              {PLAN_ORDER.map((id) => (
+                <th
+                  key={id}
+                  className={[
+                    "px-2 py-2 text-center text-[10px] font-semibold tracking-wide uppercase",
+                    PLANS[id].highlighted ? "text-blue-700 dark:text-blue-400" : "text-zinc-500",
+                  ].join(" ")}
+                >
+                  {PLANS[id].label}
                 </th>
-                {PLAN_ORDER.map((id) => (
-                  <th
-                    key={id}
-                    className={[
-                      "px-2 py-2 text-center text-[10px] font-semibold tracking-wide uppercase",
-                      PLANS[id].highlighted ? "text-blue-700 dark:text-blue-400" : "text-zinc-500",
-                    ].join(" ")}
-                  >
-                    {PLANS[id].label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {FEATURE_GROUPS.map((group) => (
-                <Fragment key={group.title}>
-                  <tr className="bg-zinc-50/50 dark:bg-zinc-900/30">
-                    <td
-                      colSpan={1 + PLAN_ORDER.length}
-                      className="px-4 py-1.5 text-[10px] font-semibold tracking-wider text-zinc-500 uppercase"
-                    >
-                      {group.title}
-                    </td>
-                  </tr>
-                  {group.rows.map((f) => (
-                    <tr key={f.key} className="hover:bg-zinc-50/30 dark:hover:bg-zinc-900/20">
-                      <td className="sticky left-0 bg-white px-4 py-2 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-                        {f.label}
-                      </td>
-                      {PLAN_ORDER.map((id) => (
-                        <td key={id} className="px-2 py-2 text-center">
-                          {renderCell((PLANS[id].limits as Record<string, unknown>)[f.key], f.type)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </Fragment>
               ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
-    </div>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {FEATURE_GROUPS.map((group) => (
+              <Fragment key={group.title}>
+                <tr className="bg-zinc-50/50 dark:bg-zinc-900/30">
+                  <td
+                    colSpan={1 + PLAN_ORDER.length}
+                    className="px-4 py-1.5 text-[10px] font-semibold tracking-wider text-zinc-500 uppercase"
+                  >
+                    {group.title}
+                  </td>
+                </tr>
+                {group.rows.map((f) => (
+                  <tr key={f.key} className="hover:bg-zinc-50/30 dark:hover:bg-zinc-900/20">
+                    <td className="sticky left-0 bg-white px-4 py-2 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                      {f.label}
+                    </td>
+                    {PLAN_ORDER.map((id) => (
+                      <td key={id} className="px-2 py-2 text-center">
+                        {renderCell((PLANS[id].limits as Record<string, unknown>)[f.key], f.type)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
   );
 }

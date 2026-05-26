@@ -5,6 +5,7 @@ import { getCurrentOrg } from "@/server/services/current-org";
 import { getPlanUsage } from "@/server/services/plan-usage";
 import { PLANS, formatBrlFromCents, type PlanId } from "@/lib/plans/limits";
 import { CancelPlanButton } from "@/components/features/billing/CancelPlanButton";
+import { CancelTrialButton } from "@/components/features/billing/CancelTrialButton";
 import { StartTrialCard } from "@/components/features/billing/StartTrialCard";
 import { BillingPlanGrid } from "@/components/features/billing/BillingPlanGrid";
 import {
@@ -110,6 +111,7 @@ export default async function BillingPage() {
               acesso ininterrupto.
             </p>
           </div>
+          <CancelTrialButton daysRemaining={trialState.daysRemaining} />
         </div>
       ) : null}
 

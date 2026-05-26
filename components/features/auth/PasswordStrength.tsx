@@ -1,7 +1,3 @@
-"use client";
-
-import { useMemo } from "react";
-
 type Score = 0 | 1 | 2 | 3 | 4;
 
 const LEVELS: Array<{ label: string; color: string; textColor: string }> = [
@@ -28,11 +24,10 @@ type Props = {
 };
 
 export function PasswordStrength({ password }: Props) {
-  const score = useMemo(() => calculate(password), [password]);
+  if (!password) return null;
+  const score = calculate(password);
   const level = LEVELS[score]!;
   const filledBars = score + 1;
-
-  if (!password) return null;
 
   return (
     <div className="space-y-1.5" aria-live="polite">

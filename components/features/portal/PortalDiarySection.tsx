@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin } from "lucide-react";
@@ -60,14 +61,14 @@ export function PortalDiarySection({ entries }: Props) {
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block aspect-square overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800"
+                      className="relative block aspect-square overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src={url}
                         alt={`Foto ${i + 1} — ${e.titulo}`}
-                        className="h-full w-full object-cover transition hover:scale-105"
-                        loading="lazy"
+                        fill
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px"
+                        className="object-cover transition hover:scale-105"
                       />
                     </a>
                   ))}

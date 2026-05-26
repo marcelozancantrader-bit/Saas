@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { loadPortfolioBySlug } from "@/server/services/portfolio-loader";
 
 export const dynamic = "force-dynamic";
@@ -66,10 +67,12 @@ export default async function PortfolioPublicPage({ params }: Props) {
       <header className="border-b border-zinc-200 pb-10 dark:border-zinc-800">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
           {org.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element -- service-role signed URL, sem layout shift previsível
-            <img
+            <Image
               src={org.logo_url}
               alt={`Logo de ${org.name}`}
+              width={80}
+              height={80}
+              priority
               className="h-20 w-20 rounded-lg border border-zinc-200 object-contain dark:border-zinc-800"
             />
           ) : (
@@ -111,14 +114,14 @@ export default async function PortfolioPublicPage({ params }: Props) {
               key={p.id}
               className="overflow-hidden rounded-lg border border-zinc-200 bg-white transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
             >
-              <div className="aspect-video w-full bg-zinc-100 dark:bg-zinc-800">
+              <div className="relative aspect-video w-full bg-zinc-100 dark:bg-zinc-800">
                 {p.diary_thumbnail_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- signed URL from service-role
-                  <img
+                  <Image
                     src={p.diary_thumbnail_url}
                     alt={`Foto de obra do projeto ${p.nome}`}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
+                    className="object-cover"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-xs text-zinc-400">

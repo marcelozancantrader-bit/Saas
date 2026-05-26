@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -316,8 +317,14 @@ export function WorkspaceForm({ initial, canEdit }: Props) {
           <div className="flex items-start gap-3">
             <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
               {form.logo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={form.logo_url} alt="Logo" className="h-full w-full object-contain" />
+                <Image
+                  src={form.logo_url}
+                  alt="Logo"
+                  width={80}
+                  height={80}
+                  className="h-full w-full object-contain"
+                  unoptimized={form.logo_url.startsWith("blob:")}
+                />
               ) : (
                 <span className="text-[10px] text-zinc-400">sem logo</span>
               )}
